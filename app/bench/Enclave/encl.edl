@@ -1,0 +1,12 @@
+enclave {
+	
+	trusted {
+   	    public void  do_zigzagger( int n );
+   	    public int   do_strlen( int n );
+        public void  *get_str_adrs( void );
+   	    public void  do_nop_slide( void );
+	};
+	
+	untrusted {
+	};
+};

@@ -1,0 +1,128 @@
+From 1aa9fb129c350e5995227bc3854e86e714a5875f Mon Sep 17 00:00:00 2001
+From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+Date: Thu, 27 Jul 2017 21:26:44 +0200
+Subject: [PATCH 2/2] Add support to retrieve most recently used TCS pointer.
+
+---
+ common/inc/sgx_urts.h                |  2 ++
+ psw/urts/linux/enter_enclave.S       | 23 +++++++++++++++++++++++
+ psw/urts/linux/urts.cpp              |  6 ++++++
+ psw/urts/linux/urts.lds              |  1 +
+ sdk/simulation/urtssim/urts_deploy.c |  6 ++++++
+ 5 files changed, 38 insertions(+)
+
+diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
+index 687e7e6..dc413a3 100644
+--- a/common/inc/sgx_urts.h
++++ b/common/inc/sgx_urts.h
+@@ -57,8 +57,10 @@ sgx_status_t SGXAPI sgx_create_enclave(const char *file_name, const int debug, s
+ 
+ sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
+ 
++//XXX
+ void* SGXAPI sgx_get_aep(void);
+ void  SGXAPI sgx_set_aep(void *aep);
++void* SGXAPI sgx_get_tcs(void);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
+index df200db..85b64d2 100644
+--- a/psw/urts/linux/enter_enclave.S
++++ b/psw/urts/linux/enter_enclave.S
+@@ -43,6 +43,19 @@ g_aep_pointer:
+     .word 0x0
+     .word 0x0
+ 
++/* XXX HACK: SGX stores TCS address in rbx on interrupt, but this value is
++ * somehow not properly stored in Linux's pt_regs struct available to our
++ * driver's interrupt handler. We therefore store TCS address here in the
++ * untrusted runtime, so as to be able to explicitly communicate TCS to our
++ * driver...
++ */
++    .data
++g_tcs:
++    .word 0x0
++    .word 0x0
++    .word 0x0
++    .word 0x0
++
+ /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
+ .file "enter_enclave.S"
+ .text
+@@ -59,6 +72,8 @@ EENTER_PROLOG
+ 
+ .Ldo_eenter:
+     mov         frame_arg0, %xbx                /* tcs addr */
++    lea_pic     g_tcs, %xax
++    mov         %xbx, (%xax)
+     /* fetch AEP; init when NULL */
+     lea_pic     g_aep_pointer, %xax
+     mov         (%xax), %xcx                    /* aep addr */
+@@ -139,6 +154,11 @@ DECLARE_GLOBAL_FUNC set_aep
+     mov         naked_arg0, (%xax)
+     ret
+ 
++DECLARE_GLOBAL_FUNC get_tcs
++    lea_pic     g_tcs, %xax
++    mov         (%xax), %xax
++    ret
++
+ DECLARE_GLOBAL_FUNC get_eenterp
+     lea_pic .Leenter_inst, %xax
+     ret
+diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
+index 94e1861..f8cb379 100644
+--- a/psw/urts/linux/urts.cpp
++++ b/psw/urts/linux/urts.cpp
+@@ -74,12 +74,18 @@ extern "C" sgx_status_t sgx_create_enclave(const char *file_name, const int debu
+ //XXX
+ extern "C" void *get_aep();
+ extern "C" void  set_aep(void *aep);
++extern "C" void *get_tcs();
+ 
+ extern "C" void* sgx_get_aep(void)
+ {
+     return get_aep();
+ }
+ 
++extern "C" void* sgx_get_tcs(void)
++{
++    return get_tcs();
++}
++
+ extern "C" void sgx_set_aep(void *aep)
+ {
+     set_aep(aep);
+diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
+index 3e02677..bad727e 100644
+--- a/psw/urts/linux/urts.lds
++++ b/psw/urts/linux/urts.lds
+@@ -2,6 +2,7 @@
+     global:
+         sgx_get_aep;
+         sgx_set_aep;
++        sgx_get_tcs;
+         sgx_create_enclave;
+         sgx_destroy_enclave;
+         sgx_ecall;
+diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_deploy.c
+index fbd021b..2f03531 100644
+--- a/sdk/simulation/urtssim/urts_deploy.c
++++ b/sdk/simulation/urtssim/urts_deploy.c
+@@ -49,6 +49,12 @@ void sgx_set_aep(void* p)
+     printf("Please use the correct uRTS library from PSW package.\n");
+ }
+ 
++void *sgx_get_tcs(void)
++{
++    printf("Please use the correct uRTS library from PSW package.\n");
++    return NULL;
++}
++
+ void sgx_debug_load_state_add_element(){};
+ void sgx_debug_unload_state_remove_element(){};
+ void sgx_destroy_enclave(){};
+-- 
+2.5.0
+
