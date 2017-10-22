@@ -39,4 +39,4 @@ with open(IN_FILE, 'r') as fi, open(OUT_FILE, 'w') as fo:
                 prev = cur
                 count_tot += 1
 
-print("parse_nop.py counted tot=", count_tot, " zero=", count_zero, " one=", count_one, " plus=", count_plus)
+print("parse_nop.py counted tot=", count_tot, " one=", count_one, " zero=", count_zero, " plus=", count_plus)

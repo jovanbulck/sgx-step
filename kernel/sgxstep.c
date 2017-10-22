@@ -327,6 +327,7 @@ void cleanup_module(void)
         log("local APIC timer event handler %p restored", event_handler);
     }
 
+    unregister_kretprobe(&krp);
     kvm_set_posted_intr_wakeup_handler(NULL);
     log("kernel module unloaded");
 }

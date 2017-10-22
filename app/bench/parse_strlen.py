@@ -69,4 +69,4 @@ with open(IN_FILE, 'r') as fi, open(OUT_FILE, 'w') as fo:
                 if (count_it == 10000):
                     break
 
-print("parse_stlen.py counted it=", count_it, "tot=", count_tot, " one=", count_one, " zero=", count_zero, " plus=", count_plus)
+print("parse_strlen.py counted it=", count_it, "tot=", count_tot, " one=", count_one, " zero=", count_zero, " plus=", count_plus)
