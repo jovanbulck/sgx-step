@@ -128,7 +128,7 @@ The above command builds `libsgxstep`, the benchmark victim enclave, and the
 untrusted attacker host process, where the attack scenario and instance size
 are configured via the corresponding environment variables. The same command
 also runs the resulting binary non-interactively (to ensure deterministic timer
-intervals), and finally calls and attack-specific post-processing Python script
+intervals), and finally calls an attack-specific post-processing Python script
 to parse the resulting enclave instruction pointer benchmark results. The
 Python scripts require the address of the benchmark instruction to be filled in
 (can be easily retrieved with `objdump -D encl.so` after compilation).
