@@ -27,6 +27,39 @@ approach to single-step enclaved execution at instruction-level granularity,
 and we show how SGX-Step enables several new or improved attacks. Finally, we
 discuss its implications for the design of effective defense mechanisms.
 
+## Overview
+
+Crucial to the design of SGX-Step, as opposed to previous enclave preemption 
+proposals, is the creation of user-space virtual memory mappings for physical
+memory locations holding page table entries, as well as for the local x86 APIC
+memory-mapped I/O configuration registers. This allows an untrusted,
+attacker-controlled host process to easily (i) configure the APIC timer
+one-shot/periodic interrupt source, (ii) trigger inter-processor interrupts,
+and (iii) track or modify enclave page table entries directly from user-space.
+
+![sgx-step-framework](https://user-images.githubusercontent.com/2464627/31863914-d6fbf5d8-b754-11e7-83e6-95e3c77dd0d6.png)
+
+The above figure summarizes the sequence of hardware and software steps when
+interrupting and resuming an SGX enclave through our framework.
+
+1. The local APIC timer interrupt arrives within an enclaved instruction.
+2. The processor executes the AEX procedure that securely stores execution
+   context in the enclave’s SSA frame, initializes CPU registers, and vectors
+   to the kernel-level interrupt handler.
+3. Our `/dev/sgx-step` loadable kernel module registered itself in the APIC
+   event call back list to make sure it is called on every timer interrupt. At
+   this point, any attack-specific, kernel-level spy code can easily be plugged
+   in. Furthermore, to enable precise evaluation of our approach on
+   attacker-controlled debug enclaves, SGX-Step can *optionally* be instrumented
+   to retrieve the stored instruction pointer from the interrupted enclave’s
+   SSA frame using the `EDBGRD` instruction.
+4. The kernel returns to the user space AEP trampoline. We modified the 
+   untrusted runtime of the official SGX SDK to allow easy registration of a
+   custom AEP stub.
+5. At this point, any attack-specific user mode spy code can again easily be
+   run, before the single-stepping adversary configures the APIC timer for the 
+   next interrupt, just before executing (6) `ERESUME`.
+
 ## Building and Running
 
 ### 1. Patch and install SGX SDK
