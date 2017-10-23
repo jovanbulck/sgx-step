@@ -33,6 +33,24 @@
     #define NUM_RUNS                100
 #endif
 
+/*
+ * XXX Configure APIC timer interval for next interrupt.
+ *
+ * NOTE: the exact timer interval value depends on CPU frequency, and hence
+ *       remains inherently platform-specific. We empirically established
+ *       suitable timer intervals on both our evaluation platforms by
+ *       tweaking and observing the NOP microbenchmark erip results.
+ */
+#define DELL_INSPIRON_7359          1
+#define DELL_OPTIPLEX_7040          2
+#if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
+    #define SGX_STEP_TIMER_INTERVAL 25
+#elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
+    #define SGX_STEP_TIMER_INTERVAL 19
+#else
+    #error Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
+#endif
+
 #define MICROBENCH                  1
 #define STRLEN                      2
 #define ZIGZAGGER                   3
@@ -68,20 +86,16 @@ void aep_cb_func(uint64_t erip)
     #endif
 
     /*
-     * XXX Configure APIC timer interval for next interrupt.
+     * Configure APIC timer interval for next interrupt.
      *
      * On our evaluation platforms, we explicitly clear the enclave's
      * _unprotected_ PMD "accessed" bit below, so as to slightly slow down
      * ERESUME such that the interrupt reliably arrives in the first subsequent
      * enclave instruction.
      * 
-     * NOTE: the exact timer interval value depends on CPU frequency, and hence
-     *       remains inherently platform-specific. We empirically established
-     *       suitable timer intervals on both our evaluation platforms by
-     *       tweaking and observing the NOP microbenchmark erip results.
      */
     *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
-    apic_timer_irq(25);
+    apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
 }
 
 /* Called upon SIGSEGV caused by untrusted page tables. */

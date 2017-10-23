@@ -20,6 +20,9 @@ OUTPUT               = app
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
+DELL_INSPIRON_7359   = 1
+DELL_OPTIPLEX_7040   = 2
+
 ATTACK = 1
 PARSE  = nop
 ifeq ($(STRLEN), 1)
@@ -31,12 +34,18 @@ ifeq ($(ZIGZAG), 1)
     PARSE  = zz
 endif
 
+PLATFORM=DELL_INSPIRON_7359
+ifeq ($(DESKTOP),1)
+    PLATFORM=DELL_OPTIPLEX_7040
+endif
+export PLATFORM
+
 ifeq ($(NUM),)
     NUM             = 100
 endif
 export NUM
 
-CFLAGS              += -DATTACK_SCENARIO=$(ATTACK) -DNUM_RUNS=$(NUM)
+CFLAGS              += -DATTACK_SCENARIO=$(ATTACK) -DNUM_RUNS=$(NUM) -DSGX_STEP_PLATFORM=$(PLATFORM)
 
 .SILENT:
 all: $(OUTPUT)
@@ -45,7 +54,7 @@ run: clean all
 	sudo ./app > out.txt
 
 parse: run
-	./parse_$(PARSE).py $(NUM)
+	SGX_STEP_PLATFORM=$(PLATFORM) ./parse_$(PARSE).py $(NUM)
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 

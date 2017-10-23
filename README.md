@@ -122,6 +122,8 @@ $ cd app/bench/Enclave
 $ make configure
 $ cd ..
 $ NUM=100 STRLEN=1 make parse   # alternatively vary NUM and use BENCH=1 or ZIGZAG=1
+$ # (above command defaults to the Dell Inspiron 13 7359 evaluation laptop machine;
+$ # use DESKTOP=1 to build for a Dell Optiplex 7040 machine)
 ```
 
 The above command builds `libsgxstep`, the benchmark victim enclave, and the

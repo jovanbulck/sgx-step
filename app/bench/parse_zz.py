@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import re
+import os
 
 IN_FILE          = 'out.txt'
 OUT_FILE         = 'parsed_zz.txt'
@@ -15,7 +16,14 @@ BLOCK3          = BLOCK2_J+2
 BLOCK3_J        = BLOCK3+8
 BLOCK4          = BLOCK3_J+2
 BLOCK5          = BLOCK4+1
-ZZ1             = BLOCK5+10
+
+# different gcc versions somehow translate the jmp asm statement to either a
+# 2-byte jump or a 4-byte jmpq machine instruction
+if os.environ['SGX_STEP_PLATFORM'] == 1:
+    ZZ1             = BLOCK5+10
+else:
+    ZZ1             = BLOCK5+7
+
 ZZ2             = ZZ1+2
 ZZ3             = ZZ2+2
 ZZ4             = ZZ3+2
