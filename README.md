@@ -1,6 +1,6 @@
 # A Practical Attack Framework for Precise Enclave Execution Control
 
-<img src="logo.png" alt="logo" align="left" />
+<img src="logo.svg" width=160 alt="logo" align="left" />
 
 This repository contains the source code of the SGX interrupt attack framework
 accompanying our SysTEX 2017 [paper](systex17.pdf).
