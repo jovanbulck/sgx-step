@@ -15,7 +15,7 @@ from Eadweard Muybridge's iconic [public
 domain](https://en.wikipedia.org/wiki/Sallie_Gardner_at_a_Gallop) "Sallie
 Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
-photo frames that reveal overall horse gait properties.
+photo frames to reveal overall horse gait properties.
 
 ## Abstract
 
@@ -72,6 +72,20 @@ interrupting and resuming an SGX enclave through our framework.
 
 ## Building and Running
 
+### 0. System Requirements
+
+SGX-Step requires an [SGX-enabled](https://github.com/ayeks/SGX-hardware) Intel
+processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
+i7-6500U/6700 CPUs, running unmodified Linux versions 4.2.0/4.4.0.  To make use
+of SGX-Step's single-stepping features, the local APIC device needs to be
+configured in memory-mapped xAPIC mode. The easiest way to do this is to pass
+the `nox2apic` Linux [kernel
+parameter](https://wiki.archlinux.org/index.php/Kernel_parameters) at boot
+time. We furthermore advise passing the `iomem=relaxed` and `no_timer_check`
+parameters to avoid too many warning messages in the kernel logs. Finally, in
+order to reproduce our experimental results, make sure to disable C-States and
+SpeedStep technology in the BIOS configuration.
+
 ### 1. Patch and install SGX SDK
 
 To enable easy registration of a custom Asynchronous Exit Pointer (AEP) stub,
@@ -125,7 +139,7 @@ SGX-Step's single-stepping and page table manipulation features. Have a look at
 the example applications in the "app" directory.
 
 For example, to build and run the `strlen` attack from the paper for a
-benchmark enclave that processes the string 100 repeated times, execute:
+benchmark enclave that processes the secret string 100 repeated times, execute:
 
 ```bash
 $ cd app/bench/Enclave
