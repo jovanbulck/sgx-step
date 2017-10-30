@@ -1,4 +1,6 @@
-# SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control
+# A Practical Attack Framework for Precise Enclave Execution Control
+
+<img src="logo.png" alt="logo" align="left" />
 
 This repository contains the source code of the SGX interrupt attack framework
 accompanying our SysTEX 2017 [paper](systex17.pdf).
@@ -6,6 +8,14 @@ accompanying our SysTEX 2017 [paper](systex17.pdf).
 > Jo Van Bulck, Frank Piessens, and Raoul Strackx. 2017. SGX-Step: A Practical
 > Attack Framework for Precise Enclave Execution Control. In Proceedings of the
 > 2nd Workshop on System Software for Trusted Execution (SysTEX '17). 
+
+SGX-Step is free software, licensed under
+[GPLv3](https://www.gnu.org/licenses/gpl-3.0). The SGX-Step logo is derived
+from Eadweard Muybridge's iconic [public
+domain](https://en.wikipedia.org/wiki/Sallie_Gardner_at_a_Gallop) "Sallie
+Gardner at a Gallop" photo series, which, like our enclave single-stepping
+goal, breaks down the galloping horse dynamics into a series of individual
+photo frames that reveal overall horse gait properties.
 
 ## Abstract
 
@@ -146,7 +156,3 @@ frequency, and hence remains inherently platform-specific. Configure a suitable
 value in `/app/bench/main.c`. We established precise timer intervals on both
 our evaluation platforms by tweaking and observing the NOP microbenchmark
 enclave instruction pointer trace results.
-
-## License
-
-SGX-Step is free software, licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0).
