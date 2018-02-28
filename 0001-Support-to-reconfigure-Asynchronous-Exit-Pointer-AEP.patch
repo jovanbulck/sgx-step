@@ -1,7 +1,7 @@
-From 11942c0b1244b28b8f1a2df0966c9fe08ca850de Mon Sep 17 00:00:00 2001
+From b39739d3a038ac55463730c3d26c83c44f853def Mon Sep 17 00:00:00 2001
 From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date: Thu, 27 Jul 2017 21:02:10 +0200
-Subject: [PATCH 1/2] Support to reconfigure Asynchronous Exit Pointer (AEP) at
+Date: Tue, 16 Jan 2018 11:44:49 +0100
+Subject: [PATCH 1/6] Support to reconfigure Asynchronous Exit Pointer (AEP) at
  runtime.
 
 This provides a convenient way for an untrusted enclave execution environment
@@ -10,11 +10,11 @@ interrupted, and can be used to execute arbitrary code before ERESUME-ing a
 previously interrupted enclave.
 ---
  common/inc/sgx_urts.h                |  3 +++
- psw/urts/linux/enter_enclave.S       | 31 +++++++++++++++++++++++++------
+ psw/urts/linux/enter_enclave.S       | 34 ++++++++++++++++++++++++++++------
  psw/urts/linux/urts.cpp              | 14 ++++++++++++++
  psw/urts/linux/urts.lds              |  2 ++
  sdk/simulation/urtssim/urts_deploy.c | 11 +++++++++++
- 5 files changed, 55 insertions(+), 6 deletions(-)
+ 5 files changed, 58 insertions(+), 6 deletions(-)
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
 index f90a2d0..687e7e6 100644
@@ -31,6 +31,7 @@ index f90a2d0..687e7e6 100644
  }
  #endif
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
+index 5ad1fb7..d25d0b8 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -32,6 +32,16 @@
@@ -50,10 +51,10 @@ diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
  
  /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
  .file "enter_enclave.S"
-@@ -48,9 +58,15 @@ EENTER_PROLOG
-     mov frame_arg3, %xsi                        /* ms */
- 
- .Ldo_eenter:
+@@ -72,9 +82,15 @@ EENTER_PROLOG
+     je   1f
+     vzeroupper
+ 1:
 -    mov frame_arg0, %xbx                        /* tcs addr */
 -    lea_pic .Lasync_exit_pointer, %xcx          /* aep addr */
 -    mov $SE_EENTER, %xax                        /* EENTER leaf */
@@ -69,7 +70,7 @@ diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
  
  .Leenter_inst:
      ENCLU
-@@ -107,14 +123,20 @@ EENTER_PROLOG
+@@ -132,14 +148,20 @@ EENTER_PROLOG
  .Loret:
      EENTER_EPILOG
  
@@ -94,6 +95,7 @@ diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
  
  DECLARE_GLOBAL_FUNC get_eenterp
 diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
+index 6ff9b42..94e1861 100644
 --- a/psw/urts/linux/urts.cpp
 +++ b/psw/urts/linux/urts.cpp
 @@ -70,3 +70,17 @@ extern "C" sgx_status_t sgx_create_enclave(const char *file_name, const int debu
@@ -115,6 +117,7 @@ diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
 +    set_aep(aep);
 +}
 diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
+index 6c4dd01..3e02677 100644
 --- a/psw/urts/linux/urts.lds
 +++ b/psw/urts/linux/urts.lds
 @@ -1,5 +1,7 @@
@@ -126,6 +129,7 @@ diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
          sgx_destroy_enclave;
          sgx_ecall;
 diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_deploy.c
+index f98e10f..fbd021b 100644
 --- a/sdk/simulation/urtssim/urts_deploy.c
 +++ b/sdk/simulation/urtssim/urts_deploy.c
 @@ -38,6 +38,17 @@ sgx_status_t sgx_create_enclave()
@@ -147,5 +151,5 @@ diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_
  void sgx_debug_unload_state_remove_element(){};
  void sgx_destroy_enclave(){};
 -- 
-2.5.0
+2.7.4
 

@@ -1,15 +1,15 @@
-From 1aa9fb129c350e5995227bc3854e86e714a5875f Mon Sep 17 00:00:00 2001
+From b26ef2c0859c32cb3d1687f52dc0607fb041a52c Mon Sep 17 00:00:00 2001
 From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date: Thu, 27 Jul 2017 21:26:44 +0200
-Subject: [PATCH 2/2] Add support to retrieve most recently used TCS pointer.
+Date: Tue, 16 Jan 2018 11:47:08 +0100
+Subject: [PATCH 2/6] Add support to retrieve most recently used TCS pointer.
 
 ---
  common/inc/sgx_urts.h                |  2 ++
- psw/urts/linux/enter_enclave.S       | 23 +++++++++++++++++++++++
+ psw/urts/linux/enter_enclave.S       | 20 ++++++++++++++++++++
  psw/urts/linux/urts.cpp              |  6 ++++++
  psw/urts/linux/urts.lds              |  1 +
  sdk/simulation/urtssim/urts_deploy.c |  6 ++++++
- 5 files changed, 38 insertions(+)
+ 5 files changed, 35 insertions(+)
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
 index 687e7e6..dc413a3 100644
@@ -27,7 +27,7 @@ index 687e7e6..dc413a3 100644
  #ifdef __cplusplus
  }
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
-index df200db..85b64d2 100644
+index d25d0b8..487cfa1 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -43,6 +43,19 @@ g_aep_pointer:
@@ -49,17 +49,17 @@ index df200db..85b64d2 100644
 +
  /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
  .file "enter_enclave.S"
- .text
-@@ -59,6 +72,8 @@ EENTER_PROLOG
- 
- .Ldo_eenter:
+ .data
+@@ -83,6 +96,8 @@ EENTER_PROLOG
+     vzeroupper
+ 1:
      mov         frame_arg0, %xbx                /* tcs addr */
 +    lea_pic     g_tcs, %xax
 +    mov         %xbx, (%xax)
      /* fetch AEP; init when NULL */
      lea_pic     g_aep_pointer, %xax
      mov         (%xax), %xcx                    /* aep addr */
-@@ -139,6 +154,11 @@ DECLARE_GLOBAL_FUNC set_aep
+@@ -164,6 +179,11 @@ DECLARE_GLOBAL_FUNC set_aep
      mov         naked_arg0, (%xax)
      ret
  
@@ -124,5 +124,5 @@ index fbd021b..2f03531 100644
  void sgx_debug_unload_state_remove_element(){};
  void sgx_destroy_enclave(){};
 -- 
-2.5.0
+2.7.4
 
