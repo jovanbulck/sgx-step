@@ -2,7 +2,6 @@
 import re
 
 IN_FILE          = 'out.txt'
-OUT_FILE         = 'parsed_strlen.txt'
 
 #    14c7:       48 89 f8                mov    %rdi,%rax
 #    14ca:       80 38 00                cmpb   $0x0,(%rax)
@@ -13,7 +12,7 @@ OUT_FILE         = 'parsed_strlen.txt'
 #    14d7:       c3                      retq   
 
 # XXX fill in appropriate address from objdump encl.so here..
-CMP             = 0x1453
+CMP             = 0x1493
 JE              = CMP+3
 INC             = JE+2
 JMP             = INC+3
@@ -38,7 +37,7 @@ count_plus = 0
 count_it   = 0
 in_strlen  = 0
 
-with open(IN_FILE, 'r') as fi, open(OUT_FILE, 'w') as fo:
+with open(IN_FILE, 'r') as fi:
     for line in fi:
         m = re.search('offset=0x([0-9A-Fa-f]+)', line)
         if m:

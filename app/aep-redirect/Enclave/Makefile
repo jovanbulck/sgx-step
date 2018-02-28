@@ -3,7 +3,7 @@ AR		  = ar
 LD		  = gcc
 EDGER		  = sgx_edger8r
 SIGNER		  = sgx_sign
-INCLUDE		  = $(patsubst %,-I%,$(subst :, ,$(SGX_INCLUDE)))
+INCLUDE       = -I$(SGX_SDK)/include/ -I$(SGX_SDK)/include/tlibc
 T_CFLAGS	  = $(CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector -g -Os
 U_CFLAGS	  = $(CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector -g
 AR_FLAGS	  = rcs
@@ -22,7 +22,7 @@ ENCLAVE_CONFIG    = $(ENCLAVE).config.xml
 OUTPUT_T          = $(ENCLAVE).so
 OUTPUT_T_UNSIG    = $(ENCLAVE).unsigned.so
 OUTPUT_U          = lib$(ENCLAVE)_proxy.a
-LIB_DIRS          = -L $(SGX_LIBS)
+LIB_DIRS          = -L $(SGX_SDK)/lib64
 LD_FLAGS	  = -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
                     -Wl,--whole-archive -Wl,--start-group $(ENCLAVE_LIBS) -Wl,--end-group \
                     -Wl,--no-whole-archive -Wl,--start-group $(ENCLAVE_LIB_PARTS) -Wl,--end-group \
@@ -37,7 +37,7 @@ UNTRUSTED_CODE    = $(ENCLAVE)_u.h $(ENCLAVE)_u.c
 #.SILENT:
 all: $(OUTPUT_T) $(OUTPUT_U)
 
-$(OUTPUT_T) : $(TRUSTED_OBJECTS) $(OBJECTS)
+$(OUTPUT_T) : $(TRUSTED_OBJECTS) $(OBJECTS) $(PRIVATE_KEY)
 	echo "$(INDENT)[LD]  " $(OBJECTS) $(TRUSTED_OBJECTS) $(ENCLAVE_LIBS) $(ENCLAVE_LIBS_PARTS) $(OUTPUT_T_UNSIG)
 	$(LD) $(OBJECTS) $(TRUSTED_OBJECTS) $(LD_FLAGS) $(LIB_DIRS) -o $(OUTPUT_T_UNSIG) 
 	
@@ -82,8 +82,7 @@ scrub:
 	echo "$(INDENT)[RM]  " $(PRIVATE_KEY) $(PUBLIC_KEY)
 	$(RM) $(PRIVATE_KEY) $(PUBLIC_KEY)
 
-.PHONY: configure
-configure: 
+$(PRIVATE_KEY): 
 	echo "$(INDENT)[GEN] $(PRIVATE_KEY) ($(KEY_SIZE) bits)"
 
 	# generate 3072 bit private RSA key

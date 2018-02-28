@@ -4,7 +4,7 @@ ARFLAGS     = -rcs
 
 CFLAGS     += -DHAS_PSTATE -DHAS_TURBO
 
-INCLUDE     = -I/opt/intel/sgxsdk/include/
+INCLUDE     = -I$(SGX_SDK)/include/
 SOURCES     = $(shell ls *.c)
 OBJECTS     = $(SOURCES:.c=.o) aep_trampoline.o
 OUTPUT      = libsgx-step.a

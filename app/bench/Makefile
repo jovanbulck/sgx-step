@@ -1,5 +1,14 @@
 LIBSGXSTEP_DIR       = ../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
+
+ifeq ($(SGX_SDK),)
+    SGX_SDK          = /opt/intel/sgxsdk
+endif
+export SGX_SDK
+ifneq ($(SGX_SDK), /opt/intel/sgxsdk)
+    URTS_LD_LIBRARY_PATH = LD_LIBRARY_PATH=$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+endif
+
 ENCLAVE              = Enclave
 SUBDIRS              = $(ENCLAVE) $(LIBSGXSTEP)
 
@@ -9,9 +18,9 @@ LD                   = gcc
 
 CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables \
                        -fno-common -Wno-attributes -g -D_GNU_SOURCE -O0
-INCLUDE              = -I/opt/intel/sgxsdk/include/ -I$(LIBSGXSTEP_DIR)
+INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR)
 LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
-                       -lsgx_uae_service $(SUBDIRS:%=-L %) 
+                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)
@@ -51,7 +60,7 @@ CFLAGS              += -DATTACK_SCENARIO=$(ATTACK) -DNUM_RUNS=$(NUM) -DSGX_STEP_
 all: $(OUTPUT)
 	
 run: clean all
-	sudo ./app > out.txt
+	sudo $(URTS_LD_LIBRARY_PATH) ./app > out.txt
 
 parse: run
 	SGX_STEP_PLATFORM=$(PLATFORM) ./parse_$(PARSE).py $(NUM)

@@ -10,7 +10,7 @@ IN_FILE          = 'out.txt'
 OUT_FILE         = 'parsed_nop.txt'
 
 # XXX fill in appropriate address from objdump encl.so here..
-INST_SLIDE_START = 0x14e3
+INST_SLIDE_START = 0x1523
 INST_SLIDE_LEN   = int(sys.argv[1])
 INST_SLIDE_END   = INST_SLIDE_START + INST_SLIDE_LEN
 

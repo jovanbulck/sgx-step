@@ -1,0 +1,29 @@
+jo@skyline:~/sgx-step/app/bench$ DESKTOP=1 NUM=1000 NOP=1 make parse
+[===] Enclave [===]
+[RM] encl.o asm.o asm_nop.o encl.unsigned.so encl.so libencl_proxy.a
+[RM] encl_t.o encl_u.o encl_t.h encl_t.c encl_u.h encl_u.c
+[===] ../../libsgxstep [===]
+[RM] apic.o enclave.o pt.o sched.o spy.o sys_file.o aep_trampoline.o libsgx-step.a
+[RM] main.o app
+[===] Enclave [===]
+[GEN] sgx_edger8r encl.edl
+[CC]  encl_t.c (trusted edge)
+[CC]  encl.c (core)
+[AS]  asm.S (core)
+[AS]  asm_nop.S (core)
+[LD]   encl.o asm.o asm_nop.o encl_t.o -lsgx_trts encl.unsigned.so
+[SGN] encl.unsigned.so
+[CC]  encl_u.c (untrusted edge)
+[AR]   libencl_proxy.a
+[===] ../../libsgxstep [===]
+[CC]  apic.c
+[CC]  enclave.c
+[CC]  pt.c
+[CC]  sched.c
+[CC]  spy.c
+[CC]  sys_file.c
+[AS]  aep_trampoline.S
+[AR]  libsgx-step.a
+[CC]  main.c
+[LD] main.o -o app
+parse_nop.py counted tot= 1005  one= 1000  zero= 4  plus= 0

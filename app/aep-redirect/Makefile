@@ -1,5 +1,15 @@
 LIBSGXSTEP_DIR       = ../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
+URTS_LIB_PATH        = $(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+
+ifeq ($(SGX_SDK),)
+    SGX_SDK          = /opt/intel/sgxsdk
+endif
+export SGX_SDK
+ifneq ($(SGX_SDK), /opt/intel/sgxsdk)
+    URTS_LD_LIBRARY_PATH = LD_LIBRARY_PATH=$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+endif
+
 ENCLAVE              = Enclave
 SUBDIRS              = $(ENCLAVE) $(LIBSGXSTEP)
 
@@ -9,9 +19,9 @@ LD                   = gcc
 
 CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables \
                        -fno-common -Wno-attributes -g -D_GNU_SOURCE -O0
-INCLUDE              = -I/opt/intel/sgxsdk/include/ -I$(LIBSGXSTEP_DIR) 
+INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR) 
 LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
-                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %)
+                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)
@@ -24,6 +34,9 @@ CLEANDIRS            = $(SUBDIRS:%=clean-%)
 .SILENT:
 all: $(OUTPUT)
 	
+run:
+	sudo $(URTS_LD_LIBRARY_PATH) ./app
+
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 
 	$(LD) $(OBJECTS) $(LDFLAGS) -o $(OUTPUT) 

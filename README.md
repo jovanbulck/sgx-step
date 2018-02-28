@@ -105,6 +105,14 @@ the Intel SGX SDK and PSW packages. You will also need to build and load an
 (unmodified) [linux-sgx-driver](https://github.com/01org/linux-sgx-driver) SGX
 kernel module in order to use SGX-Step.
 
+**Note (local installation).** The patched SGX SDK and PSW packages can be
+installed locally, without affecting a compatible system-wide 'linux-sgx'
+installation. For this the example program Makefiles support a `SGX_SDK`
+environment variable that points to the local SDK installation directory. When
+detecting a non-default SDK path (i.e., not `/opt/intel/sgxsdk`), the "run"
+targets in the Makefiles will furthermore dynamically link against the patched
+`libsgx_urts.so` untrusted runtime in the local `linux-sgx` directory.
+
 ### 2. Build and load `/dev/sgx-step`
 
 SGX-Step comes with a loadable kernel module that exports an IOCTL interface to

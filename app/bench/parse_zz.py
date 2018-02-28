@@ -3,10 +3,9 @@ import re
 import os
 
 IN_FILE          = 'out.txt'
-OUT_FILE         = 'parsed_zz.txt'
 
 # XXX fill in appropriate address from objdump encl.so here..
-BLOCK0          = 0x1488
+BLOCK0          = 0x14c8
 BLOCK0_J        = BLOCK0+25
 BLOCK1          = BLOCK0_J+2
 BLOCK1_J        = BLOCK1+8
@@ -48,7 +47,7 @@ count_plus = 0
 count_it   = 0
 in_zz      = 0
 
-with open(IN_FILE, 'r') as fi, open(OUT_FILE, 'w') as fo:
+with open(IN_FILE, 'r') as fi:
     for line in fi:
         m = re.search('offset=0x([0-9A-Fa-f]+)', line)
         if m:
