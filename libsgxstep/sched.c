@@ -119,9 +119,14 @@ int turbo_enabled( void )
 	return (result == 0)? 1 : 0;
 }
 
-int prepare_system_for_benchmark(void)
+int restore_system_state(void)
 {
-    return !pstate_set_min_perf_pct(100) && !pstate_set_max_perf_pct(100) && !disable_turbo();
+    return !(pstate_set_max_perf_pct(100) && pstate_set_min_perf_pct(100) && disable_turbo());
+}
+
+int prepare_system_for_benchmark(int pstate_perf_pct)
+{
+    return !(pstate_set_min_perf_pct(pstate_perf_pct) && pstate_set_max_perf_pct(pstate_perf_pct) && disable_turbo());
 }
 
 int print_system_settings(void)

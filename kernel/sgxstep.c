@@ -182,6 +182,24 @@ long sgx_step_ioctl_lapic_hook(struct file *filep, unsigned int cmd, unsigned lo
     return 0;
 }
 
+long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+    edbgrd_t *data = (edbgrd_t*) arg;
+    uint8_t buf[data->len];
+    edbgrd((unsigned long) data->adrs, &buf, data->len);
+
+    if (copy_to_user((void __user *) data->val, buf, data->len))
+        return -EFAULT;
+    return 0;
+}
+
+long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+    native_write_cr3(native_read_cr3());
+
+    return 0;
+}
+
 long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     address_mapping_t *map = (address_mapping_t*) arg;
@@ -244,6 +262,12 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
             break;
         case SGX_STEP_IOCTL_GET_PT_MAPPING:
             handler = sgx_step_get_pt_mapping;
+            break;
+        case SGX_STEP_IOCTL_EDBGRD:
+            handler = sgx_step_ioctl_edbgrd;
+            break;
+        case SGX_STEP_IOCTL_INVPG:
+            handler = sgx_step_ioctl_invpg;
             break;
         default:
             return -EINVAL;

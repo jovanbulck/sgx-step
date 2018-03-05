@@ -25,8 +25,10 @@
 
 #define SGX_STEP_IOCTL_MAGIC            'L'
 #define SGX_STEP_IOCTL_VICTIM_INFO      _IOWR(SGX_STEP_IOCTL_MAGIC, 0, struct sgx_step_enclave_info)
-#define SGX_STEP_IOCTL_LAPIC_HOOK       _IOWR(SGX_STEP_IOCTL_MAGIC, 0, void*)
-#define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 0, address_mapping_t)
+#define SGX_STEP_IOCTL_LAPIC_HOOK       _IOWR(SGX_STEP_IOCTL_MAGIC, 1, void*)
+#define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 2, address_mapping_t)
+#define SGX_STEP_IOCTL_EDBGRD           _IOWR(SGX_STEP_IOCTL_MAGIC, 3, edbgrd_t)
+#define SGX_STEP_IOCTL_INVPG            _IOWR(SGX_STEP_IOCTL_MAGIC, 4, void*)
 
 struct sgx_step_enclave_info
 {
@@ -46,5 +48,11 @@ typedef struct {
 	uint64_t pmd;
 	uint64_t pte;
 } address_mapping_t;
+
+typedef struct {
+    uint64_t adrs;
+    uint8_t *val;
+    int len; 
+} edbgrd_t;
 
 #endif

@@ -37,12 +37,11 @@ volatile int spy_created = 0;
 
 void *spy_init(void *arg)
 {
-	info("hi from init");
     struct spy_init *init = (struct spy_init*) arg;
     claim_cpu(init->cpu);
     spy_created = 1;
 
-    info("calling spy at %p", init->fct);
+    info("continuing on CPU %d; calling spy at %p", get_designated_cpu(), init->fct);
     init->fct(init->eid);
 }
 

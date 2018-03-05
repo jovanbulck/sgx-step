@@ -30,5 +30,6 @@ void register_enclave_info(int edbgrd_rip);
 void print_enclave_info(void);
 void *get_enclave_base(void);
 int get_enclave_size(void);
+void edbgrd(void *adrs, void* res, int len);
 
 #endif

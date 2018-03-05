@@ -22,7 +22,9 @@
 #define SGX_STEP_SCHED_H
 
 int claim_cpu(int cpu);
-int prepare_system_for_benchmark(void);
+int get_designated_cpu( void );
+int prepare_system_for_benchmark(int pstate_perf_pct);
+int restore_system_state(void);
 int print_system_settings(void);
 
 #endif

@@ -45,6 +45,7 @@ void register_aep_cb(aep_cb_t cb)
 void register_enclave_info(int edbgrd_rip)
 {
     ASSERT(fd_step >= 0);
+    sgx_set_aep(sgx_step_aep_trampoline);
 
     victim.aep = (uint64_t) sgx_get_aep();
     victim.tcs = (uint64_t) sgx_get_tcs();
@@ -65,11 +66,29 @@ int get_enclave_size(void)
     return (int) victim.size;
 }
 
+void edbgrd(void *adrs, void* res, int len)
+{
+    edbgrd_t edbgrd_data = {
+        .adrs = (uint64_t) adrs,
+        .val = (uint8_t*) res,
+        .len = len
+    };
+
+    ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_EDBGRD, &edbgrd_data) >= 0 );
+}
+
 void print_enclave_info(void)
 {
+    uint64_t read = 0xff;
+
 	printf( "==== Victim Enclave ====\n" );
 	printf( "    Base: %p\n", get_enclave_base() );
 	printf( "    Size: %d\n", get_enclave_size() );
+    printf( "    Limit:  %p\n", get_enclave_base()+get_enclave_size() );
 	printf( "    TCS:  %p\n", sgx_get_tcs() );
 	printf( "    AEP:  %p\n", sgx_get_aep() );
+
+    /* First 8 bytes of TCS must be zero */
+    edbgrd( sgx_get_tcs(), &read, 8);
+    printf( "    EDBGRD: %s\n", read ? "production" : "debug");
 }

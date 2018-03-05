@@ -29,6 +29,7 @@
 #include "libsgxstep/debug.h"
 
 #define VICTIM_CPU                  1
+#define PSTATE_PCT                  100
 #ifndef NUM_RUNS
     #define NUM_RUNS                100
 #endif
@@ -116,7 +117,7 @@ void fault_handler(int signal)
 void attacker_config_runtime(void)
 {
     ASSERT( !claim_cpu(VICTIM_CPU) );
-    ASSERT( !prepare_system_for_benchmark() );
+    ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
     ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
 	print_system_settings();
 
