@@ -1,11 +1,19 @@
 #!/usr/bin/python3
 import re
 import os
+from elftools.elf.elffile import ELFFile
 
 IN_FILE          = 'out.txt'
+ENCLAVE_FILE     = 'Enclave/encl.so'
+BLOCK0_SYM       = 'block0'
 
-# XXX fill in appropriate address from objdump encl.so here..
-BLOCK0          = 0x14c8
+with open( ENCLAVE_FILE ,'rb') as f:
+    elf = ELFFile(f)
+    symtab = elf.get_section_by_name('.symtab')
+    sym = symtab.get_symbol_by_name(BLOCK0_SYM)
+    block0_addr = sym[0]['st_value']
+
+BLOCK0          = block0_addr
 BLOCK0_J        = BLOCK0+25
 BLOCK1          = BLOCK0_J+2
 BLOCK1_J        = BLOCK1+8
@@ -38,7 +46,7 @@ prev_inst = 0
 #for i in inst_stream:
 #    print(hex(i))
 
-print("parse_zz.py: inst stream has length=", len(inst_stream))
+print("parse_zz.py: found Zigzagger block0 at {} (length={})".format(hex(block0_addr), len(inst_stream)))
 
 count_tot  = 0
 count_zero = 0

@@ -34,7 +34,7 @@ CLEANDIRS            = $(SUBDIRS:%=clean-%)
 .SILENT:
 all: $(OUTPUT)
 	
-run:
+run: clean all
 	sudo $(URTS_LD_LIBRARY_PATH) ./app
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)

@@ -6,7 +6,8 @@ CFLAGS     += -DHAS_PSTATE -DHAS_TURBO
 
 INCLUDE     = -I$(SGX_SDK)/include/
 SOURCES     = $(shell ls *.c)
-OBJECTS     = $(SOURCES:.c=.o) aep_trampoline.o
+ASM         = $(shell ls *.S)
+OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)
 OUTPUT      = libsgx-step.a
 
 all: $(OUTPUT)

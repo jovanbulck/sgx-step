@@ -1,7 +1,11 @@
 #!/usr/bin/python3
+
 import re
+from elftools.elf.elffile import ELFFile
 
 IN_FILE          = 'out.txt'
+ENCLAVE_FILE     = 'Enclave/encl.so'
+STRLEN_SYM       = 'my_strlen'
 
 #    14c7:       48 89 f8                mov    %rdi,%rax
 #    14ca:       80 38 00                cmpb   $0x0,(%rax)
@@ -11,14 +15,17 @@ IN_FILE          = 'out.txt'
 #    14d4:       48 29 f8                sub    %rdi,%rax
 #    14d7:       c3                      retq   
 
-# XXX fill in appropriate address from objdump encl.so here..
-CMP             = 0x1493
+with open( ENCLAVE_FILE ,'rb') as f:
+    elf = ELFFile(f)
+    symtab = elf.get_section_by_name('.symtab')
+    sym = symtab.get_symbol_by_name(STRLEN_SYM)
+    strlen_addr = sym[0]['st_value']
+
+CMP             = strlen_addr+3
 JE              = CMP+3
 INC             = JE+2
 JMP             = INC+3
 SUB             = JMP+2
-
-STRLEN          = 11
 
 inst_stream = (CMP, JE, INC, JMP)
 
@@ -28,7 +35,7 @@ prev_inst = 0
 #for i in inst_stream:
 #    print(hex(i))
 
-print("parse_strlen.py: inst stream has length=", len(inst_stream))
+print("parse_stlren.py: found strlen func at {} (length={})".format(hex(strlen_addr), len(inst_stream)))
 
 count_tot  = 0
 count_zero = 0

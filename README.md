@@ -107,11 +107,11 @@ kernel module in order to use SGX-Step.
 
 **Note (local installation).** The patched SGX SDK and PSW packages can be
 installed locally, without affecting a compatible system-wide 'linux-sgx'
-installation. For this the example program Makefiles support a `SGX_SDK`
+installation. For this, the example Makefiles support an `SGX_SDK`
 environment variable that points to the local SDK installation directory. When
 detecting a non-default SDK path (i.e., not `/opt/intel/sgxsdk`), the "run"
-targets in the Makefiles will furthermore dynamically link against the patched
-`libsgx_urts.so` untrusted runtime in the local `linux-sgx` directory.
+Makefile targets furthermore dynamically link against the patched
+`libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory.
 
 ### 2. Build and load `/dev/sgx-step`
 
@@ -151,12 +151,11 @@ For example, to build and run the `strlen` attack from the paper for a
 benchmark enclave that processes the secret string 100 repeated times, execute:
 
 ```bash
-$ cd app/bench/Enclave
-$ make configure
-$ cd ..
+$ cd app/bench
 $ NUM=100 STRLEN=1 make parse   # alternatively vary NUM and use BENCH=1 or ZIGZAG=1
 $ # (above command defaults to the Dell Inspiron 13 7359 evaluation laptop machine;
 $ # use DESKTOP=1 to build for a Dell Optiplex 7040 machine)
+$ # use SGX_SDK=/home/jo/sgxsdk/ for a local SDK installation
 ```
 
 The above command builds `libsgxstep`, the benchmark victim enclave, and the
@@ -164,9 +163,7 @@ untrusted attacker host process, where the attack scenario and instance size
 are configured via the corresponding environment variables. The same command
 also runs the resulting binary non-interactively (to ensure deterministic timer
 intervals), and finally calls an attack-specific post-processing Python script
-to parse the resulting enclave instruction pointer benchmark results. The
-Python scripts require the address of the benchmark instruction to be filled in
-(can be easily retrieved with `objdump -D encl.so` after compilation).
+to parse the resulting enclave instruction pointer benchmark results.
 
 **Note (performance).** Single-stepping enclaved execution incurs a substantial
 slowdown. We measured execution times of up to 15 minutes for the experiments
