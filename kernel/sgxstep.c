@@ -21,16 +21,16 @@
 #include "sgxstep_internal.h"
 #include "sgxstep_ioctl.h"
 
-#include <linux/fs.h>
-#include <linux/miscdevice.h>
-#include <asm/uaccess.h>
-#include <linux/kprobes.h>
-
-#include <linux/mm.h>
 #include <asm/pgtable.h>
 #include <asm/page.h>
+#include <linux/mm.h>
 #include <linux/sched.h>
 #include <asm/irq.h>
+
+#include <linux/fs.h>
+#include <linux/miscdevice.h>
+#include <linux/uaccess.h>
+#include <linux/kprobes.h>
 
 #include <linux/kallsyms.h>
 #include <linux/clockchips.h>
@@ -195,10 +195,15 @@ long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long a
 
 long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-    native_write_cr3(native_read_cr3());
+    unsigned long val = 0;
+
+    asm volatile("mov %%cr3, %0\n\t"
+                 "mov %0, %%cr3\n\t"
+                 : : "r" (val));
 
     return 0;
 }
+
 
 long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long arg)
 {
@@ -207,6 +212,10 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
 	pud_t *pud = NULL;
 	pmd_t *pmd = NULL;
 	pte_t *pte = NULL;
+    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+        p4d_t *p4d = NULL;
+    #endif
+
 	uint64_t virt;
     RET_ASSERT(map);
 	
@@ -220,8 +229,19 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
 	
 	if ( !pgd_present( *pgd ) )
 		return 0;
-	
-	pud = pud_offset( pgd, virt );
+
+    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,11,0))
+        #if CONFIG_PGTABLE_LEVELS > 4
+            #error 5-level page tables currently not supported by SGX-Step
+        #endif
+
+        /* simply unfold the pgd inside the dummy p4d struct */
+        p4d = p4d_offset( pgd, virt);
+        pud = pud_offset( p4d, virt );
+    #else
+        pud = pud_offset( pgd, virt );
+    #endif
+
 	map->pud = *((uint64_t *) pud);
 	
 	if ( !pud_present( *pud ) )
