@@ -111,7 +111,8 @@ installation. For this, the example Makefiles support an `SGX_SDK`
 environment variable that points to the local SDK installation directory. When
 detecting a non-default SDK path (i.e., not `/opt/intel/sgxsdk`), the "run"
 Makefile targets furthermore dynamically link against the patched
-`libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory.
+`libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory
+(using the `LD_LIBRARY_PATH` environment variable).
 
 ### 2. Build and load `/dev/sgx-step`
 
@@ -176,3 +177,17 @@ frequency, and hence remains inherently platform-specific. Configure a suitable
 value in `/app/bench/main.c`. We established precise timer intervals on both
 our evaluation platforms by tweaking and observing the NOP microbenchmark
 enclave instruction pointer trace results.
+
+## Using SGX-Step in your own projects
+
+The easiest way to get started using the SGX-Step framwork in your own
+projects, is through [git
+submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
+
+```bash
+$ cd my/git/project
+$ git submodule add git@github.com:jovanbulck/sgx-step.git
+$ cd sgx-step # Now build `/dev/sgx-step` and `libsgxstep` as described above
+```
+Have a look at the Makefiles in the `app` directory to see how a client
+application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
