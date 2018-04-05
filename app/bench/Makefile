@@ -61,6 +61,7 @@ all: $(OUTPUT)
 	
 run: clean all
 	sudo $(URTS_LD_LIBRARY_PATH) ./app > out.txt
+	cat out.txt
 
 parse: run
 	SGX_STEP_PLATFORM=$(PLATFORM) ./parse_$(PARSE).py $(NUM)
