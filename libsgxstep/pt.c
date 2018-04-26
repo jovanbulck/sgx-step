@@ -57,7 +57,10 @@ void *remap(uint64_t phys)
     ASSERT(map != MAP_FAILED);
 
     virt = ((uint64_t) map) | (phys & PFN_MASK);
-    force_mapping = *((uint8_t *) virt);
+
+    //XXX dereferencing the mapping may cause illegal memory accesses for MMIO
+    //regions (eg APIC)
+    //force_mapping = *((uint8_t *) virt);
 
     return (void*) virt;
 }
