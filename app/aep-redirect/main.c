@@ -28,7 +28,7 @@
 void *a_pt;
 int fault_fired = 0, aep_fired = 0;
 
-void aep_cb_func(uint64_t erip)
+void aep_cb_func(uintptr_t erip)
 {
     // NOTE: driver only fills in erip on APIC timer interrupt, not on fault
     info("Hello world from AEP callback! Resuming enclave.."); 

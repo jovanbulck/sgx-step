@@ -16,11 +16,20 @@ CC                   = gcc
 AS                   = gcc
 LD                   = gcc
 
+ifeq ($(M32), 1)
+	ASFLAGS  = -m32 -DM32=$(M32)
+	CFLAGS   = -m32 -DM32=$(M32)
+	LDFLAGS  = -m32
+else
+	LIB_SUFX = 64
+endif
+
 CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables \
                        -fno-common -Wno-attributes -g -D_GNU_SOURCE -O0
 INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR)
 LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
-                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
+                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib$(LIB_SUFX)/ \
+                       -L$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)
@@ -76,7 +85,7 @@ $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 
 %.o : %.S
 	echo "$(INDENT)[AS] " $<
-	$(AS) $(INCLUDE) -c $< -o $@
+	$(AS) $(ASFLAGS) $(INCLUDE) -c $< -o $@
 
 clean: $(CLEANDIRS)
 	echo "$(INDENT)[RM]" $(OBJECTS) $(OUTPUT)
@@ -84,7 +93,7 @@ clean: $(CLEANDIRS)
 
 $(BUILDDIRS):
 	echo "$(INDENT)[===] $(@:build-%=%) [===]"
-	$(MAKE) -C $(@:build-%=%) INDENT+="$(INDENT_STEP)" curr-dir=$(curr-dir)/$(@:build-%=%)
+	$(MAKE) -C $(@:build-%=%) INDENT+="$(INDENT_STEP)" M32=$(M32) curr-dir=$(curr-dir)/$(@:build-%=%)
 
 $(CLEANDIRS):
 	echo "$(INDENT)[===] $(@:clean-%=%) [===]"

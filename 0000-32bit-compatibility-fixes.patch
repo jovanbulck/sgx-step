@@ -1,0 +1,137 @@
+diff --git a/Makefile b/Makefile
+index dc31838..d618ed3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -38,7 +38,7 @@ psw: sdk
+ 	$(MAKE) -C psw/ USE_OPT_LIBS=$(USE_OPT_LIBS)
+ 
+ sdk:
+-	$(MAKE) -C sdk/ USE_OPT_LIBS=$(USE_OPT_LIBS)
++	$(MAKE) -C sdk/ ARCH=$(ARCH) USE_OPT_LIBS=$(USE_OPT_LIBS)
+ 
+ # Generate SE SDK Install package
+ sdk_install_pkg: sdk
+diff --git a/buildenv.mk b/buildenv.mk
+index 7f4806b..c657b66 100644
+--- a/buildenv.mk
++++ b/buildenv.mk
+@@ -99,7 +99,7 @@ COMMON_FLAGS += -ffunction-sections -fdata-sections
+ COMMON_FLAGS += -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type \
+ 		-Waddress -Wsequence-point -Wformat-security \
+ 		-Wmissing-include-dirs -Wfloat-equal -Wundef -Wshadow \
+-		-Wcast-align -Wconversion -Wredundant-decls
++		-Wcast-align -Wconversion -Wredundant-decls -msse2
+ 
+ # additional warnings flags for C
+ CFLAGS += -Wjump-misses-init -Wstrict-prototypes -Wunsuffixed-float-constants
+@@ -141,13 +141,13 @@ ifeq "$(findstring __INTEL_COMPILER, $(shell $(CC) -E -dM -xc /dev/null))" "__IN
+   endif
+ endif
+ 
+-ARCH := $(HOST_ARCH)
++ARCH := x86
+ ifeq "$(findstring -m32, $(CXXFLAGS))" "-m32"
+   ARCH := x86
+ endif
+ 
+ ifeq ($(ARCH), x86)
+-COMMON_FLAGS += -DITT_ARCH_IA32
++COMMON_FLAGS += -DITT_ARCH_IA32 -m32
+ else
+ COMMON_FLAGS += -DITT_ARCH_IA64
+ endif
+diff --git a/external/rdrand/src/Makefile.in b/external/rdrand/src/Makefile.in
+index 5a4ec8c..9421ce7 100644
+--- a/external/rdrand/src/Makefile.in
++++ b/external/rdrand/src/Makefile.in
+@@ -1,7 +1,7 @@
+ PACKAGE_NAME=@PACKAGE_NAME@
+ PACKAGE_VERSION=@PACKAGE_VERSION@
+ CC=@CC@
+-CFLAGS=@CFLAGS@ -O2
++CFLAGS=@CFLAGS@ -O2 -m32
+ AR=ar
+ 
+ TEST_OBJ=main.o
+diff --git a/external/vtune/linux/sdk/src/ittnotify/Makefile b/external/vtune/linux/sdk/src/ittnotify/Makefile
+index 6e4f565..fdf0b01 100644
+--- a/external/vtune/linux/sdk/src/ittnotify/Makefile
++++ b/external/vtune/linux/sdk/src/ittnotify/Makefile
+@@ -1,16 +1,19 @@
+ OBJ := ittnotify_static.o jitprofiling.o
+ 
+ LIBNAME := libittnotify.a
++LIBDIR := ../../../lib32
+ 
+ INCLUDE += -I ../../../include
+ 
+-CFLAGS += $(INCLUDE) -fPIC -Wno-strict-prototypes
++CFLAGS += $(INCLUDE) -fPIC -Wno-strict-prototypes -m32
+ 
+ .PHONY: all
+ all: $(LIBNAME)
+ 
+ $(LIBNAME): $(OBJ)
+ 	$(AR) rcs $@ $^
++	mkdir -p $(LIBDIR)
++	cp -f $(LIBNAME) $(LIBDIR)
+ 
+ .PHONY: clean
+ clean:
+diff --git a/psw/ae/aesm_service/Makefile b/psw/ae/aesm_service/Makefile
+index 1128b45..6e3dec6 100644
+--- a/psw/ae/aesm_service/Makefile
++++ b/psw/ae/aesm_service/Makefile
+@@ -139,7 +139,7 @@ endif
+ EXTERNAL_LIB += -L$(TCRYPTO_LIBDIR) -lsgx_tcrypto
+ EXTERNAL_LIB += -lprotobuf -lrt
+ EXTERNAL_LIB += -lcrypto 
+-EXTERNAL_LIB += $(shell curl-config --libs)
++EXTERNAL_LIB += -L/usr/lib/i386-linux-gnu/ -lcurl
+ EXTERNAL_LIB += -L$(LINUX_SE_WRAPPER) -lwrapper -lrt
+ EXTERNAL_LIB += -L$(RDRAND_LIBDIR) -lrdrand
+ EXTERNAL_LIB += -L$(VTUNE_LIBDIR) -littnotify
+diff --git a/sdk/protected_fs/sgx_tprotected_fs/file_read_write.cpp b/sdk/protected_fs/sgx_tprotected_fs/file_read_write.cpp
+index 2b0070e..57dc1f4 100644
+--- a/sdk/protected_fs/sgx_tprotected_fs/file_read_write.cpp
++++ b/sdk/protected_fs/sgx_tprotected_fs/file_read_write.cpp
+@@ -270,7 +270,7 @@ size_t protected_fs_file::read(void* ptr, size_t size, size_t count)
+ 		if (file_data_node == NULL)
+ 			break;
+ 
+-		size_t offset_in_node = (offset - MD_USER_DATA_SIZE) % NODE_SIZE;
++		size_t offset_in_node = (size_t)(offset - MD_USER_DATA_SIZE) % NODE_SIZE;
+ 		size_t data_left_in_node = NODE_SIZE - offset_in_node;
+ 		
+ 		if (data_left_to_read <= data_left_in_node)
+diff --git a/sdk/protected_fs/sgx_uprotected_fs/sgx_uprotected_fs.cpp b/sdk/protected_fs/sgx_uprotected_fs/sgx_uprotected_fs.cpp
+index 2226ced..ea5648b 100644
+--- a/sdk/protected_fs/sgx_uprotected_fs/sgx_uprotected_fs.cpp
++++ b/sdk/protected_fs/sgx_uprotected_fs/sgx_uprotected_fs.cpp
+@@ -148,7 +148,7 @@ int32_t u_sgxprotectedfs_fread_node(void* f, uint64_t node_number, uint8_t* buff
+ 		return -1;
+ 	}
+ 
+-	if ((result = fseeko(file, offset, SEEK_SET)) != 0)
++	if ((result = fseeko(file, (__off_t)offset, SEEK_SET)) != 0)
+ 	{
+ 		DEBUG_PRINT("fseeko returned %d\n", result);
+ 		if (errno != 0)
+@@ -198,7 +198,7 @@ int32_t u_sgxprotectedfs_fwrite_node(void* f, uint64_t node_number, uint8_t* buf
+ 		return -1;
+ 	}
+ 
+-	if ((result = fseeko(file, offset, SEEK_SET)) != 0)
++	if ((result = fseeko(file, (__off_t)offset, SEEK_SET)) != 0)
+ 	{
+ 		DEBUG_PRINT("fseeko returned %d\n", result);
+ 		if (errno != 0)
+@@ -451,7 +451,7 @@ int32_t u_sgxprotectedfs_do_file_recovery(const char* filename, const char* reco
+ 			}
+ 
+ 			// seek the regular file to the required offset
+-			if ((result = fseeko(source_file, (*((uint64_t*)recovery_node)) * node_size, SEEK_SET)) != 0)
++			if ((result = fseeko(source_file, (__off_t)((*((uint64_t*)recovery_node)) * node_size), SEEK_SET)) != 0)
+ 			{
+ 				DEBUG_PRINT("fseeko returned %d\n", result);
+ 				if (errno != 0)

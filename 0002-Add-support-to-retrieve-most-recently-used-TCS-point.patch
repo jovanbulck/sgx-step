@@ -59,8 +59,8 @@ index d25d0b8..487cfa1 100644
      /* fetch AEP; init when NULL */
      lea_pic     g_aep_pointer, %xax
      mov         (%xax), %xcx                    /* aep addr */
-@@ -164,6 +179,11 @@ DECLARE_GLOBAL_FUNC set_aep
-     mov         naked_arg0, (%xax)
+@@ -165,6 +180,11 @@ DECLARE_GLOBAL_FUNC set_aep
+     mov         %xbx, (%xax)
      ret
  
 +DECLARE_GLOBAL_FUNC get_tcs

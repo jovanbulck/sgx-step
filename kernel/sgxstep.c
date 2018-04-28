@@ -219,7 +219,7 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
 	uint64_t virt;
     RET_ASSERT(map);
 	
-	virt = (uint64_t) map->virt;
+	virt = map->virt;
 	memset( map, 0x00, sizeof( address_mapping_t ) );
 	map->virt = virt;
 	
@@ -309,6 +309,7 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 static const struct file_operations step_fops = {
     .owner              = THIS_MODULE,
+    .compat_ioctl       = step_ioctl,
     .unlocked_ioctl     = step_ioctl,
     .open               = step_open,
     .release            = step_release

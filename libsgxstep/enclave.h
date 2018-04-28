@@ -23,7 +23,7 @@
 
 #include <stdint.h>
 
-typedef void (*aep_cb_t)(uint64_t erip);
+typedef void (*aep_cb_t)(uintptr_t erip);
 void register_aep_cb(aep_cb_t cb);
 
 void register_enclave_info(int edbgrd_rip);

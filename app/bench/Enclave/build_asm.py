@@ -19,7 +19,7 @@ template = string.Template('''
     $asmCode
 
 micro_done:
-    retq
+    ret
 ''')
 
 asm = (ASM_INST + '\n') * NB_INST

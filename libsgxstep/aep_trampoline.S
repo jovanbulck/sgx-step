@@ -18,32 +18,47 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* 32-bit compatibility ~~following Intel SGX-SDK convention. */
+#if defined(M32)
+    #define xax  eax
+    #define xbx  ebx
+    #define xcx  ecx
+    #define xdi  edi
+    #define movx movl
+#else
+    #define xax  rax
+    #define xbx  rbx
+    #define xcx  rcx
+    #define xdi  rdi
+    #define movx movq
+#endif
+
 /* 
  * ---------------------------------------------------------------------
  * Function: sgx_step_trampoline
  *      Code that will be returned to after interrupting an enclave.
  *
  * Registers:
- *      RAX - ERESUME leaf
- *      RBX - TSC address
- *      RCX - AEP address
+ *      XAX - ERESUME leaf
+ *      XBX - TSC address
+ *      XCX - AEP address
  */
     .text
     .global sgx_step_aep_trampoline
     .type sgx_step_aep_trampoline, @function
 sgx_step_aep_trampoline:
-    mov %rbx, sgx_step_tcs
+    mov %xbx, sgx_step_tcs
 
     /* optional C function callback */
-    lea sgx_step_aep_cb, %rax
-    test %rax, %rax
-    je .Leresume
-    mov sgx_step_erip, %rdi
-    call *(%rax)
-    movq $0, sgx_step_erip
+    lea sgx_step_aep_cb, %xax
+    test %xax, %xax
+    je   .Leresume
+    mov sgx_step_erip, %xdi
+    call *(%xax)
+    movx $0, sgx_step_erip
 
 .Leresume:
-    mov $3, %rax                        /* ERESUME leaf */
-    mov sgx_step_tcs, %rbx              /* TCS address */
-    lea sgx_step_aep_trampoline, %rcx   /* AEP address */
+    mov $3, %xax                        /* ERESUME leaf */
+    mov sgx_step_tcs, %xbx              /* TCS address */
+    lea sgx_step_aep_trampoline, %xcx   /* AEP address */
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */

@@ -1,8 +1,13 @@
 CC          = gcc
+AS          = gcc
 AR          = ar
 ARFLAGS     = -rcs
-
 CFLAGS     += -DHAS_PSTATE -DHAS_TURBO
+
+ifeq ($(M32), 1)
+	ASFLAGS = -m32 -DM32=$(32BIT)
+	CFLAGS += -m32
+endif
 
 INCLUDE     = -I$(SGX_SDK)/include/
 SOURCES     = $(shell ls *.c)
@@ -22,7 +27,7 @@ $(OUTPUT): $(OBJECTS)
 
 %.o : %.S
 	echo "$(INDENT)[AS] " $<
-	$(AS) $(INCLUDE) -c $< -o $@
+	$(AS) $(ASFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
 	echo "$(INDENT)[RM]" $(OBJECTS) $(OUTPUT)

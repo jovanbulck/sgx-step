@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 
 import re
+import os
 from elftools.elf.elffile import ELFFile
 
 IN_FILE          = 'out.txt'
 ENCLAVE_FILE     = 'Enclave/encl.so'
 STRLEN_SYM       = 'my_strlen'
 
+# 64-bit
 #    14c7:       48 89 f8                mov    %rdi,%rax
 #    14ca:       80 38 00                cmpb   $0x0,(%rax)
 #    14cd:       74 05                   je     14d4 <my_strlen+0xd>
@@ -15,17 +17,37 @@ STRLEN_SYM       = 'my_strlen'
 #    14d4:       48 29 f8                sub    %rdi,%rax
 #    14d7:       c3                      retq   
 
+# 32-bit
+#    286a:       55                      push   %ebp
+#    286b:       89 e5                   mov    %esp,%ebp
+#    286d:       8b 55 08                mov    0x8(%ebp),%edx
+#    2870:       89 d0                   mov    %edx,%eax
+#    2872:       80 38 00                cmpb   $0x0,(%eax)
+#    2875:       74 03                   je     287a <my_strlen+0x10>
+#    2877:       40                      inc    %eax
+#    2878:       eb f8                   jmp    2872 <my_strlen+0x8>
+#    287a:       29 d0                   sub    %edx,%eax
+#    287c:       5d                      pop    %ebp
+#    287d:       c3                      ret
+
 with open( ENCLAVE_FILE ,'rb') as f:
     elf = ELFFile(f)
     symtab = elf.get_section_by_name('.symtab')
     sym = symtab.get_symbol_by_name(STRLEN_SYM)
     strlen_addr = sym[0]['st_value']
 
-CMP             = strlen_addr+3
-JE              = CMP+3
-INC             = JE+2
-JMP             = INC+3
-SUB             = JMP+2
+if not os.environ.get("M32"):
+    CMP             = strlen_addr+3
+    JE              = CMP+3
+    INC             = JE+2
+    JMP             = INC+3
+    SUB             = JMP+2
+else:
+    CMP             = strlen_addr+8
+    JE              = CMP+3
+    INC             = JE+2
+    JMP             = INC+1
+    SUB             = JMP+2
 
 inst_stream = (CMP, JE, INC, JMP)
 

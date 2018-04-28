@@ -49,7 +49,7 @@ void apic_init(void)
 
 void apic_hook(void)
 {
-    ASSERT((fd_step >= 0) && (ioctl(fd_step, SGX_STEP_IOCTL_LAPIC_HOOK, &dummy_pt) >= 0));
+    ASSERT((fd_step >= 0) && (ioctl(fd_step, SGX_STEP_IOCTL_LAPIC_HOOK, (uintptr_t)&dummy_pt) >= 0));
 }
 
 int apic_timer_oneshot(void)

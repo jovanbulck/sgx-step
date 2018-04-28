@@ -25,15 +25,63 @@ secret_str:
     .ascii "SysTEX 2017" //len=11
     .space 0x100000 /* 1 MiB */
 
-.macro lea_pic symbol, reg
-    lea   \symbol(%rip), \reg
-.endm
+#ifdef M32
+    .macro lea_pic symbol, reg
+        call  . + 0x5
+        pop   \reg
+        lea   (\symbol - . + 1)(\reg), \reg
+    .endm
+#else
+    .macro lea_pic symbol, reg
+        lea   \symbol(%rip), \reg
+    .endm
+#endif
 
     .text
     .global zigzag_bench
     .type zigzag_bench,@function
 // code snippet from
 // https://www.usenix.org/system/files/conference/usenixsecurity17/sec17-lee-sangho.pdf
+#ifdef M32
+
+zigzag_bench:
+            cmp $0, 0x8(%ebp)
+            je zigzag_bench_ret
+
+block0:     lea_pic block1, %edx
+            lea_pic block2, %ecx
+            lea_pic a, %eax
+            cmp $0, (%eax)
+            cmove %ecx, %edx
+block0.j:   jmp zz1
+block1:     nop
+            lea_pic block5, %edx
+block1.j:   jmp zz2
+block2:     lea_pic block3, %edx
+            lea_pic block4, %ecx
+            lea_pic b, %eax
+            cmp $0, (%eax)
+            cmove %ecx, %edx
+block2.j:   jmp zz3
+block3:     nop
+            lea_pic block5, %edx
+block3.j:   jmp zz4
+block4:     nop
+block5:     nop
+
+            decl 0x8(%ebp)
+            jmp zigzag_bench
+
+zigzag_bench_ret:
+            ret
+
+zz1:        jmp block1.j
+zz2:        jmp block2.j
+zz3:        jmp block3.j
+zz4:        jmp *%edx
+
+#else
+
 zigzag_bench:
             cmp $0, %rdi
             je zigzag_bench_ret
@@ -67,3 +115,5 @@ zz1:        jmp block1.j
 zz2:        jmp block2.j
 zz3:        jmp block3.j
 zz4:        jmpq *%r15
+
+#endif
