@@ -11,7 +11,7 @@ index 9e84078..669ef2e 100644
  #ifdef __cplusplus
  }
 diff --git a/psw/urts/linux/enclave_creator_hw.cpp b/psw/urts/linux/enclave_creator_hw.cpp
-index 48482ef..634d6f2 100644
+index 79749bd..340cc32 100644
 --- a/psw/urts/linux/enclave_creator_hw.cpp
 +++ b/psw/urts/linux/enclave_creator_hw.cpp
 @@ -57,6 +57,8 @@
@@ -56,3 +56,30 @@ index bad727e..fd8fa6b 100644
          sgx_create_enclave;
          sgx_destroy_enclave;
          sgx_ecall;
+diff --git a/sdk/simulation/uinst/u_instructions.cpp b/sdk/simulation/uinst/u_instructions.cpp
+index 89364a9..3733b2a 100644
+--- a/sdk/simulation/uinst/u_instructions.cpp
++++ b/sdk/simulation/uinst/u_instructions.cpp
+@@ -57,6 +57,13 @@ static uintptr_t _ECREATE (page_info_t* pi);
+ static uintptr_t _EADD (page_info_t* pi, void* epc_lin_addr);
+ static uintptr_t _EREMOVE(const void* epc_lin_addr);
+ 
++void* sgx_load_ptr = NULL;
++
++void sgx_set_load_ptr(void* load_ptr)
++{
++	sgx_load_ptr = load_ptr;
++}
++
+ ////////////////////////////////////////////////////////////////////////
+ #define __GP__() exit(EXIT_FAILURE)
+ 
+@@ -154,7 +161,7 @@ uintptr_t _ECREATE(page_info_t* pi)
+ 
+     // `ce' is not checked against NULL, since it is not
+     // allocated with new(std::no_throw).
+-    addr = se_virtual_alloc(NULL, (size_t)secs->size, MEM_COMMIT);
++    addr = se_virtual_alloc(sgx_load_ptr, (size_t)secs->size, MEM_COMMIT);
+     if (addr == NULL) {
+         delete ce;
+         return 0;
