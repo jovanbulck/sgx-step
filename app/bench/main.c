@@ -61,8 +61,7 @@
 
 sgx_enclave_id_t eid = 0;
 int strlen_nb_access = 0;
-int irq_cnt = 0;
-int fault_cnt = 0;
+int irq_cnt = 0, do_irq = 1, fault_cnt = 0;
 uint64_t *pte_encl = NULL;
 uint64_t *pmd_encl = NULL;
 
@@ -86,6 +85,13 @@ void aep_cb_func(uint64_t erip)
         *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
     #endif
 
+    if (do_irq && (irq_cnt > NUM_RUNS*500))
+    {
+        info("excessive interrupt rate detected (try adjusting timer interval " \
+             "to avoid getting stuck in zero-stepping); aborting...");
+	do_irq = 0;
+    }
+
     /*
      * Configure APIC timer interval for next interrupt.
      *
@@ -95,8 +101,11 @@ void aep_cb_func(uint64_t erip)
      * enclave instruction.
      * 
      */
-    *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
-    apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    if (do_irq)
+    {
+        *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
+        apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    }
 }
 
 /* Called upon SIGSEGV caused by untrusted page tables. */
