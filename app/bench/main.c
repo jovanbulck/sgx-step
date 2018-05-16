@@ -46,6 +46,8 @@
 #define DELL_OPTIPLEX_7040          2
 #if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
     #define SGX_STEP_TIMER_INTERVAL 28
+#elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
+    #define SGX_STEP_TIMER_INTERVAL 37
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
 #else
@@ -177,11 +179,11 @@ void attacker_restore_apic(void)
 /* Untrusted main function to create/enter the trusted enclave. */
 int main( int argc, char **argv )
 {
-	sgx_launch_token_t token = {0};
-	int apic_fd, encl_strlen = 0, updated = 0;
+    sgx_launch_token_t token = {0};
+    int apic_fd, encl_strlen = 0, updated = 0;
 
-   	info("Creating enclave...");
-	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
+    info("Creating enclave...");
+    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
                                     &token, &updated, &eid, NULL ) );
 
     /* 1. Setup attack execution environment. */
@@ -190,7 +192,8 @@ int main( int argc, char **argv )
     attacker_config_apic();
 
     /* 2. Single-step enclaved execution. */
-    info("calling enclave: attack=%d; num_runs=%d", ATTACK_SCENARIO, NUM_RUNS);
+    info("calling enclave: attack=%d; num_runs=%d; timer=%d",
+        ATTACK_SCENARIO, NUM_RUNS, SGX_STEP_TIMER_INTERVAL);
 
     #if (ATTACK_SCENARIO == ZIGZAGGER)
         SGX_ASSERT( do_zigzagger(eid, NUM_RUNS) );
@@ -204,7 +207,7 @@ int main( int argc, char **argv )
 
     /* 3. Restore normal execution environment. */
     attacker_restore_apic();
-   	SGX_ASSERT( sgx_destroy_enclave( eid ) );
+    SGX_ASSERT( sgx_destroy_enclave( eid ) );
 
     info("all done; counted %d IRQs", irq_cnt);
     return 0;
