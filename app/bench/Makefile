@@ -31,6 +31,7 @@ CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
 DELL_INSPIRON_7359   = 1
 DELL_OPTIPLEX_7040   = 2
+DELL_LATITUDE_7490   = 3
 
 ATTACK = 1
 PARSE  = nop
