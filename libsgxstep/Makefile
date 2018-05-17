@@ -1,3 +1,5 @@
+-include Makefile.config
+
 CC          = gcc
 AR          = ar
 ARFLAGS     = -rcs

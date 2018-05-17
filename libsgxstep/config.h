@@ -21,7 +21,6 @@
 #ifndef SGX_STEP_CONFIG
 #define SGX_STEP_CONFIG
 
-#define VICTIM_CPU                  6
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
 #define APIC_CONFIG_MSR             1
@@ -39,10 +38,13 @@
 #define DELL_LATITUDE_7490          3
 #if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
     #define SGX_STEP_TIMER_INTERVAL 25
+    #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
     #define SGX_STEP_TIMER_INTERVAL 36
+    #define VICTIM_CPU              6
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
+    #define VICTIM_CPU              1
 #else
     #warning Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
 #endif

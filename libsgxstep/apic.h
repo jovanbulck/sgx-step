@@ -22,6 +22,7 @@
 #define SGX_STEP_APIC_H
 
 #include "debug.h"
+#include "config.h"
 #include <stdint.h>
 
 #if APIC_CONFIG_MSR
