@@ -98,8 +98,8 @@ timer interval.
 
 | Model name            | CPU                                               | Base frequency | APIC timer interval |
 |-----------------------|---------------------------------------------------|----------------|---------------------|
-| Dell Latitude 7490    | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 37                  |
-| Dell Inspiron 13 7359 | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 28                  |
+| Dell Latitude 7490    | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 36                  |
+| Dell Inspiron 13 7359 | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
 | Dell Optiplex 7040    | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
 
 ### 1. Patch and install SGX SDK

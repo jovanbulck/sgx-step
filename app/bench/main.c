@@ -27,32 +27,10 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
+#include "../sgx-step-config.h"
 
-#define VICTIM_CPU                  1
-#define PSTATE_PCT                  100
 #ifndef NUM_RUNS
     #define NUM_RUNS                100
-#endif
-
-/*
- * XXX Configure APIC timer interval for next interrupt.
- *
- * NOTE: the exact timer interval value depends on CPU frequency, and hence
- *       remains inherently platform-specific. We empirically established
- *       suitable timer intervals on both our evaluation platforms by
- *       tweaking and observing the NOP microbenchmark erip results.
- */
-#define DELL_INSPIRON_7359          1
-#define DELL_OPTIPLEX_7040          2
-#define DELL_LATITUDE_7490          3
-#if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
-    #define SGX_STEP_TIMER_INTERVAL 28
-#elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
-    #define SGX_STEP_TIMER_INTERVAL 37
-#elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
-    #define SGX_STEP_TIMER_INTERVAL 19
-#else
-    #error Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
 #endif
 
 #define MICROBENCH                  1
@@ -158,7 +136,9 @@ void attacker_config_page_table(void)
 
     print_page_table( get_enclave_base() );
     pmd_encl = remap_page_table_level( get_enclave_base(), PMD);
-    *pmd_encl = MARK_EXECUTE_DISABLE(*pmd_encl);
+    #if SINGLE_STEP_ENABLE
+        *pmd_encl = MARK_EXECUTE_DISABLE(*pmd_encl);
+    #endif
 }
 
 /* Hook local APIC timer in /dev/sgx-step driver and setup one-shot mode. */
