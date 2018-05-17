@@ -18,13 +18,12 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SYS_FILE_H_INC
-#define SYS_FILE_H_INC
+#ifndef SGX_STEP_MSR_H
+#define SGX_STEP_MSR_H
 
-int fread_value( char const *file, char const *format, void *result );
+#include <stdint.h>
 
-int fread_int( char const *file, int *result );
-
-int fwrite_value( char const *file, int value );
+uint64_t rdmsr_on_cpu(uint32_t reg, int cpu);
+void     wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data);
 
 #endif

@@ -16,51 +16,27 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  NOTE: code below is adapted from the msr-tools free software (GPL)
+ *  project <https://github.com/01org/msr-tools/>.
+ *
  */
 
-#include "sys_file.h"
-
+#include "msr.h"
+#include "file.h"
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
-int fread_value( char const *file, char const *format, void *result )
+uint64_t rdmsr_on_cpu(uint32_t reg, int cpu)
 {
-	FILE *fp;
-	
-	if ( result == NULL )
-		return -1;
-	
-	if ( NULL == ( fp = fopen( file, "r" ) ) )
-		return -2;
-	
-	if ( 1 != fscanf( fp, format, result ) )
-		return -3;
-	
-	fclose( fp );
-	
-	return 0;
-}
-
-int fread_int( char const *file, int *result )
-{
-	return fread_value( file, "%i", result );
-}
-
-int fwrite_value( char const *file, int value )
-{
-	FILE *fp;
-    int rv;
-	
-	if ( file == NULL )
-		return -1;
-	
-	if ( NULL == ( fp = fopen( file, "w" ) ) )
-		return -2;
-	
-	rv = fprintf( fp, "%i", value );
-	
-	fclose( fp );
-	
-	return rv;
+    uint64_t data;
+    int fd;
+    char *pat;
+    int width;
+    char msr_file_name[64];
+    unsigned int bits;
+    
+    sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
+    file_read_offset(msr_file_name, (uint8_t*) &data, sizeof(data), reg);
+    
+    return data;
 }

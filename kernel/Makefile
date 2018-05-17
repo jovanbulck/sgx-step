@@ -15,5 +15,6 @@ unload:
 	sudo rmmod $(LKM).ko || true
 
 load: unload all
+	sudo modprobe -a isgx msr
 	sudo insmod $(LKM).ko
 	dmesg | tail

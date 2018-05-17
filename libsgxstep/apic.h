@@ -24,22 +24,29 @@
 #include "debug.h"
 #include <stdint.h>
 
-#define APIC_BASE           0xfee00000
-#define APIC_ICR            0x300
-#define APIC_LVTT           0x320
-#define APIC_TDCR           0x3e0
-#define APIC_TMICT          0x380
-#define APIC_TMCCT          0x390
+#if APIC_CONFIG_MSR
+    #define APIC_BASE_MSR_X2APIC    0x400
+    #define APIC_BASE_MSR_ENABLE    0x800
+    #define APIC_BASE_ADDR_MASK     0xfff
+#else
+    #define APIC_BASE               0xfee00000
+#endif
 
-#define APIC_ID             0x20
+#define APIC_ICR                    0x300
+#define APIC_LVTT                   0x320
+#define APIC_TDCR                   0x3e0
+#define APIC_TMICT                  0x380
+#define APIC_TMCCT                  0x390
 
-#define APIC_TDR_DIV_1      0xb
-#define APIC_TDR_DIV_2      0x0
-#define APIC_LVTT_ONESHOT   (0 << 17)
-#define APIC_LVTT_DEADLINE  (2 << 17)
+#define APIC_ID                     0x20
 
-#define LOCAL_TIMER_VECTOR  0xef
-#define APIC_IPI_CFG        0xc08f1
+#define APIC_TDR_DIV_1              0xb
+#define APIC_TDR_DIV_2              0x0
+#define APIC_LVTT_ONESHOT           (0 << 17)
+#define APIC_LVTT_DEADLINE          (2 << 17)
+
+#define LOCAL_TIMER_VECTOR          0xef
+#define APIC_IPI_CFG                0xc08f1
 
 extern void* apic_base;
 void apic_init(void);

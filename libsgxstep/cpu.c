@@ -19,6 +19,8 @@
  */
 
 #include "cpu.h"
+#include "file.h"
+#include <stdio.h>
 
 /*
  * Code adapted from
@@ -60,4 +62,24 @@ uint64_t rdtsc_end( void )
 
   a = (d<<32) | a;
   return a;
+}
+
+/*
+ * Code adapted from <https://github.com/01org/msr-tools/>.
+ * requires 'msr' Linux kernel module (try `sudo modprobe msr`)
+ */
+int rdmsr_on_cpu(uint32_t reg, int cpu, uint64_t *data)
+{
+    char msr_file_name[64];
+    
+    sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
+    return file_read_offset(msr_file_name, (uint8_t*) data, sizeof(data), reg);
+}
+
+int wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data)
+{
+    char msr_file_name[64];
+    
+    sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
+    return file_write_offset(msr_file_name, (uint8_t*) &data, sizeof(data), reg);
 }

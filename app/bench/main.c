@@ -27,7 +27,7 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
-#include "../sgx-step-config.h"
+#include "libsgxstep/config.h"
 
 #ifndef NUM_RUNS
     #define NUM_RUNS                100
@@ -130,11 +130,11 @@ void attacker_config_page_table(void)
         void *str_adrs;
         SGX_ASSERT( get_str_adrs( eid, &str_adrs) );
         info("enclave str adrs at %p\n", str_adrs);
-        print_page_table( str_adrs );
+        //print_page_table( str_adrs );
         pte_encl = remap_page_table_level( str_adrs, PTE);
     #endif
 
-    print_page_table( get_enclave_base() );
+    //print_page_table( get_enclave_base() );
     pmd_encl = remap_page_table_level( get_enclave_base(), PMD);
     #if SINGLE_STEP_ENABLE
         *pmd_encl = MARK_EXECUTE_DISABLE(*pmd_encl);

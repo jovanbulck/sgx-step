@@ -20,6 +20,8 @@
 
 #include "apic.h"
 #include "pt.h"
+#include "cpu.h"
+#include "sched.h"
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include "../kernel/sgxstep_ioctl.h"
@@ -40,8 +42,19 @@ void *dummy_pt = NULL;
  */
 void apic_init(void)
 {
-    apic_base = remap(APIC_BASE);
-    info("established local APIC memory mapping at %p", apic_base);
+    uintptr_t apic_base_addr = 0x0;
+    #if APIC_CONFIG_MSR
+        uint64_t apic_base_msr = 0x0;
+        rdmsr_on_cpu(IA32_APIC_BASE_MSR, get_cpu(), &apic_base_msr);
+        ASSERT( (apic_base_msr & APIC_BASE_MSR_ENABLE) );
+        ASSERT( !(apic_base_msr & APIC_BASE_MSR_X2APIC) );
+        apic_base_addr = apic_base_msr & ~APIC_BASE_ADDR_MASK;
+    #else
+        apic_base_addr = APIC_BASE;
+    #endif
+
+    apic_base = remap(apic_base_addr);
+    info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
 
     info("apic_id is %x", apic_read(APIC_ID));
     ASSERT(apic_read(APIC_ID) != -1);
@@ -68,4 +81,9 @@ int apic_timer_deadline(void)
     apic_write(APIC_TDCR, APIC_TDR_DIV_2);
     info("APIC timer deadline mode with division 2 (lvtt=%x/tdcr=%x)",
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
+
+    /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
+    #if APIC_CONFIG_MSR
+        wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), 1);
+    #endif
 }

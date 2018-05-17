@@ -23,7 +23,13 @@
 
 #include <stdint.h>
 
+#define IA32_APIC_BASE_MSR      0x1b
+#define IA32_TSC_DEADLINE_MSR   0x6e0
+
 uint64_t rdtsc_begin( void );
 uint64_t rdtsc_end( void );
+
+int rdmsr_on_cpu(uint32_t reg, int cpu, uint64_t *data);
+int wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data);
 
 #endif
