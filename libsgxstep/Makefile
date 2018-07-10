@@ -7,8 +7,8 @@ ARFLAGS     = -rcs
 CFLAGS     += -DHAS_PSTATE -DHAS_TURBO
 
 ifeq ($(M32), 1)
-	ASFLAGS = -m32 -DM32=$(32BIT)
-	CFLAGS += -m32
+	ASFLAGS = -m32 -DM32=1
+	CFLAGS += -m32 -DM32=1
 endif
 
 INCLUDE     = -I$(SGX_SDK)/include/

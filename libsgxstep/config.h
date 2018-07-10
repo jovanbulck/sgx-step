@@ -23,7 +23,12 @@
 
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
-#define APIC_CONFIG_MSR             1
+
+#if (M32 != 1)
+	#define APIC_CONFIG_MSR         1
+#else
+	#define APIC_CONFIG_MSR         0
+#endif
 
 /*
  * XXX Configure APIC timer interval for next interrupt.
