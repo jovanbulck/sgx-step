@@ -74,17 +74,33 @@ interrupting and resuming an SGX enclave through our framework.
 
 ### 0. System Requirements
 
-SGX-Step requires an [SGX-enabled](https://github.com/ayeks/SGX-hardware) Intel
+SGX-Step requires an [SGX-capable](https://github.com/ayeks/SGX-hardware) Intel
 processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
-i7-6500U/6700 CPUs, running unmodified Linux versions 4.2.0/4.4.0.  To make use
+i7-6500U/6700 CPUs, running unmodified Linux versions 4.2.0/4.4.0. To make use
 of SGX-Step's single-stepping features, the local APIC device needs to be
 configured in memory-mapped xAPIC mode. The easiest way to do this is to pass
 the `nox2apic` Linux [kernel
 parameter](https://wiki.archlinux.org/index.php/Kernel_parameters) at boot
-time. We furthermore advise passing the `iomem=relaxed` and `no_timer_check`
-parameters to avoid too many warning messages in the kernel logs. Finally, in
-order to reproduce our experimental results, make sure to disable C-States and
-SpeedStep technology in the BIOS configuration.
+time. We furthermore advise passing the `iomem=relaxed`, `no_timer_check`, and
+`isolcpus` parameters to respectively avoid too many warning messages in the
+kernel logs and affinitize the victim process to an isolated CPU core.
+
+```bash
+$ sudo vim /etc/default/grub
+  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check isolcpus=1"
+$ sudo update-grub && sudo reboot
+```
+
+Finally, in order to reproduce our experimental results, make sure to disable
+C-States and SpeedStep technology in the BIOS configuration. The table below
+lists currently supported Intel CPUs, together with their single-stepping APIC
+timer interval.
+
+| Model name            | CPU                                               | Base frequency | APIC timer interval |
+|-----------------------|---------------------------------------------------|----------------|---------------------|
+| Dell Latitude 7490    | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 36                  |
+| Dell Inspiron 13 7359 | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
+| Dell Optiplex 7040    | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
 
 ### 1. Patch and install SGX SDK
 
@@ -113,6 +129,9 @@ detecting a non-default SDK path (i.e., not `/opt/intel/sgxsdk`), the "run"
 Makefile targets furthermore dynamically link against the patched
 `libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory
 (using the `LD_LIBRARY_PATH` environment variable).
+
+**Note (32-bit support).** Instructions for building 32-bit versions of
+the SGX SDK and sgx-step can be found in `README-m32.md`.
 
 ### 2. Build and load `/dev/sgx-step`
 
@@ -157,6 +176,7 @@ $ NUM=100 STRLEN=1 make parse   # alternatively vary NUM and use BENCH=1 or ZIGZ
 $ # (above command defaults to the Dell Inspiron 13 7359 evaluation laptop machine;
 $ # use DESKTOP=1 to build for a Dell Optiplex 7040 machine)
 $ # use SGX_SDK=/home/jo/sgxsdk/ for a local SDK installation
+$ # use M32=1 To produce a 32-bit executable
 ```
 
 The above command builds `libsgxstep`, the benchmark victim enclave, and the
@@ -174,9 +194,9 @@ access rights on specific code or data pages of interest.
 
 **Note (timer interval).** The exact timer interval value depends on CPU
 frequency, and hence remains inherently platform-specific. Configure a suitable
-value in `/app/bench/main.c`. We established precise timer intervals on both
-our evaluation platforms by tweaking and observing the NOP microbenchmark
-enclave instruction pointer trace results.
+value in `/app/bench/main.c`. We established precise timer intervals for our
+evaluation platforms (see table above) by tweaking and observing the NOP
+microbenchmark enclave instruction pointer trace results.
 
 ## Using SGX-Step in your own projects
 

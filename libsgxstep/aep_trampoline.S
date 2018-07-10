@@ -50,11 +50,11 @@ sgx_step_aep_trampoline:
     mov %xbx, sgx_step_tcs
 
     /* optional C function callback */
-    lea sgx_step_aep_cb, %xax
+    mov (sgx_step_aep_cb), %xax
     test %xax, %xax
     je   .Leresume
     mov sgx_step_erip, %xdi
-    call *(%xax)
+    call *%xax
     movx $0, sgx_step_erip
 
 .Leresume:

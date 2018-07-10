@@ -22,7 +22,7 @@
 #include <sched.h>
 #include "sched.h"
 #include "debug.h"
-#include "sys_file.h"
+#include "file.h"
 
 int claim_cpu(int cpu)
 {
@@ -54,14 +54,17 @@ int get_designated_cpu( void )
 	return -3;
 }
 
+int get_cpu( void )
+{
+    return sched_getcpu();
+}
+
 unsigned int pstate_max_perf_pct( void )
 {
 #if HAS_PSTATE
 	int result;
 	
-	if ( 0 != fread_int( "/sys/devices/system/cpu/intel_pstate/max_perf_pct", &result ) )
-		return -1;
-	
+	file_read_int( "/sys/devices/system/cpu/intel_pstate/max_perf_pct", &result );
 	return result;
 #else
 	return 0;
@@ -71,7 +74,7 @@ unsigned int pstate_max_perf_pct( void )
 int pstate_set_max_perf_pct( unsigned int val)
 {
 #if HAS_PSTATE
-	return fwrite_value( "/sys/devices/system/cpu/intel_pstate/max_perf_pct", (int) val);
+	return file_write_int( "/sys/devices/system/cpu/intel_pstate/max_perf_pct", (int) val);
 #else
     return -1;
 #endif
@@ -82,9 +85,7 @@ unsigned int pstate_min_perf_pct( void )
 #if HAS_PSTATE
 	int result;
 	
-	if ( 0 != fread_int( "/sys/devices/system/cpu/intel_pstate/min_perf_pct", &result ) )
-		return -1;
-	
+	file_read_int("/sys/devices/system/cpu/intel_pstate/min_perf_pct", &result);
 	return result;
 #else
 	return 0;
@@ -94,7 +95,7 @@ unsigned int pstate_min_perf_pct( void )
 int pstate_set_min_perf_pct( unsigned int val)
 {
 #if HAS_PSTATE
-	return fwrite_value( "/sys/devices/system/cpu/intel_pstate/min_perf_pct", (int) val);
+	return file_write_int( "/sys/devices/system/cpu/intel_pstate/min_perf_pct", (int) val);
 #else
     return -1;
 #endif
@@ -103,7 +104,7 @@ int pstate_set_min_perf_pct( unsigned int val)
 int disable_turbo(void)
 {
 #ifdef HAS_TURBO
-    return fwrite_value( "/sys/devices/system/cpu/intel_pstate/no_turbo", 1);
+    return file_write_int( "/sys/devices/system/cpu/intel_pstate/no_turbo", 1);
 #else
     return -1;
 #endif
@@ -113,9 +114,7 @@ int turbo_enabled( void )
 {
 	int result;
 	
-	if ( 0 != fread_int( "/sys/devices/system/cpu/intel_pstate/no_turbo", &result ) )
-		return -1;
-	
+    file_read_int( "/sys/devices/system/cpu/intel_pstate/no_turbo", &result);
 	return (result == 0)? 1 : 0;
 }
 
@@ -141,5 +140,5 @@ int print_system_settings(void)
 	printf( "    cpu pinning:         %d\n", pin = (get_designated_cpu() >= 0));
 	if (pin)
     printf( "    Designated cpu:      %d\n", get_designated_cpu() );
-	printf( "    Running on cpu:      %d\n", sched_getcpu()  );
+	printf( "    Running on cpu:      %d\n", get_cpu()  );
 }

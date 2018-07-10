@@ -1,3 +1,5 @@
+-include Makefile.config
+
 CC          = gcc
 AS          = gcc
 AR          = ar

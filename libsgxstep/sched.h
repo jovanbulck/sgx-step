@@ -23,6 +23,7 @@
 
 int claim_cpu(int cpu);
 int get_designated_cpu( void );
+int get_cpu( void );
 int prepare_system_for_benchmark(int pstate_perf_pct);
 int restore_system_state(void);
 int print_system_settings(void);
