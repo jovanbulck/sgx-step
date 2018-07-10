@@ -36,6 +36,7 @@ sudo apt install libssl-dev:i386 libcurl4-openssl-dev:i386 protobuf-compiler:i38
 ```
 You can then build the SGX-SDK install package with:
 ```bash
+cd linux-sgx
 make sdk_install_pkg ARCH=x86
 ```
 

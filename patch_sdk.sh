@@ -2,7 +2,7 @@
 
 cd linux-sgx
 
-if [M32]
+if [[ -v M32 ]]
 then
     echo "=== patching SDK   ==="
     patch -p1 < ../0000-32bit-compatibility-fixes.patch
