@@ -101,6 +101,7 @@ timer interval.
 | Dell Latitude 7490    | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 36                  |
 | Dell Inspiron 13 7359 | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
 | Dell Optiplex 7040    | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
+| Acer Aspire V15       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | 28                  |
 
 ### 1. Patch and install SGX SDK
 
@@ -129,6 +130,9 @@ detecting a non-default SDK path (i.e., not `/opt/intel/sgxsdk`), the "run"
 Makefile targets furthermore dynamically link against the patched
 `libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory
 (using the `LD_LIBRARY_PATH` environment variable).
+
+**Note (32-bit support).** Instructions for building 32-bit versions of
+the SGX SDK and sgx-step can be found in `README-m32.md`.
 
 ### 2. Build and load `/dev/sgx-step`
 
@@ -173,6 +177,7 @@ $ NUM=100 STRLEN=1 make parse   # alternatively vary NUM and use BENCH=1 or ZIGZ
 $ # (above command defaults to the Dell Inspiron 13 7359 evaluation laptop machine;
 $ # use DESKTOP=1 to build for a Dell Optiplex 7040 machine)
 $ # use SGX_SDK=/home/jo/sgxsdk/ for a local SDK installation
+$ # use M32=1 To produce a 32-bit executable
 ```
 
 The above command builds `libsgxstep`, the benchmark victim enclave, and the

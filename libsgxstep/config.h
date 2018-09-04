@@ -23,7 +23,12 @@
 
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
-#define APIC_CONFIG_MSR             1
+
+#if (M32 != 1)
+	#define APIC_CONFIG_MSR         1
+#else
+	#define APIC_CONFIG_MSR         0
+#endif
 
 /*
  * XXX Configure APIC timer interval for next interrupt.
@@ -44,6 +49,9 @@
     #define VICTIM_CPU              6
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
+    #define VICTIM_CPU              1
+#elif (SGX_STEP_PLATFORM == ACER_ASPIRE_V15)
+    #define SGX_STEP_TIMER_INTERVAL 28
     #define VICTIM_CPU              1
 #else
     #warning Unsupported SGX_STEP_PLATFORM; configure timer interval manually...

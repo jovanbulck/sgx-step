@@ -11,6 +11,14 @@ OBJECTS		  = encl.o asm.o asm_nop.o
 LIB_SGX_TRTS      = -lsgx_trts
 LIB_SGX_TSERVICE  = -lsgx_tservice
 
+ifeq ($(M32), 1)
+	T_CFLAGS += -m32 -msse2 -DM32=1
+	U_CFLAGS += -m32 -msse2
+	LD_FLAGS  = -m32
+else
+	LIB_SUFX  = 64
+endif
+
 ENCLAVE_LIBS      = $(LIB_SGX_TRTS)
 ENCLAVE_LIB_PARTS = -lsgx_tstdc -lsgx_tcrypto $(LIB_SGX_TSERVICE)
 ENCLAVE	          = encl
@@ -22,8 +30,8 @@ ENCLAVE_CONFIG    = $(ENCLAVE).config.xml
 OUTPUT_T          = $(ENCLAVE).so
 OUTPUT_T_UNSIG    = $(ENCLAVE).unsigned.so
 OUTPUT_U          = lib$(ENCLAVE)_proxy.a
-LIB_DIRS          = -L$(SGX_SDK)/lib64/
-LD_FLAGS	  = -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
+LIB_DIRS          = -L$(SGX_SDK)/lib$(LIB_SUFX)/
+LD_FLAGS         += -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
                     -Wl,--whole-archive -Wl,--start-group $(ENCLAVE_LIBS) -Wl,--end-group \
                     -Wl,--no-whole-archive -Wl,--start-group $(ENCLAVE_LIB_PARTS) -Wl,--end-group \
                     -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \

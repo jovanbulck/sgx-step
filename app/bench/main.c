@@ -50,10 +50,15 @@ uint64_t *pmd_encl = NULL;
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
 
 /* Called before resuming the enclave after an Asynchronous Enclave eXit. */
-void aep_cb_func(uint64_t erip)
+void aep_cb_func(uintptr_t erip)
 {
-    uint64_t erip_offset = erip - (uint64_t) get_enclave_base();
-    info("^^ enclave RIP=%#llx (offset=%#llx)", erip, erip_offset);
+    #ifdef M32
+        /* 32-bit calling convention expects erip on stack */
+        asm __volatile__("movl %%edi, %0" : "=r"(erip));
+    #endif
+
+    uint64_t erip_offset = erip - (uintptr_t) get_enclave_base();
+    info("^^ enclave RIP=%#llx (offset=%#llx)", (uint64_t)erip, erip_offset);
     irq_cnt++;
 
     /* XXX insert custom attack-specific side-channel observation code here */

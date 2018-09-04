@@ -28,40 +28,42 @@
  */
 uint64_t rdtsc_begin( void )
 {
-  uint64_t a, d;
+  uint64_t begin;
+  uint32_t a, d;
 
   asm volatile (
     "mfence\n\t"
     "CPUID\n\t"
     "RDTSCP\n\t"
-    "mov %%rdx, %0\n\t"
-    "mov %%rax, %1\n\t"
+    "mov %%edx, %0\n\t"
+    "mov %%eax, %1\n\t"
     "mfence\n\t"
     : "=r" (d), "=r" (a)
     :
-    : "%rax", "%rbx", "%rcx", "%rdx");
+    : "%eax", "%ebx", "%ecx", "%edx");
 
-  a = (d<<32) | a;
-  return a;
+  begin = ((uint64_t)d << 32) | a;
+  return begin;
 }
 
 uint64_t rdtsc_end( void )
 {
-  uint64_t a, d;
+  uint64_t end;
+  uint32_t a, d;
 
   asm volatile(
     "mfence\n\t"
     "RDTSCP\n\t"
-    "mov %%rdx, %0\n\t"
-    "mov %%rax, %1\n\t"
+    "mov %%edx, %0\n\t"
+    "mov %%eax, %1\n\t"
     "CPUID\n\t"
     "mfence\n\t"
     : "=r" (d), "=r" (a)
     :
-    : "%rax", "%rbx", "%rcx", "%rdx");
+    : "%eax", "%ebx", "%ecx", "%edx");
 
-  a = (d<<32) | a;
-  return a;
+  end = ((uint64_t)d << 32) | a;
+  return end;
 }
 
 /*

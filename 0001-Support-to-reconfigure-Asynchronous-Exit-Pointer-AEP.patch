@@ -70,7 +70,7 @@ index 5ad1fb7..d25d0b8 100644
  
  .Leenter_inst:
      ENCLU
-@@ -132,14 +148,20 @@ EENTER_PROLOG
+@@ -132,14 +148,21 @@ EENTER_PROLOG
  .Loret:
      EENTER_EPILOG
  
@@ -90,7 +90,8 @@ index 5ad1fb7..d25d0b8 100644
 + 
 +DECLARE_GLOBAL_FUNC set_aep
 +    lea_pic     g_aep_pointer, %xax
-+    mov         naked_arg0, (%xax)
++    mov         naked_arg0, %xbx
++    mov         %xbx, (%xax)
      ret
  
  DECLARE_GLOBAL_FUNC get_eenterp

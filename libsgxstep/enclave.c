@@ -47,9 +47,9 @@ void register_enclave_info(int edbgrd_rip)
     ASSERT(fd_step >= 0);
     sgx_set_aep(sgx_step_aep_trampoline);
 
-    victim.aep = (uint64_t) sgx_get_aep();
-    victim.tcs = (uint64_t) sgx_get_tcs();
-    victim.erip_pt = edbgrd_rip ? (void*) &sgx_step_erip : NULL;
+    victim.aep = (uintptr_t) sgx_get_aep();
+    victim.tcs = (uintptr_t) sgx_get_tcs();
+    victim.erip_pt = edbgrd_rip ? (uintptr_t) &sgx_step_erip : 0;
     ASSERT(ioctl(fd_step, SGX_STEP_IOCTL_VICTIM_INFO, &victim) >= 0);
     ioctl_init = 1;
 }
@@ -57,7 +57,7 @@ void register_enclave_info(int edbgrd_rip)
 void *get_enclave_base(void)
 {
     ASSERT(ioctl_init && "/dev/sgx-step enclave_info struct not filled in");
-    return (void*) victim.base;
+    return (void*)((uintptr_t) victim.base);
 }
 
 int get_enclave_size(void)
@@ -69,9 +69,9 @@ int get_enclave_size(void)
 void edbgrd(void *adrs, void* res, int len)
 {
     edbgrd_t edbgrd_data = {
-        .adrs = (uint64_t) adrs,
-        .val = (uint8_t*) res,
-        .len = len
+        .adrs = (uintptr_t) adrs,
+        .val = (uintptr_t) res,
+        .len = (int64_t) len
     };
 
     ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_EDBGRD, &edbgrd_data) >= 0 );

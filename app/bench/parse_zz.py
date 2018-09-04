@@ -5,40 +5,37 @@ from elftools.elf.elffile import ELFFile
 
 IN_FILE          = 'out.txt'
 ENCLAVE_FILE     = 'Enclave/encl.so'
-BLOCK0_SYM       = 'block0'
+
+def get_sym_addr(name, symtab):
+    return symtab.get_symbol_by_name(name)[0]['st_value']
 
 with open( ENCLAVE_FILE ,'rb') as f:
     elf = ELFFile(f)
     symtab = elf.get_section_by_name('.symtab')
-    sym = symtab.get_symbol_by_name(BLOCK0_SYM)
-    block0_addr = sym[0]['st_value']
+    BLOCK0          = get_sym_addr("block0"  , symtab)
+    BLOCK0_J        = get_sym_addr("block0.j", symtab)
+    BLOCK1          = get_sym_addr("block1"  , symtab)
+    BLOCK1_J        = get_sym_addr("block1.j", symtab)
+    BLOCK2          = get_sym_addr("block2"  , symtab)
+    BLOCK2_J        = get_sym_addr("block2.j", symtab)
+    BLOCK3          = get_sym_addr("block3"  , symtab)
+    BLOCK3_J        = get_sym_addr("block3.j", symtab)
+    BLOCK4          = get_sym_addr("block4"  , symtab)
+    BLOCK5          = get_sym_addr("block5"  , symtab)
+    ZZ1             = get_sym_addr("zz1"     , symtab)
+    ZZ2             = get_sym_addr("zz2"     , symtab)
+    ZZ3             = get_sym_addr("zz3"     , symtab)
+    ZZ4             = get_sym_addr("zz4"     , symtab)
 
-BLOCK0          = block0_addr
-BLOCK0_J        = BLOCK0+25
-BLOCK1          = BLOCK0_J+2
-BLOCK1_J        = BLOCK1+8
-BLOCK2          = BLOCK1_J+2
-BLOCK2_J        = BLOCK2+25
-BLOCK3          = BLOCK2_J+2
-BLOCK3_J        = BLOCK3+8
-BLOCK4          = BLOCK3_J+2
-BLOCK5          = BLOCK4+1
-
-# different gcc versions somehow translate the jmp asm statement to either a
-# 2-byte jump or a 4-byte jmpq machine instruction
-if os.environ['SGX_STEP_PLATFORM'] == 1:
-    ZZ1             = BLOCK5+10
-else:
-    ZZ1             = BLOCK5+7
-
-ZZ2             = ZZ1+2
-ZZ3             = ZZ2+2
-ZZ4             = ZZ3+2
-
-
-inst_stream = (BLOCK0, BLOCK0+7, BLOCK0+14, BLOCK0+21, BLOCK0_J, ZZ1, BLOCK1_J,
+if not os.environ.get("M32"):
+    inst_stream = (BLOCK0, BLOCK0+7, BLOCK0+14, BLOCK0+21, BLOCK0_J, ZZ1, BLOCK1_J,
                ZZ2, BLOCK2_J, ZZ3, BLOCK3_J, ZZ4, BLOCK1, BLOCK1+1, BLOCK1_J,
                ZZ2, BLOCK2_J, ZZ3, BLOCK3_J, ZZ4, BLOCK5)
+else:
+    inst_stream = (BLOCK0, BLOCK0+5, BLOCK0+6, BLOCK0+12, BLOCK0+17, BLOCK0+18,
+                BLOCK0+24, BLOCK0+29, BLOCK0+30, BLOCK0+36, BLOCK0+39, BLOCK0_J,
+                ZZ1, BLOCK1_J, ZZ2, BLOCK2_J, ZZ3, BLOCK3_J, ZZ4, BLOCK1, BLOCK1+1,
+                BLOCK1+6, BLOCK1+7, BLOCK1_J, ZZ2, BLOCK2_J, ZZ3, BLOCK3_J, ZZ4, BLOCK5)
 
 cur_inst = 0
 prev_inst = 0
@@ -46,7 +43,7 @@ prev_inst = 0
 #for i in inst_stream:
 #    print(hex(i))
 
-print("parse_zz.py: found Zigzagger block0 at {} (length={})".format(hex(block0_addr), len(inst_stream)))
+print("parse_zz.py: found Zigzagger block0 at {} (length={})".format(hex(BLOCK0), len(inst_stream)))
 
 count_tot  = 0
 count_zero = 0

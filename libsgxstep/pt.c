@@ -18,6 +18,7 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _FILE_OFFSET_BITS 64
 #include "pt.h"
 #include "apic.h"
 #include "debug.h"
@@ -52,7 +53,7 @@ void __attribute__((destructor)) tear_down_sgx_step( void )
 void *remap(uint64_t phys)
 {
     void *map;
-    uint64_t virt;
+    uintptr_t virt;
     volatile uint8_t force_mapping;
     ASSERT(fd_mem >= 0);
 
@@ -60,7 +61,7 @@ void *remap(uint64_t phys)
                fd_mem, phys & ~PFN_MASK );
     ASSERT(map != MAP_FAILED);
 
-    virt = ((uint64_t) map) | (phys & PFN_MASK);
+    virt = ((uintptr_t) map) | (phys & PFN_MASK);
 
     //XXX dereferencing the mapping may cause illegal memory accesses for MMIO
     //regions (eg APIC)
@@ -86,7 +87,7 @@ address_mapping_t *get_mappings( void *address )
 	ASSERT( (mapping = (address_mapping_t *) malloc(sizeof(address_mapping_t))) );
 	memset( mapping, 0x00, sizeof( address_mapping_t ) );
 	
-	mapping->virt = (uint64_t) address;
+	mapping->virt = (uintptr_t) address;
     ASSERT( ioctl( fd_step, SGX_STEP_IOCTL_GET_PT_MAPPING, mapping ) >= 0);
 
     return mapping;
@@ -175,29 +176,29 @@ uint64_t virt_index( address_mapping_t *map, pt_level_t level )
 	}
 }
 
-void cpuid( uint64_t *rax, uint64_t *rbx, uint64_t *rcx, uint64_t *rdx )
+void cpuid( uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx )
 {
 	asm volatile (	"cpuid\n"
-			: "=a" (*rax), "=b" (*rbx), "=c" (*rcx), "=d" (*rdx)
-			: "a" (*rax), "b" (*rbx), "c" (*rcx), "d" (*rdx) );
+                       : "=a" (*eax), "=b" (*ebx), "=c" (*ecx), "=d" (*edx)
+                       : "a" (*eax), "b" (*ebx), "c" (*ecx), "d" (*edx) );
 }
 
 uint64_t physical_address_width( void )
 {
-	uint64_t rax, rbx, rcx, rdx;
+	uint32_t eax, ebx, ecx, edx;
 	static uint64_t width = 0;
 	
 	//the result is cached to avoid VM exits due to the issuing of cpuid
 	if ( width == 0 )
 	{
-		rax = 0x80000008;
-		rbx = 0;
-		rcx = 0;
-		rdx = 0;
+		eax = 0x80000008;
+		ebx = 0;
+		ecx = 0;
+		edx = 0;
 
-		cpuid( &rax, &rbx, &rcx, &rdx );
+		cpuid( &eax, &ebx, &ecx, &edx );
 
-		width = ( rax & 0xff );
+		width = ( eax & 0xff );
 	}
 
 	return width;
