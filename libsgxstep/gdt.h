@@ -18,39 +18,36 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SGX_STEP_IOCTL_H_INC
-#define SGX_STEP_IOCTL_H_INC
+#ifndef SGX_STEP_GDT_H
+#define SGX_STEP_GDT_H
 
-#include <linux/ioctl.h>
+#include "desc.h"
+#include "debug.h"
 
-#define SGX_STEP_IOCTL_MAGIC            'L'
-#define SGX_STEP_IOCTL_VICTIM_INFO      _IOWR(SGX_STEP_IOCTL_MAGIC, 0, struct sgx_step_enclave_info)
-#define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 1, address_mapping_t)
-#define SGX_STEP_IOCTL_EDBGRD           _IOWR(SGX_STEP_IOCTL_MAGIC, 2, edbgrd_t)
-#define SGX_STEP_IOCTL_INVPG            _IOWR(SGX_STEP_IOCTL_MAGIC, 3, void*)
+/*
+ * IA-64: normal (non LDT/TSS) GDT entries are still 8 bytes
+ * (from Linux kernel arch/x86/include/asm/desc_defs.h)
+ */
+typedef struct {
+    uint16_t limit0;
+    uint16_t base0;
+    unsigned base1: 8, type: 4, s: 1, dpl: 2, p: 1;
+    unsigned limit1: 4, avl: 1, l: 1, d: 1, g: 1, base2: 8;
+} __attribute__((packed)) desc_t;
 
-struct sgx_step_enclave_info
-{
-    uint64_t base;
-    uint64_t size;
-    uint64_t aep;
-    uint64_t tcs;
-};
+#define desc_base(d) ((d)->base0 | ((unsigned long)(d)->base1 << 16) | ((unsigned long)(d)->base2 << 24))
+#define desc_limit(d) ((d)->limit0 | ((unsigned long)(d)->limit1 << 16))
+#define desc_ptr(gdt_base, idx) ((desc_t*) (((void*) gdt_base) + idx*sizeof(desc_t)))
 
 typedef struct {
-	uint64_t virt;
-	uint64_t phys;
-	uint64_t pgd_phys_address;
-	uint64_t pgd;
-	uint64_t pud;
-	uint64_t pmd;
-	uint64_t pte;
-} address_mapping_t;
+    desc_t  *base;
+    size_t   entries;
+} gdt_t;
 
-typedef struct {
-    uint64_t adrs;
-    uint64_t val;
-    int64_t  len;
-} edbgrd_t;
+void map_gdt(gdt_t *gdt);
+void dump_gdt(gdt_t *gdt);
+void dump_desc(desc_t *desc, int idx);
+
+desc_t *get_desc(gdt_t *gdt, int idx);
 
 #endif

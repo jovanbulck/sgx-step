@@ -50,15 +50,20 @@ sgx_step_aep_trampoline:
     mov %xbx, sgx_step_tcs
 
     /* optional C function callback */
-    mov (sgx_step_aep_cb), %xax
+    lea sgx_step_aep_cb, %xax
     test %xax, %xax
-    je   .Leresume
-    mov sgx_step_erip, %xdi
-    call *%xax
-    movx $0, sgx_step_erip
+    je .Leresume
+    call *(%xax)
 
 .Leresume:
-    mov $3, %xax                        /* ERESUME leaf */
     mov sgx_step_tcs, %xbx              /* TCS address */
     lea sgx_step_aep_trampoline, %xcx   /* AEP address */
+
+    prefetch (nemesis_tsc_eresume)
+    mfence
+
+    rdtsc
+    mov %eax, (nemesis_tsc_eresume)
+
+    mov $3, %xax                        /* ERESUME leaf */
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */

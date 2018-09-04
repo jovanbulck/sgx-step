@@ -85,3 +85,22 @@ int wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data)
     sprintf(msr_file_name, "/dev/cpu/%d/msr", cpu);
     return file_write_offset(msr_file_name, (uint8_t*) &data, sizeof(data), reg);
 }
+
+uint64_t read_flags()
+{
+	uint64_t flags = 0x0;
+
+	asm("pushfq\n\t"
+	    "popq %0\n\t"
+	    :"=m"(flags)::);
+
+    return flags;
+}
+
+void clflush(void *p)
+{
+    asm volatile ("clflush 0(%0)\n"
+      :
+      : "c" (p)
+      : "rax");
+}

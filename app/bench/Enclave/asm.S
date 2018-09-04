@@ -39,6 +39,7 @@ secret_str:
 
     .text
     .global zigzag_bench
+    .align 0x1000   /* 4KiB */
     .type zigzag_bench,@function
 // code snippet from
 // https://www.usenix.org/system/files/conference/usenixsecurity17/sec17-lee-sangho.pdf

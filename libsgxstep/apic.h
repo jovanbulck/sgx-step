@@ -40,18 +40,27 @@
 #define APIC_TMCCT                  0x390
 
 #define APIC_ID                     0x20
+#define APIC_EOI                    0xb0
+
+#define APIC_TPR	                0x80
+#define APIC_PPR	                0xa0
 
 #define APIC_TDR_DIV_1              0xb
 #define APIC_TDR_DIV_2              0x0
 #define APIC_LVTT_ONESHOT           (0 << 17)
 #define APIC_LVTT_DEADLINE          (2 << 17)
 
+/* From Linux kernel src (TODO read and store: changed to 0xEF in kernel 4.15) */
 #define LOCAL_TIMER_VECTOR          0xef
 #define APIC_IPI_CFG                0xc08f1
 
+#define APIC_ICR_VECTOR(n)      (n & 0xFF)
+#define APIC_ICR_DELIVERY_FIXED (0x0 << 8)
+#define APIC_ICR_LEVEL_ASSERT   (0x1 << 14)
+#define APIC_ICR_DEST_SELF      (0x1 << 18)
+
 extern void* apic_base;
 void apic_init(void);
-void apic_hook(void);
 
 /*
  * From Linux kernel source: /arch/x86/include/asm/apic.h
@@ -77,10 +86,11 @@ static inline uint32_t apic_read(uint32_t reg)
     return *((volatile uint32_t *)(apic_base + reg));
 }
 
-#define apic_send_ipi() apic_write(APIC_ICR, APIC_IPI_CFG)
+//#define apic_send_ipi() apic_write(APIC_ICR, APIC_IPI_CFG)
 #define apic_timer_irq(tsc) apic_write(APIC_TMICT, tsc);
+#define apic_send_ipi_self(n) apic_write(APIC_ICR, APIC_ICR_VECTOR(n) | APIC_ICR_DELIVERY_FIXED | APIC_ICR_LEVEL_ASSERT | APIC_ICR_DEST_SELF)
 
-int apic_timer_oneshot(void);
+int apic_timer_oneshot(uint8_t vector);
 int apic_timer_deadline(void);
 
 #endif

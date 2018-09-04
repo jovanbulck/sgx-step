@@ -28,6 +28,8 @@
 
 uint64_t rdtsc_begin( void );
 uint64_t rdtsc_end( void );
+uint64_t read_flags(void);
+void clflush(void *p);
 
 int rdmsr_on_cpu(uint32_t reg, int cpu, uint64_t *data);
 int wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data);

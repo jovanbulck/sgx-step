@@ -18,64 +18,29 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef SGX_STEP_DESC_H
+#define SGX_STEP_DESC_H
+
 #include <stdint.h>
-#include <string.h>
 
-// see asm.S
-extern char secret_str;
-extern void zigzag_bench(uint64_t nb);
+/*
+ * From Linux kernel arch/x86/include/asm/segment.h 
+ *                   arch/x86/include/asm/desc_defs.h
+ */
+#define KERNEL_DPL          0
+#define USER_DPL            3
+#define GDT_ENTRY_USER_CS   6
+#define USER_CS             (GDT_ENTRY_USER_CS*8+USER_DPL)
+#define GDT_ENTRY_KERNEL_CS 2
+#define KERNEL_CS           (GDT_ENTRY_KERNEL_CS*8+KERNEL_DPL)
 
-// see asm_nop.S
-extern void asm_microbenchmark(void);
+typedef struct {
+    uint16_t size;
+    uint64_t base;
+} __attribute__((packed)) dtr_t;
 
-void do_nop_slide(void)
-{
-    asm_microbenchmark();
-}
+#define dump_dtr(dtr, entries)                      \
+    info("DTR.base=%p/size=%d (%d entries)",       \
+        (void*) (dtr)->base, (dtr)->size, entries);
 
-int a, b;
-
-void do_zigzagger(int n)
-{
-    a = 1;
-    b = 0;
-    zigzag_bench(n);
-}
-
-size_t __attribute__((aligned(0x1000))) my_strlen(const char *str)
-{
-    const char *s;
-
-    for (s = str; *s; ++s);
-    return (s - str);
-}
-
-int do_strlen(int n)
-{
-    int i, j;
-
-    for (i=0; i < n; i++)
-        j = my_strlen(&secret_str);
-
-    return j;
-}
-
-void *get_str_adrs( void )
-{
-    return &secret_str;
-}
-
-void *get_nop_adrs( void )
-{
-    return asm_microbenchmark;
-}
-
-void *get_zz_adrs(void)
-{
-    return zigzag_bench;
-}
-
-void *get_strlen_adrs(void)
-{
-    return my_strlen;
-}
+#endif

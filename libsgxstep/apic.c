@@ -60,14 +60,9 @@ void apic_init(void)
     ASSERT(apic_read(APIC_ID) != -1);
 }
 
-void apic_hook(void)
+int apic_timer_oneshot(uint8_t vector)
 {
-    ASSERT((fd_step >= 0) && (ioctl(fd_step, SGX_STEP_IOCTL_LAPIC_HOOK, (uintptr_t)&dummy_pt) >= 0));
-}
-
-int apic_timer_oneshot(void)
-{
-    apic_write(APIC_LVTT, LOCAL_TIMER_VECTOR | APIC_LVTT_ONESHOT);
+    apic_write(APIC_LVTT, vector | APIC_LVTT_ONESHOT);
     apic_write(APIC_TDCR, APIC_TDR_DIV_2);
     // NOTE: APIC seems not to handle divide by 1 properly (?)
     // see also: http://wiki.osdev.org/APIC_timer)

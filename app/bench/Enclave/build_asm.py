@@ -15,6 +15,7 @@ template = string.Template('''
 
     .text
     .global asm_microbenchmark
+    .align 0x1000 /* 4KiB */
     asm_microbenchmark:
     $asmCode
 

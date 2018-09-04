@@ -30,7 +30,7 @@
 extern void sgx_step_aep_trampoline(void);
 aep_cb_t sgx_step_aep_cb = NULL;
 uint64_t sgx_step_tcs    = 0x0;
-uint64_t sgx_step_erip   = 0x0;
+uint32_t nemesis_tsc_eresume = 0x0, nemesis_tsc_aex = 0x0;
 
 extern int fd_step;
 struct sgx_step_enclave_info victim = {0};
@@ -42,14 +42,13 @@ void register_aep_cb(aep_cb_t cb)
     sgx_step_aep_cb = cb;
 }
 
-void register_enclave_info(int edbgrd_rip)
+void register_enclave_info(void)
 {
     ASSERT(fd_step >= 0);
     sgx_set_aep(sgx_step_aep_trampoline);
 
-    victim.aep = (uintptr_t) sgx_get_aep();
-    victim.tcs = (uintptr_t) sgx_get_tcs();
-    victim.erip_pt = edbgrd_rip ? (uintptr_t) &sgx_step_erip : 0;
+    victim.tcs = (uint64_t) sgx_get_tcs();
+    victim.aep = (uint64_t) sgx_get_aep();
     ASSERT(ioctl(fd_step, SGX_STEP_IOCTL_VICTIM_INFO, &victim) >= 0);
     ioctl_init = 1;
 }
@@ -75,6 +74,24 @@ void edbgrd(void *adrs, void* res, int len)
     };
 
     ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_EDBGRD, &edbgrd_data) >= 0 );
+}
+
+uint64_t edbgrd_ssa(int ssa_field_offset)
+{
+    /* NOTE: we cache ossa here to avoid 2 EDBGRD IOCTL calls every time.. */
+    static uint64_t ossa = 0x0;
+    uint64_t ret;
+    void *ssa_field_addr, *tcs_addr = sgx_get_tcs();
+
+    if (!ossa)
+    {
+        edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
+    }
+    ssa_field_addr = get_enclave_base() + ossa + SGX_SSAFRAMESIZE
+                     - SGX_GPRSGX_SIZE + ssa_field_offset;
+    edbgrd(ssa_field_addr, &ret, 8);
+
+    return ret;
 }
 
 void print_enclave_info(void)

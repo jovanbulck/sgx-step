@@ -68,9 +68,10 @@ in_strlen  = 0
 
 with open(IN_FILE, 'r') as fi:
     for line in fi:
-        m = re.search('offset=0x([0-9A-Fa-f]+)', line)
+        m = re.search('RIP=0x([0-9A-Fa-f]+); ACCESSED=([0-9])', line)
         if m:
             cur = int(m.groups()[0], base=16) 
+            a = int(m.groups()[1]) 
             if (cur >= CMP and cur <= JMP):
                 in_strlen = 1
                 count_tot += 1
@@ -78,8 +79,12 @@ with open(IN_FILE, 'r') as fi:
 
                 if (cur == prev_inst):
                     count_zero += 1
+                    if a:
+                        print("parse_strlen.py: WARNING: code PTE 'accessed' bit set for zero-step at", hex(cur))
                 elif (cur == expected):
                     count_one += 1
+                    if not a:
+                        print("parse_strlen.py: WARNING: code PTE 'accessed' bit not set for single-step at", hex(cur))
                     prev_inst = inst_stream[cur_inst]
                     cur_inst = (cur_inst + 1) % len(inst_stream)
                 elif (cur != expected):

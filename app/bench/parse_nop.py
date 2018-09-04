@@ -32,19 +32,24 @@ prev       = 0
 
 with open(IN_FILE, 'r') as fi, open(OUT_FILE, 'w') as fo:
     for line in fi:
-        m = re.search('offset=0x([0-9A-Fa-f]+)', line)
+        m = re.search('RIP=0x([0-9A-Fa-f]+); ACCESSED=([0-9])', line)
         if m:
             cur = int(m.groups()[0], base=16) 
+            a = int(m.groups()[1]) 
             if (cur >= INST_SLIDE_START) and (cur <= INST_SLIDE_END):
                 diff = cur - prev
                 if prev:
                     fo.write(str(diff) + '\n')
                 if diff == 0:
                     count_zero += 1
+                    if a:
+                        print("parse_nop.py: WARNING: code PTE 'accessed' bit set for zero-step at", hex(cur))
                 elif diff == 1:
                     count_one += 1
+                    if not a:
+                        print("parse_nop.py: WARNING: code PTE 'accessed' bit not set for single-step at", hex(cur))
                 elif prev:
-                    print("parse_nop.py: non-single step diff:", diff, "prev=", prev, " cur=", cur)
+                    print("parse_nop.py: WARNING: non-single step diff:", diff, "prev=", hex(prev), " cur=", hex(cur))
                     count_plus += 1
                 prev = cur
                 count_tot += 1

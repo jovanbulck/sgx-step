@@ -23,13 +23,27 @@
 
 #include <stdint.h>
 
-typedef void (*aep_cb_t)(uintptr_t erip);
+extern uint32_t nemesis_tsc_eresume, nemesis_tsc_aex;
+
+typedef void (*aep_cb_t)(void);
 void register_aep_cb(aep_cb_t cb);
 
-void register_enclave_info(int edbgrd_rip);
+void register_enclave_info(void);
 void print_enclave_info(void);
 void *get_enclave_base(void);
 int get_enclave_size(void);
 void edbgrd(void *adrs, void* res, int len);
+
+/* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
+#define SGX_TCS_OSSA_OFFSET         16
+#define SGX_GPRSGX_SIZE             184
+#define SGX_GPRSGX_RIP_OFFSET       136
+
+/* HACK: to avoid having to retrieve the SSA framesize from the untrusted
+   runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
+#define SGX_SSAFRAMESIZE            4096
+
+uint64_t edbgrd_ssa(int ssa_field_offset);
+#define edbgrd_erip() edbgrd_ssa(SGX_GPRSGX_RIP_OFFSET)
 
 #endif

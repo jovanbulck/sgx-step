@@ -23,12 +23,16 @@
 
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
-
+#define IRQ_VECTOR                  45
 #if (M32 != 1)
 	#define APIC_CONFIG_MSR         1
 #else
 	#define APIC_CONFIG_MSR         0
 #endif
+
+#define VICTIM_CPU                  1
+#define NUM_CORES                   4
+#define SPY_CPU                     (VICTIM_CPU + NUM_CORES)
 
 /*
  * XXX Configure APIC timer interval for next interrupt.
@@ -43,9 +47,8 @@
 #define DELL_LATITUDE_7490          3
 #if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
     #define SGX_STEP_TIMER_INTERVAL 25
-    #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
-    #define SGX_STEP_TIMER_INTERVAL 42
+    #define SGX_STEP_TIMER_INTERVAL 40
     #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
