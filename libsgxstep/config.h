@@ -45,8 +45,8 @@
     #define SGX_STEP_TIMER_INTERVAL 25
     #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
-    #define SGX_STEP_TIMER_INTERVAL 36
-    #define VICTIM_CPU              6
+    #define SGX_STEP_TIMER_INTERVAL 42
+    #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
     #define VICTIM_CPU              1
