@@ -17,6 +17,11 @@ Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
 photo frames to reveal overall horse gait properties.
 
+| SGX-Step release | Publication details                                                  | Comments 		         |
+|------------------|----------------------------------------------------------------------|------------------------------|
+| v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		 |
+| v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework. |
+
 ## Abstract
 
 Protected module architectures such as Intel SGX hold the promise of protecting
@@ -132,7 +137,7 @@ Makefile targets furthermore dynamically link against the patched
 (using the `LD_LIBRARY_PATH` environment variable).
 
 **Note (32-bit support).** Instructions for building 32-bit versions of
-the SGX SDK and sgx-step can be found in `README-m32.md`.
+the SGX SDK and SGX-Step can be found in [README-m32.md](README-m32.md).
 
 ### 2. Build and load `/dev/sgx-step`
 
