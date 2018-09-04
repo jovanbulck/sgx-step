@@ -17,10 +17,10 @@ previously interrupted enclave.
  5 files changed, 58 insertions(+), 6 deletions(-)
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
-index f90a2d0..687e7e6 100644
+index 1128698..82dbe29 100644
 --- a/common/inc/sgx_urts.h
 +++ b/common/inc/sgx_urts.h
-@@ -57,6 +57,9 @@ sgx_status_t SGXAPI sgx_create_enclave(const char *file_name, const int debug, s
+@@ -96,6 +96,9 @@ sgx_status_t SGXAPI sgx_create_encrypted_enclave(
  
  sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
  
@@ -31,7 +31,7 @@ index f90a2d0..687e7e6 100644
  }
  #endif
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
-index 5ad1fb7..d25d0b8 100644
+index fcc5da8..2b17fac 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -32,6 +32,16 @@
@@ -96,12 +96,12 @@ index 5ad1fb7..d25d0b8 100644
  
  DECLARE_GLOBAL_FUNC get_eenterp
 diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
-index 6ff9b42..94e1861 100644
+index 1003e37..f39a1cd 100644
 --- a/psw/urts/linux/urts.cpp
 +++ b/psw/urts/linux/urts.cpp
-@@ -70,3 +70,17 @@ extern "C" sgx_status_t sgx_create_enclave(const char *file_name, const int debu
- 
-     return ret;
+@@ -145,3 +145,17 @@ sgx_create_encrypted_enclave(
+     return __sgx_create_enclave_ex(file_name, debug, launch_token,
+         launch_token_updated, enclave_id, misc_attr, ex_features, ex_features_p);
  }
 +
 +//XXX
@@ -118,7 +118,7 @@ index 6ff9b42..94e1861 100644
 +    set_aep(aep);
 +}
 diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
-index 6c4dd01..3e02677 100644
+index 07d4a6a..6bcd6b9 100644
 --- a/psw/urts/linux/urts.lds
 +++ b/psw/urts/linux/urts.lds
 @@ -1,5 +1,7 @@
@@ -127,13 +127,13 @@ index 6c4dd01..3e02677 100644
 +        sgx_get_aep;
 +        sgx_set_aep;
          sgx_create_enclave;
+         sgx_create_enclave_ex;
          sgx_destroy_enclave;
-         sgx_ecall;
 diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_deploy.c
-index f98e10f..fbd021b 100644
+index 2a56e27..42cbad4 100644
 --- a/sdk/simulation/urtssim/urts_deploy.c
 +++ b/sdk/simulation/urtssim/urts_deploy.c
-@@ -38,6 +38,17 @@ sgx_status_t sgx_create_enclave()
+@@ -56,6 +56,17 @@ sgx_status_t sgx_create_encrypted_enclave()
      return SGX_ERROR_UNEXPECTED;
  }
  
@@ -151,6 +151,3 @@ index f98e10f..fbd021b 100644
  void sgx_debug_load_state_add_element(){};
  void sgx_debug_unload_state_remove_element(){};
  void sgx_destroy_enclave(){};
--- 
-2.7.4
-

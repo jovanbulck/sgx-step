@@ -1,8 +1,8 @@
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
-index 9e84078..669ef2e 100644
+index ae1e10e..fbfc367 100644
 --- a/common/inc/sgx_urts.h
 +++ b/common/inc/sgx_urts.h
-@@ -61,6 +61,7 @@ sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
+@@ -100,6 +100,7 @@ sgx_status_t SGXAPI sgx_destroy_enclave(const sgx_enclave_id_t enclave_id);
  void* SGXAPI sgx_get_aep(void);
  void  SGXAPI sgx_set_aep(void *aep);
  void* SGXAPI sgx_get_tcs(void);
@@ -11,11 +11,11 @@ index 9e84078..669ef2e 100644
  #ifdef __cplusplus
  }
 diff --git a/psw/urts/linux/enclave_creator_hw.cpp b/psw/urts/linux/enclave_creator_hw.cpp
-index 79749bd..340cc32 100644
+index ac934f4..d0664bc 100644
 --- a/psw/urts/linux/enclave_creator_hw.cpp
 +++ b/psw/urts/linux/enclave_creator_hw.cpp
-@@ -57,6 +57,8 @@
- 
+@@ -53,6 +53,8 @@
+   
  static EnclaveCreatorHW g_enclave_creator_hw;
  
 +void* sgx_load_ptr = NULL;
@@ -23,7 +23,7 @@ index 79749bd..340cc32 100644
  EnclaveCreator* g_enclave_creator = &g_enclave_creator_hw;
  static uint64_t g_eid = 0x1;
  
-@@ -116,6 +118,11 @@ int EnclaveCreatorHW::error_driver2urts(int driver_error)
+@@ -112,6 +114,11 @@ int EnclaveCreatorHW::error_driver2urts(int driver_error)
   
       return ret;
   }
@@ -35,7 +35,7 @@ index 79749bd..340cc32 100644
   
  int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id, void **start_addr, bool ae)
  {
-@@ -130,7 +137,7 @@ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id,
+@@ -126,7 +133,7 @@ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id,
  
      //SECS:BASEADDR must be naturally aligned on an SECS.SIZE boundary
      //This alignment is guaranteed by driver
@@ -45,7 +45,7 @@ index 79749bd..340cc32 100644
      {
          SE_TRACE(SE_TRACE_WARNING, "\ncreate enclave: mmap failed, errno = %d\n", errno);
 diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
-index bad727e..fd8fa6b 100644
+index 0918523..92a7905 100644
 --- a/psw/urts/linux/urts.lds
 +++ b/psw/urts/linux/urts.lds
 @@ -3,6 +3,7 @@
@@ -54,8 +54,8 @@ index bad727e..fd8fa6b 100644
          sgx_get_tcs;
 +        sgx_set_load_ptr;
          sgx_create_enclave;
+         sgx_create_enclave_ex;
          sgx_destroy_enclave;
-         sgx_ecall;
 diff --git a/sdk/simulation/uinst/u_instructions.cpp b/sdk/simulation/uinst/u_instructions.cpp
 index 89364a9..3733b2a 100644
 --- a/sdk/simulation/uinst/u_instructions.cpp
