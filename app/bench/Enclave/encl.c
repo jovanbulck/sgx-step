@@ -27,6 +27,7 @@ extern void zigzag_bench(uint64_t nb);
 
 // see asm_nop.S
 extern void asm_microbenchmark(void);
+extern int my_strlen(const char *str);
 
 void do_nop_slide(void)
 {
@@ -40,14 +41,6 @@ void do_zigzagger(int n)
     a = 1;
     b = 0;
     zigzag_bench(n);
-}
-
-size_t __attribute__((aligned(0x1000))) my_strlen(const char *str)
-{
-    const char *s;
-
-    for (s = str; *s; ++s);
-    return (s - str);
 }
 
 int do_strlen(int n)

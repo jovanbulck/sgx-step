@@ -37,6 +37,21 @@ secret_str:
     .endm
 #endif
 
+
+    .text
+    .global my_strlen
+    .align 0x1000   /* 4KiB */
+    .type my_strlen,@function
+my_strlen:
+    mov    %rdi,%rax
+1:  cmpb   $0x0,(%rax)
+    je     2f
+    inc    %rax
+    jmp    1b
+2:  sub    %rdi,%rax
+    retq   
+    .space 0x1000   /* 4KiB */
+
     .text
     .global zigzag_bench
     .align 0x1000   /* 4KiB */
