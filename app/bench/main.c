@@ -197,11 +197,16 @@ int main( int argc, char **argv )
     attacker_config_runtime();
     attacker_config_page_table();
 
-    info_event("Establishing user space IDT mapping");
-    map_idt(&idt);
-    install_user_irq_handler(&idt, irq_handler, IRQ_VECTOR);
-    //dump_idt(&idt);
-    apic_timer_oneshot(IRQ_VECTOR);
+    #if USER_IDT_ENABLE
+        info_event("Establishing user space APIC/IDT mappings");
+        map_idt(&idt);
+        install_user_irq_handler(&idt, irq_handler, IRQ_VECTOR);
+        //dump_idt(&idt);
+        apic_timer_oneshot(IRQ_VECTOR);
+    #else
+        info_event("Establishing user space APIC mapping (with kernel space handler)");
+        apic_timer_oneshot(LOCAL_TIMER_VECTOR);
+    #endif
 
     /* 2. Single-step enclaved execution. */
     info("calling enclave: attack=%d; num_runs=%d; timer=%d",

@@ -23,6 +23,7 @@
 
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
+#define USER_IDT_ENABLE             1
 #define IRQ_VECTOR                  45
 #if (M32 != 1)
 	#define APIC_CONFIG_MSR         1

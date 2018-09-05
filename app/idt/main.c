@@ -26,7 +26,8 @@
 #include "libsgxstep/config.h"
 
 #define USER_CS_CONFIRMING          0
-#define APIC_IRQ                    1
+#define DO_APIC_TMR_IRQ             1
+#define DO_APIC_SW_IRQ              1
 
 extern void my_irq_handler(void);
 uint64_t irq_handler_count = 0x0;
@@ -70,13 +71,14 @@ int main( int argc, char **argv )
     install_user_irq_handler(&idt, hello_world, IRQ_VECTOR);
     dump_idt(&idt);
 
-    info_event("Triggering user space software interrupts");
-    asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
-    asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+    #if DO_APIC_SW_IRQ
+        info_event("Triggering user space software interrupts");
+        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+    #endif
 
-    #if APIC_IRQ
+    #if DO_APIC_TMR_IRQ
         info_event("Triggering user space APIC timer interrupts");
-        apic_init();
         apic_timer_oneshot(IRQ_VECTOR);
 
         for (int i=0; i < 3; i++)
