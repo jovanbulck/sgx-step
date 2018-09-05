@@ -120,7 +120,7 @@ void irq_handler(uint8_t *rsp)
     info("****** hello world from user space IRQ handler with count=%d ******",
         irq_count++);
 
-	info("APIC TPR/PPR is %d/%d", apic_read(APIC_TPR), apic_read(APIC_PPR));
+    info("APIC TPR/PPR is %d/%d", apic_read(APIC_TPR), apic_read(APIC_PPR));
     info("RSP at %p", rsp);
     info("RIP is %p", *p++);
     info("CS is %p", *p++);
@@ -206,6 +206,14 @@ int main( int argc, char **argv )
     #else
         info_event("Establishing user space APIC mapping (with kernel space handler)");
         apic_timer_oneshot(LOCAL_TIMER_VECTOR);
+    #endif
+
+    /* TODO for some reason the Dell Latitude machine first needs 2 SW IRQs
+     * before the timer IRQs even fire (??) */
+    #if USER_IDT_ENABLE
+        info_event("Triggering user space software interrupts");
+        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
     #endif
 
     /* 2. Single-step enclaved execution. */
