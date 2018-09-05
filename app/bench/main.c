@@ -66,7 +66,7 @@ void aep_cb_func(void)
             info("accessed!");
             strlen_nb_access++;
         }
-        *pte_str_encl = MARK_NOT_ACCESSED( *pte_encl );
+        *pte_str_encl = MARK_NOT_ACCESSED( *pte_str_encl );
     #endif
 
     if (do_irq && (irq_cnt > NUM_RUNS*500))
@@ -157,7 +157,7 @@ void attacker_config_page_table(void)
     #if (ATTACK_SCENARIO == STRLEN)
         void *str_adrs;
         SGX_ASSERT( get_str_adrs( eid, &str_adrs) );
-        info("enclave string adrs at %p\n", str_adrs);
+        info("enclave string adrs at %p", str_adrs);
         ASSERT( pte_str_encl = remap_page_table_level( str_adrs, PTE) );
     #endif
 
