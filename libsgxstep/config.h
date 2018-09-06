@@ -50,13 +50,10 @@
     #define SGX_STEP_TIMER_INTERVAL 25
 #elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
     #define SGX_STEP_TIMER_INTERVAL 40
-    #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == DELL_OPTIPLEX_7040)
     #define SGX_STEP_TIMER_INTERVAL 19
-    #define VICTIM_CPU              1
 #elif (SGX_STEP_PLATFORM == ACER_ASPIRE_V15)
     #define SGX_STEP_TIMER_INTERVAL 28
-    #define VICTIM_CPU              1
 #else
     #warning Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
 #endif
