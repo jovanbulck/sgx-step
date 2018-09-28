@@ -2,12 +2,13 @@
 
 <img src="logo.svg" width=160 alt="logo" align="left" />
 
-This repository contains the source code of the SGX interrupt attack framework
-accompanying our SysTEX 2017 [paper](systex17.pdf).
-
-> Jo Van Bulck, Frank Piessens, and Raoul Strackx. 2017. SGX-Step: A Practical
-> Attack Framework for Precise Enclave Execution Control. In Proceedings of the
-> 2nd Workshop on System Software for Trusted Execution (SysTEX '17). 
+SGX-Step is an open-source framework to facilitate side-channel attack research
+on Intel SGX platforms.  SGX-Step consists of an adversarial Linux kernel
+driver and user space library that allow to configure untrusted page table
+entries and/or x86 APIC timer interrupts completely from user space. Our
+research results have demonstrated several new and improved enclaved execution
+attacks that gather side-channel observations at a maximal temporal resolution
+(by interrupting the victim enclave after _every_ single instruction).
 
 SGX-Step is free software, licensed under
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0). The SGX-Step logo is derived
@@ -17,14 +18,15 @@ Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
 photo frames to reveal overall horse gait properties.
 
-| SGX-Step release | Publication details                                                  | Comments 		         |
-|------------------|----------------------------------------------------------------------|------------------------------|
-| v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		 |
-| v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework. |
+| SGX-Step release | Publication details                                                  | Comments 		               |
+|------------------|----------------------------------------------------------------------|--------------------------------|
+| v1.2.0           | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling. |
+| v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
+| v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
 
 ## Abstract
 
-Protected module architectures such as Intel SGX hold the promise of protecting
+Trusted execution environments such as Intel SGX hold the promise of protecting
 sensitive computations from a potentially compromised operating system. Recent
 research convincingly demonstrated, however, that SGX's strengthened adversary
 model also gives rise to to a new class of powerful, low-noise side-channel
@@ -42,17 +44,23 @@ approach to single-step enclaved execution at instruction-level granularity,
 and we show how SGX-Step enables several new or improved attacks. Finally, we
 discuss its implications for the design of effective defense mechanisms.
 
+> Jo Van Bulck, Frank Piessens, and Raoul Strackx. 2017. SGX-Step: A Practical
+> Attack Framework for Precise Enclave Execution Control. In Proceedings of the
+> 2nd Workshop on System Software for Trusted Execution (SysTEX '17). 
+
 ## Overview
 
-Crucial to the design of SGX-Step, as opposed to previous enclave preemption 
+Crucial to the design of SGX-Step, as opposed to previous enclave preemption
 proposals, is the creation of user-space virtual memory mappings for physical
-memory locations holding page table entries, as well as for the local x86 APIC
-memory-mapped I/O configuration registers. This allows an untrusted,
-attacker-controlled host process to easily (i) configure the APIC timer
-one-shot/periodic interrupt source, (ii) trigger inter-processor interrupts,
-and (iii) track or modify enclave page table entries directly from user-space.
+memory locations holding page table entries, as well as for the local APIC
+memory-mapped I/O configuration registers and the x86 Interrupt Descriptor
+Table (IDT). This allows an untrusted, attacker-controlled host process to
+easily (i) track or modify enclave page table entries, (ii) configure the APIC
+timer one-shot/periodic interrupt source, (iii) trigger inter-processor
+interrupts, and (iv) register custom interrupt handlers completely _within_
+user space.
 
-![sgx-step-framework](https://user-images.githubusercontent.com/2464627/31863914-d6fbf5d8-b754-11e7-83e6-95e3c77dd0d6.png)
+![sgx-step-framework](framework.png)
 
 The above figure summarizes the sequence of hardware and software steps when
 interrupting and resuming an SGX enclave through our framework.
@@ -60,20 +68,18 @@ interrupting and resuming an SGX enclave through our framework.
 1. The local APIC timer interrupt arrives within an enclaved instruction.
 2. The processor executes the AEX procedure that securely stores execution
    context in the enclave’s SSA frame, initializes CPU registers, and vectors
-   to the kernel-level interrupt handler.
-3. Our `/dev/sgx-step` loadable kernel module registered itself in the APIC
-   event call back list to make sure it is called on every timer interrupt. At
-   this point, any attack-specific, kernel-level spy code can easily be plugged
-   in. Furthermore, to enable precise evaluation of our approach on
-   attacker-controlled debug enclaves, SGX-Step can *optionally* be instrumented
-   to retrieve the stored instruction pointer from the interrupted enclave’s
-   SSA frame using the `EDBGRD` instruction.
-4. The kernel returns to the user space AEP trampoline. We modified the 
+   to the (user space) interrupt handler registered in the IDT.
+3. At this point, any attack-specific, spy code can easily be plugged in. 
+4. The library returns to the user space AEP trampoline. We modified the 
    untrusted runtime of the official SGX SDK to allow easy registration of a
-   custom AEP stub.
-5. At this point, any attack-specific user mode spy code can again easily be
-   run, before the single-stepping adversary configures the APIC timer for the 
-   next interrupt, just before executing (6) `ERESUME`.
+   custom AEP stub. Furthermore, to enable precise evaluation of our approach on
+   attacker-controlled benchmark debug enclaves, SGX-Step can *optionally* be
+   instrumented to retrieve the stored instruction pointer from the interrupted
+   enclave’s SSA frame. For this, our `/dev/sgx-step` driver offers an optional
+   IOCTL call for the privileged `EDBGRD` instruction.
+5. Thereafter, we configure the local APIC timer for the next interrupt
+   by writing into the initial-count MMIO register, just before executing (6)
+   `ERESUME`.
 
 ## Building and Running
 
