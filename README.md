@@ -8,9 +8,9 @@ driver and user space library that allow to configure untrusted page table
 entries and/or x86 APIC timer interrupts completely from user space. Our
 research results have demonstrated several new and improved enclaved execution
 attacks that gather side-channel observations at a maximal temporal resolution
-(by interrupting the victim enclave after _every_ single instruction).
+(i.e., by interrupting the victim enclave after _every_ single instruction).
 
-SGX-Step is free software, licensed under
+**License.** SGX-Step is free software, licensed under
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0). The SGX-Step logo is derived
 from Eadweard Muybridge's iconic [public
 domain](https://en.wikipedia.org/wiki/Sallie_Gardner_at_a_Gallop) "Sallie
@@ -87,14 +87,18 @@ interrupting and resuming an SGX enclave through our framework.
 
 SGX-Step requires an [SGX-capable](https://github.com/ayeks/SGX-hardware) Intel
 processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
-i7-6500U/6700 CPUs, running unmodified Linux versions 4.2.0/4.4.0. To make use
-of SGX-Step's single-stepping features, the local APIC device needs to be
-configured in memory-mapped xAPIC mode. The easiest way to do this is to pass
-the `nox2apic` Linux [kernel
-parameter](https://wiki.archlinux.org/index.php/Kernel_parameters) at boot
-time. We furthermore advise passing the `iomem=relaxed`, `no_timer_check`, and
-`isolcpus` parameters to respectively avoid too many warning messages in the
-kernel logs and affinitize the victim process to an isolated CPU core.
+i7-6500U/6700 CPUs, running Ubuntu 16.04 with a stock Linux 4.15.0 kernel.
+We summarize Linux [kernel parameters](https://wiki.archlinux.org/index.php/Kernel_parameters)
+below.
+
+| Linux kernel parameter           | Motivation                                                                                                                      |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------  |
+| `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).             |
+| `iomem=relaxed, no_timer_check`  | Suppress unneeded warning messages in the kernel logs.                                                                          |
+| `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.                                                                          |
+| `dis_ucode_ldr`                  | Disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations may affect single-stepping interval). |
+
+Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
@@ -105,7 +109,7 @@ $ sudo update-grub && sudo reboot
 Finally, in order to reproduce our experimental results, make sure to disable
 C-States and SpeedStep technology in the BIOS configuration. The table below
 lists currently supported Intel CPUs, together with their single-stepping APIC
-timer interval.
+timer interval (`libsgxstep/config.h`).
 
 | Model name            | CPU                                               | Base frequency | APIC timer interval |
 |-----------------------|---------------------------------------------------|----------------|---------------------|
