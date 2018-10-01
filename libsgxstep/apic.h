@@ -50,8 +50,6 @@
 #define APIC_LVTT_ONESHOT           (0 << 17)
 #define APIC_LVTT_DEADLINE          (2 << 17)
 
-/* From Linux kernel src (TODO read and store: changed to 0xEF in kernel 4.15) */
-#define LOCAL_TIMER_VECTOR          0xef
 #define APIC_IPI_CFG                0xc08f1
 
 #define APIC_ICR_VECTOR(n)      (n & 0xFF)
@@ -60,6 +58,7 @@
 #define APIC_ICR_DEST_SELF      (0x1 << 18)
 
 extern void* apic_base;
+extern uint32_t apic_lvtt;
 void apic_init(void);
 
 /*

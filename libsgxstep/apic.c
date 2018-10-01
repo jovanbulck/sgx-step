@@ -29,6 +29,7 @@
 extern int fd_step;
 void *apic_base = NULL;
 void *dummy_pt = NULL;
+uint32_t apic_lvtt = 0x0, apic_tdcr = 0x0;
 
 /*
  * Code below maps APIC timer MMIO registers in user space.
@@ -42,6 +43,8 @@ void *dummy_pt = NULL;
  */
 void apic_init(void)
 {
+    if (apic_base) return;
+
     uintptr_t apic_base_addr = 0x0;
     #if APIC_CONFIG_MSR
         uint64_t apic_base_msr = 0x0;
@@ -56,12 +59,17 @@ void apic_init(void)
     apic_base = remap(apic_base_addr);
     info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
 
-    info("apic_id is %x", apic_read(APIC_ID));
+    info("APIC_ID=%x; LVTT=%x; TDCR=%x", apic_read(APIC_ID),
+        apic_read(APIC_LVTT), apic_read(APIC_TDCR));
     ASSERT(apic_read(APIC_ID) != -1);
 }
 
 int apic_timer_oneshot(uint8_t vector)
 {
+    /* Save APIC tmr config for later restore */
+    apic_lvtt = apic_read(APIC_LVTT);
+    apic_tdcr = apic_read(APIC_TDCR);
+
     apic_write(APIC_LVTT, vector | APIC_LVTT_ONESHOT);
     apic_write(APIC_TDCR, APIC_TDR_DIV_2);
     // NOTE: APIC seems not to handle divide by 1 properly (?)
@@ -72,13 +80,14 @@ int apic_timer_oneshot(uint8_t vector)
 
 int apic_timer_deadline(void)
 {
-    apic_write(APIC_LVTT, LOCAL_TIMER_VECTOR | APIC_LVTT_DEADLINE);
-    apic_write(APIC_TDCR, APIC_TDR_DIV_2);
-    info("APIC timer deadline mode with division 2 (lvtt=%x/tdcr=%x)",
+    apic_write(APIC_LVTT, apic_lvtt);
+    apic_write(APIC_TDCR, apic_tdcr);
+    info("Restored APIC_LVTT=%x/TDCR=%x)",
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
 
     /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
     #if APIC_CONFIG_MSR
         wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), 1);
     #endif
+    apic_lvtt = apic_tdcr = 0x0;
 }
