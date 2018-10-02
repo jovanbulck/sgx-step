@@ -155,6 +155,8 @@ uint64_t virt_index( address_mapping_t *map, pt_level_t level );
 uint64_t physical_address_width( void );
 
 void print_page_table( void *address );
+void print_pte_adrs( void *adrs);
+void print_pte( uint64_t *pte );
 void print_mapping( address_mapping_t *map );
 
 #endif

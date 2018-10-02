@@ -36,7 +36,7 @@ void __attribute__((constructor)) init_sgx_step( void )
     ASSERT((fd_step = open("/dev/sgx-step", O_RDWR)) >= 0);
     info("/dev/sgx-step opened!");
 
-    ASSERT((fd_mem = open("/dev/mem", O_RDWR|O_SYNC)) >= 0);
+    ASSERT((fd_mem = open("/dev/mem", O_RDWR)) >= 0);
     info("/dev/mem opened!");
 }
 
@@ -213,6 +213,22 @@ void print_page_table( void *address )
 	print_mapping( map );
 	
 	free( map );
+}
+
+void print_pte_adrs( void *adrs)
+{
+    uint64_t *pte = NULL;
+    ASSERT( pte = remap_page_table_level( adrs, PTE) );
+    print_pte(pte);
+}
+
+void print_pte( uint64_t *pte )
+{
+    printf("+-------------------------------------------------------------------------------------------+\n");
+    printf("| XD | PK | IGN | RSVD | PHYS ADRS      | IGN | G | PAT | D | A | PCD | PWT | U/S | R/W | P | \n");
+    printf("| %d  | x  | x   | x    | 0x%012" PRIi64 " | x   | x | x   | %d | %d | x   | x   | x   | %d   | %d | \n",
+            (int) EXECUTE_DISABLE(*pte), PT_PHYS(*pte), (int) DIRTY(*pte), (int) ACCESSED(*pte), (int) WRITABLE(*pte), (int) PRESENT(*pte));
+    printf("+-------------------------------------------------------------------------------------------+\n");
 }
 
 void print_mapping( address_mapping_t *map )

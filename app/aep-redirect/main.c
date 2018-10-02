@@ -24,6 +24,7 @@
 #include <signal.h>
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
+#include "libsgxstep/pt.h"
 
 void *a_pt;
 int fault_fired = 0, aep_fired = 0;
@@ -40,6 +41,7 @@ void fault_handler(int signal)
 {
 	info("Caught fault %d! Restoring access rights..", signal);
     ASSERT(!mprotect(a_pt, 4096, PROT_READ | PROT_WRITE));
+    print_pte_adrs(a_pt);
     fault_fired++;
 }
 
@@ -60,7 +62,9 @@ int main( int argc, char **argv )
     info("revoking a access rights..");
     SGX_ASSERT( get_a_addr(eid, &a_pt) );
     info("a at %p", a_pt);
+    print_pte_adrs(a_pt);
     ASSERT(!mprotect(a_pt, 4096, PROT_NONE));
+    print_pte_adrs(a_pt);
     ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
 
     info("calling enclave..");
