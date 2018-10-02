@@ -22,6 +22,7 @@
 #include "debug.h"
 #include <sys/ioctl.h>
 #include "../kernel/sgxstep_ioctl.h"
+#include <inttypes.h>
 
 /* Includes custom AEP get/set functions from patched SGX SDK urts. */
 #include <sgx_urts.h>
@@ -31,6 +32,7 @@ extern void sgx_step_aep_trampoline(void);
 aep_cb_t sgx_step_aep_cb = NULL;
 uint64_t sgx_step_tcs    = 0x0;
 uint32_t nemesis_tsc_eresume = 0x0, nemesis_tsc_aex = 0x0;
+int sgx_step_eresume_cnt = 0;
 
 extern int fd_step;
 struct sgx_step_enclave_info victim = {0};
@@ -94,18 +96,61 @@ uint64_t edbgrd_ssa(int ssa_field_offset)
     return ret;
 }
 
+void* get_enclave_ssa_gprsgx_adrs(void)
+{
+    /* NOTE: we cache ossa here to avoid 2 EDBGRD IOCTL calls every time.. */
+    static uint64_t ossa = 0x0;
+    void *tcs_addr = sgx_get_tcs();
+    if (!ossa)
+    {
+        edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
+    }
+
+    return get_enclave_base() + ossa + SGX_SSAFRAMESIZE - SGX_GPRSGX_SIZE;
+}
+
 void print_enclave_info(void)
 {
     uint64_t read = 0xff;
 
 	printf( "==== Victim Enclave ====\n" );
-	printf( "    Base: %p\n", get_enclave_base() );
-	printf( "    Size: %d\n", get_enclave_size() );
+	printf( "    Base:   %p\n", get_enclave_base() );
+	printf( "    Size:   %d\n", get_enclave_size() );
     printf( "    Limit:  %p\n", get_enclave_base()+get_enclave_size() );
-	printf( "    TCS:  %p\n", sgx_get_tcs() );
-	printf( "    AEP:  %p\n", sgx_get_aep() );
+	printf( "    TCS:    %p\n", sgx_get_tcs() );
+    printf( "    SSA:    %p\n", get_enclave_ssa_gprsgx_adrs() );
+	printf( "    AEP:    %p\n", sgx_get_aep() );
 
     /* First 8 bytes of TCS must be zero */
     edbgrd( sgx_get_tcs(), &read, 8);
     printf( "    EDBGRD: %s\n", read ? "production" : "debug");
 }
+
+void dump_gprsgx_region(gprsgx_region_t *gprsgx_region)
+{
+    printf("=== Foreshadow recovered SSA/GPRSGX region after AEX ===\n");
+    printf("    RAX:      0x%" PRIx64 "\n", gprsgx_region->fields.rax);
+    printf("    RCX:      0x%" PRIx64 "\n", gprsgx_region->fields.rcx);
+    printf("    RDX:      0x%" PRIx64 "\n", gprsgx_region->fields.rdx);
+    printf("    RBX:      0x%" PRIx64 "\n", gprsgx_region->fields.rbx);
+    printf("    RSP:      0x%" PRIx64 "\n", gprsgx_region->fields.rsp);
+    printf("    RBP:      0x%" PRIx64 "\n", gprsgx_region->fields.rbp);
+    printf("    RSI:      0x%" PRIx64 "\n", gprsgx_region->fields.rsi);
+    printf("    RDI:      0x%" PRIx64 "\n", gprsgx_region->fields.rdi);
+    printf("    R8:       0x%" PRIx64 "\n", gprsgx_region->fields.r8);
+    printf("    R9:       0x%" PRIx64 "\n", gprsgx_region->fields.r9);
+    printf("    R10:      0x%" PRIx64 "\n", gprsgx_region->fields.r10);
+    printf("    R11:      0x%" PRIx64 "\n", gprsgx_region->fields.r11);
+    printf("    R12:      0x%" PRIx64 "\n", gprsgx_region->fields.r12);
+    printf("    R13:      0x%" PRIx64 "\n", gprsgx_region->fields.r13);
+    printf("    R14:      0x%" PRIx64 "\n", gprsgx_region->fields.r14);
+    printf("    R15:      0x%" PRIx64 "\n", gprsgx_region->fields.r15);
+    printf("    RFLAGS:   0x%" PRIx64 "\n", gprsgx_region->fields.rflags);
+    printf("    RIP:      0x%" PRIx64 "\n", gprsgx_region->fields.rip);
+    printf("    URSP:     0x%" PRIx64 "\n", gprsgx_region->fields.ursp);
+    printf("    URBP:     0x%" PRIx64 "\n", gprsgx_region->fields.urbp);
+    printf("    EXITINFO: 0x%" PRIx32 "\n", gprsgx_region->fields.exitinfo);
+    printf("    FSBASE:   0x%" PRIx64 "\n", gprsgx_region->fields.fsbase);
+    printf("    GSBASE:   0x%" PRIx64 "\n", gprsgx_region->fields.gsbase);
+}
+

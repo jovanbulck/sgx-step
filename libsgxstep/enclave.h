@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 extern uint32_t nemesis_tsc_eresume, nemesis_tsc_aex;
+extern int sgx_step_eresume_cnt;
 
 typedef void (*aep_cb_t)(void);
 void register_aep_cb(aep_cb_t cb);
@@ -42,6 +43,46 @@ void edbgrd(void *adrs, void* res, int len);
 /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
    runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
 #define SGX_SSAFRAMESIZE            4096
+
+struct gprsgx_region {
+    uint64_t rax;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t rbx;
+    uint64_t rsp;
+    uint64_t rbp;
+    uint64_t rsi;
+    uint64_t rdi;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+    uint64_t rflags;
+    uint64_t rip;
+    uint64_t ursp;
+    uint64_t urbp;
+    uint32_t exitinfo;
+    uint32_t reserved;
+    uint64_t fsbase;
+    uint64_t gsbase;
+};
+
+typedef union {
+    struct gprsgx_region fields;
+    uint8_t bytes[ sizeof(struct gprsgx_region) ];
+} gprsgx_region_t;
+
+typedef union {
+    uint8_t bytes[8];
+    uint64_t reg;
+} gpr_t;
+
+void* get_enclave_ssa_gprsgx_adrs(void);
+void dump_gprsgx_region(gprsgx_region_t *gprsgx_region);
 
 uint64_t edbgrd_ssa(int ssa_field_offset);
 #define edbgrd_erip() edbgrd_ssa(SGX_GPRSGX_RIP_OFFSET)

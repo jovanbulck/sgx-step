@@ -1,0 +1,10 @@
+enclave {
+	
+	trusted {
+        public void* enclave_get_trigger_adrs(void);
+        public void  enclave_run(void);
+	};
+	
+	untrusted {
+	};
+};
