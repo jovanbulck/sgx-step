@@ -51,9 +51,10 @@ sgx_step_aep_trampoline:
 
     /* optional C function callback */
     lea sgx_step_aep_cb, %xax
+    mov (%xax), %xax
     test %xax, %xax
     je .Leresume
-    call *(%xax)
+    call %xax
 
 .Leresume:
     mov sgx_step_tcs, %xbx              /* TCS address */
