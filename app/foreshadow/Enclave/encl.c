@@ -19,12 +19,44 @@
  */
 
 #include <stdint.h>
+#include <sgx_trts.h>
 
-extern uint8_t *trigger_page;
+// read entire cache line
+#define CACHE_LINE_SIZE     64
+#ifndef SECRET_BYTES
+    #define SECRET_BYTES    CACHE_LINE_SIZE
+#endif
 
-void* enclave_get_trigger_adrs(void)
+// first few cache lines seem not to work stable (?)
+#define SECRET_CACHE_LINE   22
+#define SECRET_OFFSET       (CACHE_LINE_SIZE*SECRET_CACHE_LINE)
+
+uint8_t __attribute__ ((aligned(0x1000))) array[1000];
+#define secret array[SECRET_OFFSET]
+
+void *enclave_generate_secret( void )
 {
-    return &trigger_page;
+	sgx_read_rand( &secret, SECRET_BYTES);
+    return &secret;
+}
+
+void enclave_destroy_secret( uint8_t cl[SECRET_BYTES] )
+{
+    uint8_t rv = secret;
+
+    for (int i=0; i < SECRET_BYTES; i++)
+    {
+        cl[i] = array[SECRET_OFFSET+i];
+        array[SECRET_OFFSET+i] = 0xff;
+    }
+}
+
+void enclave_reload( void *adrs )
+{
+    asm volatile (
+        "movl (%0), %%eax\n\t"
+        : : "c" (adrs)
+        : "%rax");
 }
 
 void enclave_run(void)
@@ -45,7 +77,7 @@ void enclave_run(void)
         "mov $0x1515151515151515, %%r15 \n\t"
         "mov (%0), %%rdi \n\t"
         :
-        : "S" (&trigger_page)
+        : "S" (&secret)
         : "rax", "rbx", "rcx", "rdx", "rdi",
           "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
     );

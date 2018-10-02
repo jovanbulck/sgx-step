@@ -47,6 +47,11 @@ all: $(OUTPUT)
 run: clean all
 	sudo $(URTS_LD_LIBRARY_PATH) ./app 
 
+repeat: clean all
+	while true; do \
+        $(WATCH) sudo $(URTS_LD_LIBRARY_PATH) ./app ; \
+	done;
+
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 
 	$(LD) $(OBJECTS) $(LDFLAGS) -o $(OUTPUT) 

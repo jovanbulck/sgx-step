@@ -27,7 +27,7 @@
  * NOTE: As speculative reading tend to have a slight bias towards zero values; we
  * retry a few times before concluding the secret byte is indeed zero.
  */
-#define FORESHADOW_ZERO_RETRIES     10
+#define FORESHADOW_ZERO_RETRIES     20
 
 /* Be extra suspicious of zero bytes (which might mean the SSA cacheline got kicked,
  * and we need to reload it via a fresh faulting ERESUME call) */
