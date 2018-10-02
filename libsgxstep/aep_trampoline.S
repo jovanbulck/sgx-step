@@ -54,7 +54,7 @@ sgx_step_aep_trampoline:
     mov (%xax), %xax
     test %xax, %xax
     je .Leresume
-    call %xax
+    call *%xax
 
 .Leresume:
     mov sgx_step_tcs, %xbx              /* TCS address */
