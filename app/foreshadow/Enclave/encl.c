@@ -28,7 +28,7 @@
 #endif
 
 // first few cache lines seem not to work stable (?)
-#define SECRET_CACHE_LINE   22
+#define SECRET_CACHE_LINE   27
 #define SECRET_OFFSET       (CACHE_LINE_SIZE*SECRET_CACHE_LINE)
 
 uint8_t __attribute__ ((aligned(0x1000))) array[1000];

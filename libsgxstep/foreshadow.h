@@ -33,25 +33,9 @@
  * and we need to reload it via a fresh faulting ERESUME call) */
 #define FORESHADOW_SSA_ZERO_RETRIES 20
 
-#define FORESHADOW_DEBUG            0
-
-#define CEIL(x,y)			        ( ((x) % (y) == 0 ) ? ((x) / (y)) : ((x) / (y)) + 1 )
-
-#define NEGATIVE_MARGIN_SLOTS		5
-#define POSITIVE_MARGIN_SLOTS		5
-#define NUM_SLOTS			        256
-#define SLOT_SIZE			        (64*64)
-#define SLOT_OFFSET(base, index)	((uint8_t *)((uint64_t) (base) + (index) * SLOT_SIZE))
-#define ORACLE_POSITIVE_MARGIN_SIZE	(POSITIVE_MARGIN_SLOTS * SLOT_SIZE)
-#define ORACLE_NEGATIVE_MARGIN_SIZE	(NEGATIVE_MARGIN_SLOTS * SLOT_SIZE)
-#define ORACLE_MAIN_BUFFER_SIZE		(NUM_SLOTS * SLOT_SIZE)
-#define TOTAL_ORACLE_PAGES		    ( CEIL( ORACLE_POSITIVE_MARGIN_SIZE, 0x1000 ) + CEIL( ORACLE_MAIN_BUFFER_SIZE, 0x1000 ) + CEIL( ORACLE_NEGATIVE_MARGIN_SIZE, 0x1000 ) )
-
-uint8_t *create_oracle_buffer( void );
-void destroy_oracle_buffer( uint8_t *oracle_buffer );
-
-int foreshadow(void *adrs, void *oracle);
-int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_alias, void* oracle);
+void foreshadow_init(void);
+int foreshadow(void *adrs);
+int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt);
 
 void foreshadow_dump_perf(void);
 int foreshadow_compare_secret(uint8_t *recovered, uint8_t *real, int len);

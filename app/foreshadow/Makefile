@@ -39,7 +39,7 @@ OUTPUT               = app
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
-WATCH                = watch -n 0,1 #-e
+WATCH                = watch -n 0.1 #-e
 
 .SILENT:
 all: $(OUTPUT)

