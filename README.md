@@ -20,7 +20,8 @@ photo frames to reveal overall horse gait properties.
 
 | SGX-Step release | Publication details                                                  | Comments 		               |
 |------------------|----------------------------------------------------------------------|--------------------------------|
-| v1.2.0           | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling. |
+| v1.3.0           | [USEC'18](https://foreshadowattack.eu/foreshadow.pdf)                | Transient execution (Foreshadow attack).|
+| v1.2.0           | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling (Nemesis interrupt timing attack). |
 | v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
 | v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
 
