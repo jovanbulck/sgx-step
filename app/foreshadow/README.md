@@ -1,5 +1,66 @@
-Sample output (note: the last cacheline (8 registers including RIP) seems to be
-almost always flushed -- due to the kernel #PF handler??):
+# Foreshadow: Extracting the keys to the Intel SGX kingdom with transient out-of-order execution
+
+The PoC (app/foreshadow) generates a random secret in an enclave, loads
+it in L1D, and then extracts the cache line contents from the untrusted
+surrounding process using Foreshadow/L1TF. From a high level, the attack
+proceeds in 3 phases:
+
+### 1. Load enclave secret in cache
+
+We explore various techniques in the [USENIX
+paper](https://foreshadowattack.eu/foreshadow.pdf), but the simplest of
+course is to execute the enclave. The PoC also demonstrates how CPU
+registers can be retrieved from the enclave State Save Area (SSA) frame
+upon interrupt/fault.
+
+### 2. Unmap enclave page
+
+This is the trick to make Foreshadow work: we clear the "present" bit in
+the page table entry mapping the enclave secret (in contrast to Meltdown
+which bypasses the "supervisor" bit).
+
+Simplest to do this on unpatched Linux systems was the unprivileged
+`mprotect(PROT_NONE)` system call, which originally cleared the "present"
+bit while leaving the physical page address unmodified. However, all
+recent Linux kernels have been unconditionally patched since August to
+sanitize the physical page address upon mprotect. We therefore rely on a
+malicious driver (`/dev/sgx-step`) to map the process's page table entries
+in user space. Arbitrary enclave page table manipulation can now simply
+be performed via a convenient library (`libsgxstep/pt.c`).
+
+Note that we setup a dedicated "alias" page table mapping with the
+present bit cleared in the PoC code (`attacker_config_page_table`
+function). Having a separate valid mapping for the enclave, plus invalid
+mapping for the attacker, allows to easily execute/extract the enclave
+w/o switching to the kernel.
+
+### 3. Execute Meltdown
+
+After unmapping, we simply execute plain vanilla Meltdown to extract the
+enclave secret from L1D using a Flush+Reload covert channel (see
+`libsgxstep/foreshadow.c` and `libsgxstep/transient.S`).
+
+## Running and sample output
+
+After properly installing SGX-Step, as explained in the top-level directory
+[README.md](https://github.com/jovanbulck/sgx-step/blob/master/README.md),
+simply execute:
+
+```bash
+$ make run
+```
+
+**Note (mitigations).** In order to successfully run the PoC, you need to
+disable CPU microcode patches (e.g., using the `dis_ucode_ldr` Linux kernel
+parameter). Intel mitigated this attack with a microcode update that
+automatically flushes L1D on enclave entry/exit and extends attestation to
+include whether HyperThreading (HT) is enabled/disabled. Since we also
+demonstrated concurrent L1D extraction from a sibling HT CPU, you should
+only trust non-HT attestations to date.
+
+Sample output (note: in this case the last cacheline (8 registers including
+RIP) seems to be almost always flushed -- probably because of the kernel #PF
+handler execution):
 
 ```
 [pt.c] /dev/sgx-step opened!
