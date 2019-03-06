@@ -99,6 +99,7 @@ int foreshadow(void *adrs)
     return rv;
 }
 
+#if !NO_SGX
 int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt)
 {
     static int ssa_cur_byte = 0, ssa_zero_retries = 0;
@@ -137,13 +138,16 @@ int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt)
     else
         return ssa_cur_byte ? ssa_cur_byte : -1;
 }
+#endif
 
 void foreshadow_dump_perf(void)
 {
     info("Foreshadow conf: 0X00_RETRIES=%d SSA_0x00_RETRIES=%d",
             FORESHADOW_ZERO_RETRIES, FORESHADOW_SSA_ZERO_RETRIES);
+    #if !NO_SGX
     info("Foreshadow perf: 0x00 retries=%d; number AEX=%d",
             fs_zero_retries, sgx_step_eresume_cnt);
+    #endif
 }
 
 int foreshadow_compare_secret(uint8_t *recovered, uint8_t *real, int len)

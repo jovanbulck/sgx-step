@@ -18,8 +18,9 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SGX_STEP_AEP_H
-#define SGX_STEP_AEP_H
+#ifndef SGX_STEP_ENCLAVE_H
+#define SGX_STEP_ENCLAVE_H
+#if !NO_SGX
 
 #include <stdint.h>
 
@@ -87,4 +88,5 @@ void dump_gprsgx_region(gprsgx_region_t *gprsgx_region);
 uint64_t edbgrd_ssa(int ssa_field_offset);
 #define edbgrd_erip() edbgrd_ssa(SGX_GPRSGX_RIP_OFFSET)
 
+#endif
 #endif

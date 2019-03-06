@@ -34,8 +34,11 @@
 
 #include <linux/kallsyms.h>
 #include <linux/clockchips.h>
+#include <linux/version.h>
 
-#include "linux-sgx-driver/sgx.h"
+#if !NO_SGX
+    #include "linux-sgx-driver/sgx.h"
+#endif
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.strackx@cs.kuleuven.be>");
@@ -66,16 +69,18 @@ int step_release(struct inode *inode, struct file *file)
 
 long sgx_step_ioctl_info(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-    struct sgx_encl *enclave;
-    struct vm_area_struct *vma = NULL;
-    struct sgx_step_enclave_info *info = (struct sgx_step_enclave_info *) arg;
+    #if !NO_SGX
+        struct sgx_encl *enclave;
+        struct vm_area_struct *vma = NULL;
+        struct sgx_step_enclave_info *info = (struct sgx_step_enclave_info *) arg;
 
-    vma = find_vma(current->mm, (uint64_t) info->tcs);
-    RET_ASSERT(vma && (enclave = vma->vm_private_data));
-    RET_ASSERT(info->aep && info->tcs);
+        vma = find_vma(current->mm, (uint64_t) info->tcs);
+        RET_ASSERT(vma && (enclave = vma->vm_private_data));
+        RET_ASSERT(info->aep && info->tcs);
 
-    info->base = enclave->base;
-    info->size = enclave->size;
+        info->base = enclave->base;
+        info->size = enclave->size;
+    #endif
 
     return 0;
 }

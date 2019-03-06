@@ -1,6 +1,8 @@
 #include "debug.h"
 
+#if !NO_SGX
 sgx_status_t sgx_step_rv = SGX_SUCCESS;
+#endif
 
 void dump_hex(uint8_t *buf, int len)
 {

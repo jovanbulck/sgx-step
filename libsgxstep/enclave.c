@@ -17,6 +17,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
+#if !NO_SGX
 
 #include "enclave.h"
 #include "debug.h"
@@ -154,3 +155,4 @@ void dump_gprsgx_region(gprsgx_region_t *gprsgx_region)
     printf("    GSBASE:   0x%" PRIx64 "\n", gprsgx_region->fields.gsbase);
 }
 
+#endif

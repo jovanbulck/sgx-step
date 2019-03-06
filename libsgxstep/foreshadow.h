@@ -35,7 +35,9 @@
 
 void foreshadow_init(void);
 int foreshadow(void *adrs);
-int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt);
+#if !NO_SGX
+    int foreshadow_ssa(gprsgx_region_t *shadow_gprsgx, void* gprsgx_pt);
+#endif
 
 void foreshadow_dump_perf(void);
 int foreshadow_compare_secret(uint8_t *recovered, uint8_t *real, int len);
