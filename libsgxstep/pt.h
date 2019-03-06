@@ -65,6 +65,9 @@
 #define P_SHIFT			0
 #define P_MASK			UINT64_C(0x1)
 
+#define RSVD_SHIFT      51
+#define RSVD_MASK       (UINT64_C(0x1) << RSVD_SHIFT)
+
 #define PUD_PS_SHIFT		7
 #define PUD_PS_MASK		(UINT64_C(0x1) << PUD_PS_SHIFT)
 
@@ -128,6 +131,10 @@
 #define PRESENT(entry)			(((entry) & P_MASK) >> P_SHIFT)
 #define MARK_PRESENT(entry) 		((entry) | P_MASK)
 #define MARK_NOT_PRESENT(entry) 	((entry) & ~P_MASK)
+
+#define RSVD(entry)			    (((entry) & RSVD_MASK) >> RSVD_SHIFT)
+#define MARK_RSVD(entry)        ((entry) | RSVD_MASK)
+#define CLEAR_RSVD(entry)       ((entry) & ~RSVD_MASK)
 
 #define PUD_PS(entry)			(((entry) & PUD_PS_MASK) >> PUD_PS_SHIFT)
 #define PMD_PS(entry)			(((entry) & PMD_PS_MASK) >> PMD_PS_SHIFT)

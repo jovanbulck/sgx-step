@@ -235,8 +235,8 @@ void print_pte( uint64_t *pte )
 {
     printf("+-------------------------------------------------------------------------------------------+\n");
     printf("| XD | PK | IGN | RSVD | PHYS ADRS      | IGN | G | PAT | D | A | PCD | PWT | U/S | R/W | P | \n");
-    printf("| %d  | x  | x   | x    | 0x%012" PRIi64 " | x   | x | x   | %d | %d | x   | x   | %d   | %d   | %d | \n",
-            (int) EXECUTE_DISABLE(*pte), PT_PHYS(*pte), (int) DIRTY(*pte), (int) ACCESSED(*pte), (int) USER(*pte), (int) WRITABLE(*pte), (int) PRESENT(*pte));
+    printf("| %d  | x  | x   | %d    | 0x%012" PRIi64 " | x   | x | x   | %d | %d | x   | x   | %d   | %d   | %d | \n",
+            (int) EXECUTE_DISABLE(*pte), (int) RSVD(*pte), PT_PHYS(*pte), (int) DIRTY(*pte), (int) ACCESSED(*pte), (int) USER(*pte), (int) WRITABLE(*pte), (int) PRESENT(*pte));
     printf("+-------------------------------------------------------------------------------------------+\n");
 }
 
