@@ -56,6 +56,9 @@
 #define W_SHIFT			1
 #define W_MASK			(UINT64_C(0x1) << W_SHIFT)
 
+#define US_SHIFT		2
+#define US_MASK			(UINT64_C(0x1) << US_SHIFT)
+
 #define XD_SHIFT		63
 #define XD_MASK			(UINT64_C(0x1) << XD_SHIFT)
 
@@ -109,6 +112,10 @@
 #define WRITABLE(entry) 		(((entry) & W_MASK) >> W_SHIFT)
 #define MARK_WRITABLE(entry) 		((entry) | W_MASK)
 #define MARK_NON_WRITABLE(entry)	((entry) & ~W_MASK)
+
+#define USER(entry) 		    (((entry) & US_MASK) >> US_SHIFT)
+#define MARK_USER(entry) 		((entry) | US_MASK)
+#define MARK_SUPERVISOR(entry)	((entry) & ~US_MASK)
 
 #define EXECUTE_DISABLE(entry)		((((entry) & XD_MASK) >> XD_SHIFT))
 #define MARK_EXECUTE_DISABLE(entry)	((entry) | XD_MASK)

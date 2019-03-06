@@ -56,4 +56,13 @@ inline void __attribute__((always_inline)) flush(void* p)
       : "rax");
 }
 
+inline void __attribute__((always_inline)) maccess(void* p)
+{
+    asm volatile (
+    "mov (%0), %%rax\n"
+    :
+    : "c" (p)
+    : "rax");
+}
+
 #endif
