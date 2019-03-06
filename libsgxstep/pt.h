@@ -147,6 +147,7 @@ typedef enum {PGD, PUD, PMD, PTE, PAGE} pt_level_t;
 
 void *remap(uint64_t phys);
 void *remap_page_table_level( void *address, pt_level_t level );
+void flush_tlb(void *adrs);
 
 address_mapping_t *get_mappings( void *address );
 uint64_t phys_address( address_mapping_t *map, pt_level_t level );

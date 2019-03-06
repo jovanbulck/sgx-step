@@ -105,14 +105,14 @@ long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long a
     return 0;
 }
 
+typedef void (*ftlb_t)(void);
+
 long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-    unsigned long val = 0;
+    ftlb_t ftlb;
+    RET_ASSERT(ftlb = (ftlb_t) kallsyms_lookup_name("flush_tlb_all"));
 
-    asm volatile("mov %%cr3, %0\n\t"
-                 "mov %0, %%cr3\n\t"
-                 : : "r" (val));
-
+    ftlb();
     return 0;
 }
 

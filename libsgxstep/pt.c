@@ -50,6 +50,15 @@ void __attribute__((destructor)) tear_down_sgx_step( void )
     close(fd_mem);
 }
 
+void flush_tlb(void *adrs)
+{
+    invpg_t param = {
+        .adrs = (uint64_t) adrs
+    };
+
+    ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_INVPG, &param) >= 0 );
+}
+
 void *remap(uint64_t phys)
 {
     void *map;
