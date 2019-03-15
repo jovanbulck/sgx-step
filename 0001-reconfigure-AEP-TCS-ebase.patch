@@ -1,0 +1,238 @@
+diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
+index 6c9d8a2..7253142 100644
+--- a/common/inc/sgx_urts.h
++++ b/common/inc/sgx_urts.h
+@@ -76,6 +76,12 @@ typedef struct _sgx_kss_config_t
+ extern "C" {
+ #endif
+ 
++//XXX
++void* SGXAPI sgx_get_aep(void);
++void  SGXAPI sgx_set_aep(void *aep);
++void* SGXAPI sgx_get_tcs(void);
++void  SGXAPI sgx_set_load_ptr(void *load_ptr);
++
+ typedef uint8_t sgx_launch_token_t[1024];
+ 
+ /* Convenient macro to be passed to sgx_create_enclave(). */
+diff --git a/psw/urts/linux/enclave_creator_hw.cpp b/psw/urts/linux/enclave_creator_hw.cpp
+index f1d914d..d3879b7 100644
+--- a/psw/urts/linux/enclave_creator_hw.cpp
++++ b/psw/urts/linux/enclave_creator_hw.cpp
+@@ -54,6 +54,8 @@
+   
+ static EnclaveCreatorHW g_enclave_creator_hw;
+ 
++void* sgx_load_ptr = NULL;
++
+ EnclaveCreator* g_enclave_creator = &g_enclave_creator_hw;
+ static uint64_t g_eid = 0x1;
+ 
+@@ -166,7 +168,12 @@ int EnclaveCreatorHW::error_api2urts(uint32_t api_error)
+ 
+      return ret;
+ }
+- 
++
++void sgx_set_load_ptr(void* load_ptr)
++{
++	sgx_load_ptr = load_ptr;
++}
++  
+ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id, void **start_addr, bool ae)
+ {
+     assert(secs != NULL && enclave_id != NULL && start_addr != NULL);
+@@ -177,7 +184,7 @@ int EnclaveCreatorHW::create_enclave(secs_t *secs, sgx_enclave_id_t *enclave_id,
+         return SGX_ERROR_UNEXPECTED;
+ 
+     uint32_t enclave_error = ENCLAVE_ERROR_SUCCESS;
+-    void* enclave_base = enclave_create(NULL, (size_t)secs->size, 0, ENCLAVE_TYPE_SGX2, &enclave_create_sgx, sizeof(enclave_create_sgx_t), &enclave_error);
++    void* enclave_base = enclave_create(sgx_load_ptr, (size_t)secs->size, 0, ENCLAVE_TYPE_SGX2, &enclave_create_sgx, sizeof(enclave_create_sgx_t), &enclave_error);
+ 
+     if (enclave_error)
+         return error_api2urts(enclave_error);
+diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
+index fcc5da8..ff992b6 100644
+--- a/psw/urts/linux/enter_enclave.S
++++ b/psw/urts/linux/enter_enclave.S
+@@ -32,6 +32,29 @@
+ 
+ #include "enter_enclave.h"
+ 
++/* XXX runtime reconfigurable indirect Asynchronous Exit Pointer (AEP)
++ * (ld complains when initializing __default_async_exit_pointer here, so we have
++ * to do it at runtime, when EENTERing, below in .Ldo_eenter.
++ */
++    .data
++g_aep_pointer:
++    .word 0x0
++    .word 0x0
++    .word 0x0
++    .word 0x0
++
++/* XXX HACK: SGX stores TCS address in rbx on interrupt, but this value is
++ * somehow not properly stored in Linux's pt_regs struct available to our
++ * driver's interrupt handler. We therefore store TCS address here in the
++ * untrusted runtime, so as to be able to explicitly communicate TCS to our
++ * driver...
++ */
++    .data
++g_tcs:
++    .word 0x0
++    .word 0x0
++    .word 0x0
++    .word 0x0
+ 
+ /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
+ .file "enter_enclave.S"
+@@ -72,9 +95,17 @@ EENTER_PROLOG
+     je   1f
+     vzeroupper
+ 1:
+-    mov frame_arg0, %xbx                        /* tcs addr */
+-    lea_pic .Lasync_exit_pointer, %xcx          /* aep addr */
+-    mov $SE_EENTER, %xax                        /* EENTER leaf */
++    mov         frame_arg0, %xbx                /* tcs addr */
++    lea_pic     g_tcs, %xax
++    mov         %xbx, (%xax)
++    /* fetch AEP; init when NULL */
++    lea_pic     g_aep_pointer, %xax
++    mov         (%xax), %xcx                    /* aep addr */
++    cmp         $0x0, %xcx
++    jnz 1f
++    lea_pic     __default_async_exit_pointer, %xcx
++    mov         %xcx, (%xax)
++1:  mov         $SE_EENTER, %xax                /* EENTER leaf */
+ 
+ .Leenter_inst:
+     ENCLU
+@@ -132,14 +163,26 @@ EENTER_PROLOG
+ .Loret:
+     EENTER_EPILOG
+ 
+-.Lasync_exit_pointer:
++__default_async_exit_pointer:
+     ENCLU
+ 
+ .size __morestack, .-__morestack
+ 
+ 
+-DECLARE_GLOBAL_FUNC get_aep
+-    lea_pic     .Lasync_exit_pointer, %xax
++ DECLARE_GLOBAL_FUNC get_aep
++    lea_pic     g_aep_pointer, %xax
++    mov         (%xax), %xax
++    ret
++ 
++DECLARE_GLOBAL_FUNC set_aep
++    lea_pic     g_aep_pointer, %xax
++    mov         naked_arg0, %xbx
++    mov         %xbx, (%xax)
++    ret
++
++DECLARE_GLOBAL_FUNC get_tcs
++    lea_pic     g_tcs, %xax
++    mov         (%xax), %xax
+     ret
+ 
+ DECLARE_GLOBAL_FUNC get_eenterp
+diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
+index d22dddb..5abf27d 100644
+--- a/psw/urts/linux/urts.cpp
++++ b/psw/urts/linux/urts.cpp
+@@ -40,6 +40,26 @@
+ 
+ #include "urts_com.h"
+ 
++//XXX
++extern "C" void *get_aep();
++extern "C" void  set_aep(void *aep);
++extern "C" void *get_tcs();
++
++extern "C" void* sgx_get_aep(void)
++{
++    return get_aep();
++}
++
++extern "C" void* sgx_get_tcs(void)
++{
++    return get_tcs();
++}
++
++extern "C" void sgx_set_aep(void *aep)
++{
++    set_aep(aep);
++}
++
+ static bool inline _check_ex_params_(const uint32_t ex_features, const void* ex_features_p[32])
+ {
+     //update last feature index if it fails here
+diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
+index 5ba4bd1..baf8197 100644
+--- a/psw/urts/linux/urts.lds
++++ b/psw/urts/linux/urts.lds
+@@ -1,5 +1,9 @@
+ {
+     global:
++        sgx_get_aep;
++        sgx_set_aep;
++        sgx_get_tcs;
++        sgx_set_load_ptr;
+         sgx_create_enclave;
+         sgx_create_enclave_ex;
+         sgx_destroy_enclave;
+diff --git a/sdk/simulation/uinst/u_instructions.cpp b/sdk/simulation/uinst/u_instructions.cpp
+index 0b0486f..42d1146 100644
+--- a/sdk/simulation/uinst/u_instructions.cpp
++++ b/sdk/simulation/uinst/u_instructions.cpp
+@@ -57,6 +57,13 @@ static uintptr_t _ECREATE (page_info_t* pi);
+ static uintptr_t _EADD (page_info_t* pi, void* epc_lin_addr);
+ static uintptr_t _EREMOVE(const void* epc_lin_addr);
+ 
++void* sgx_load_ptr = NULL;
++
++void sgx_set_load_ptr(void* load_ptr)
++{
++	sgx_load_ptr = load_ptr;
++}
++
+ ////////////////////////////////////////////////////////////////////////
+ #define __GP__() exit(EXIT_FAILURE)
+ 
+@@ -154,7 +161,7 @@ uintptr_t _ECREATE(page_info_t* pi)
+ 
+     // `ce' is not checked against NULL, since it is not
+     // allocated with new(std::no_throw).
+-    addr = se_virtual_alloc(NULL, (size_t)secs->size, MEM_COMMIT);
++    addr = se_virtual_alloc(sgx_load_ptr, (size_t)secs->size, MEM_COMMIT);
+     if (addr == NULL) {
+         delete ce;
+         return 0;
+diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_deploy.c
+index a383efd..1f116ee 100644
+--- a/sdk/simulation/urtssim/urts_deploy.c
++++ b/sdk/simulation/urtssim/urts_deploy.c
+@@ -57,6 +57,23 @@ sgx_status_t sgx_create_encrypted_enclave()
+ }
+ 
+ 
++void *sgx_get_aep(void)
++{
++    printf("Please use the correct uRTS library from PSW package.\n");
++    return NULL;
++}
++
++void sgx_set_aep(void* p)
++{
++    printf("Please use the correct uRTS library from PSW package.\n");
++}
++
++void *sgx_get_tcs(void)
++{
++    printf("Please use the correct uRTS library from PSW package.\n");
++    return NULL;
++}
++
+ void sgx_debug_load_state_add_element(){};
+ void sgx_debug_unload_state_remove_element(){};
+ void sgx_destroy_enclave(){};
