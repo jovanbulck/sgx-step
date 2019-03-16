@@ -154,7 +154,8 @@
 #define PAGE1GiB_INDEX(virt)	(virt & PAGE1GiB_MASK) >> PAGE1GiB_SHIFT
 #define PAGE2MiB_INDEX(virt)	(virt & PAGE2MiB_MASK) >> PAGE2MiB_SHIFT
 
-void __attribute__((constructor)) init_sgx_step( void );
+void mem_open( void );
+void step_open( void );
 void __attribute__((destructor))  tear_down_sgx_step( void );
 
 typedef enum {PGD, PUD, PMD, PTE, PAGE} pt_level_t;

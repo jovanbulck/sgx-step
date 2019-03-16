@@ -31,8 +31,12 @@ int fault_fired = 0, aep_fired = 0;
 
 void aep_cb_func(void)
 {
+    gprsgx_region_t gprsgx;
     uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
     info("Hello world from AEP callback with erip=%#llx! Resuming enclave..", erip); 
+
+    edbgrd(get_enclave_ssa_gprsgx_adrs(), &gprsgx, sizeof(gprsgx_region_t));
+    dump_gprsgx_region(&gprsgx);
 
     aep_fired++;
 }
@@ -55,7 +59,6 @@ int main( int argc, char **argv )
 	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
                                     &token, &updated, &eid, NULL ) );
     register_aep_cb(aep_cb_func);
-    register_enclave_info();
     print_enclave_info();
 
     /* mprotect to provoke page faults during enclaved execution */

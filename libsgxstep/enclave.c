@@ -22,8 +22,9 @@
 #include "enclave.h"
 #include "debug.h"
 #include <sys/ioctl.h>
-#include "../kernel/sgxstep_ioctl.h"
 #include <inttypes.h>
+#include "../kernel/sgxstep_ioctl.h"
+#include "pt.h"
 
 /* Includes custom AEP get/set functions from patched SGX SDK urts. */
 #include <sgx_urts.h>
@@ -47,24 +48,25 @@ void register_aep_cb(aep_cb_t cb)
 
 void register_enclave_info(void)
 {
-    ASSERT(fd_step >= 0);
-    sgx_set_aep(sgx_step_aep_trampoline);
-
     victim.tcs = (uint64_t) sgx_get_tcs();
     victim.aep = (uint64_t) sgx_get_aep();
+
+    step_open();
     ASSERT(ioctl(fd_step, SGX_STEP_IOCTL_VICTIM_INFO, &victim) >= 0);
     ioctl_init = 1;
 }
 
 void *get_enclave_base(void)
 {
-    ASSERT(ioctl_init && "/dev/sgx-step enclave_info struct not filled in");
+    if (!ioctl_init) register_enclave_info();
+
     return (void*)((uintptr_t) victim.base);
 }
 
 int get_enclave_size(void)
 {
-    ASSERT(ioctl_init && "/dev/sgx-step enclave_info struct not filled in");
+    if (!ioctl_init) register_enclave_info();
+
     return (int) victim.size;
 }
 
@@ -76,6 +78,7 @@ void edbgrd(void *adrs, void* res, int len)
         .len = (int64_t) len
     };
 
+    step_open();
     ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_EDBGRD, &edbgrd_data) >= 0 );
 }
 
@@ -129,7 +132,7 @@ void print_enclave_info(void)
 
 void dump_gprsgx_region(gprsgx_region_t *gprsgx_region)
 {
-    printf("=== Foreshadow recovered SSA/GPRSGX region after AEX ===\n");
+    printf("=== SSA/GPRSGX region after AEX ===\n");
     printf("    RAX:      0x%" PRIx64 "\n", gprsgx_region->fields.rax);
     printf("    RCX:      0x%" PRIx64 "\n", gprsgx_region->fields.rcx);
     printf("    RDX:      0x%" PRIx64 "\n", gprsgx_region->fields.rdx);

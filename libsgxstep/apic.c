@@ -26,7 +26,6 @@
 #include <sys/ioctl.h>
 #include "../kernel/sgxstep_ioctl.h"
 
-extern int fd_step;
 void *apic_base = NULL;
 void *dummy_pt = NULL;
 uint32_t apic_lvtt = 0x0, apic_tdcr = 0x0;

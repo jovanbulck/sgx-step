@@ -30,14 +30,22 @@
 
 int fd_step = -1, fd_mem = -1;
 
-void __attribute__((constructor)) init_sgx_step( void )
-{ 
-    ASSERT((fd_step == -1) && (fd_mem == -1)); 
-    ASSERT((fd_step = open("/dev/sgx-step", O_RDWR)) >= 0);
-    info("/dev/sgx-step opened!");
+void mem_open( void )
+{
+    if (fd_mem == -1)
+    {
+        ASSERT((fd_mem = open("/dev/mem", O_RDWR)) >= 0);
+        info("/dev/mem opened!");
+    }
+}
 
-    ASSERT((fd_mem = open("/dev/mem", O_RDWR)) >= 0);
-    info("/dev/mem opened!");
+void step_open( void )
+{ 
+    if (fd_step == -1)
+    {
+        ASSERT((fd_step = open("/dev/sgx-step", O_RDWR)) >= 0);
+        info("/dev/sgx-step opened!");
+    }
 }
 
 void __attribute__((destructor)) tear_down_sgx_step( void )
@@ -46,8 +54,10 @@ void __attribute__((destructor)) tear_down_sgx_step( void )
     if (apic_lvtt)
         apic_timer_deadline();
 
-    close(fd_step);
-    close(fd_mem);
+    if (fd_step >= 0)
+        close(fd_step);
+    if (fd_mem >= 0)
+        close(fd_mem);
 }
 
 void flush_tlb(void *adrs)
@@ -56,6 +66,7 @@ void flush_tlb(void *adrs)
         .adrs = (uint64_t) adrs
     };
 
+    step_open();
     ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_INVPG, &param) >= 0 );
 }
 
@@ -64,8 +75,8 @@ void *remap(uint64_t phys)
     void *map;
     uintptr_t virt;
     volatile uint8_t force_mapping;
-    ASSERT(fd_mem >= 0);
 
+    mem_open();
     map = mmap(0, 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED,
                fd_mem, phys & ~PFN_MASK );
     ASSERT(map != MAP_FAILED);
@@ -95,8 +106,9 @@ address_mapping_t *get_mappings( void *address )
 	address_mapping_t *mapping;
 	ASSERT( (mapping = (address_mapping_t *) malloc(sizeof(address_mapping_t))) );
 	memset( mapping, 0x00, sizeof( address_mapping_t ) );
-	
 	mapping->virt = (uintptr_t) address;
+
+    step_open();
     ASSERT( ioctl( fd_step, SGX_STEP_IOCTL_GET_PT_MAPPING, mapping ) >= 0);
 
     return mapping;
