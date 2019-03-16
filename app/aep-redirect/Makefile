@@ -38,12 +38,14 @@ OUTPUT               = app
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
-
 .SILENT:
 all: $(OUTPUT)
 	
 run: clean all
-	sudo $(URTS_LD_LIBRARY_PATH) ./app
+	sudo $(URTS_LD_LIBRARY_PATH) ./$(OUTPUT)
+
+debug: clean all
+	sudo `which sgx-gdb` ./$(OUTPUT)
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 
