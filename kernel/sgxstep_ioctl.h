@@ -51,6 +51,7 @@ typedef struct {
     uint64_t adrs;
     uint64_t val;
     int64_t  len;
+    int      write;
 } edbgrd_t;
 
 typedef struct {

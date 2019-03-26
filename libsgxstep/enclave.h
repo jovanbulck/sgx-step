@@ -34,7 +34,9 @@ void register_enclave_info(void);
 void print_enclave_info(void);
 void *get_enclave_base(void);
 int get_enclave_size(void);
-void edbgrd(void *adrs, void* res, int len);
+void edbgrdwr(void *adrs, void* res, int len, int write);
+#define edbgrd(adrs, res, len)  edbgrdwr(adrs, res, len, 0)
+#define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)
 
 /* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
 #define SGX_TCS_OSSA_OFFSET         16

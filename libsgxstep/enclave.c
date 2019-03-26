@@ -70,12 +70,13 @@ int get_enclave_size(void)
     return (int) victim.size;
 }
 
-void edbgrd(void *adrs, void* res, int len)
+void edbgrdwr(void *adrs, void* res, int len, int write)
 {
     edbgrd_t edbgrd_data = {
         .adrs = (uintptr_t) adrs,
         .val = (uintptr_t) res,
-        .len = (int64_t) len
+        .len = (int64_t) len,
+        .write = write
     };
 
     step_open();

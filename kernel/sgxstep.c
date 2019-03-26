@@ -85,22 +85,25 @@ long sgx_step_ioctl_info(struct file *filep, unsigned int cmd, unsigned long arg
     return 0;
 }
 
-long edbgrd(unsigned long addr, void *buf, int len)
+long edbgrdwr(unsigned long addr, void *buf, int len, int write)
 {
     apvm_t apvm;
 
     /* access_process_vm will use the vm_operations defined by the isgx driver */
     RET_ASSERT(apvm = (apvm_t) kallsyms_lookup_name("access_process_vm"));
-    return apvm(current, addr, buf, len, /*write=*/0);
+    return apvm(current, addr, buf, len, write);
 }
 
 long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     edbgrd_t *data = (edbgrd_t*) arg;
     uint8_t buf[data->len];
-    edbgrd((unsigned long) data->adrs, &buf, data->len);
+    if (data->write && copy_from_user(buf, (void __user *) data->val, data->len))
+        return -EFAULT;
 
-    if (copy_to_user((void __user *) data->val, buf, data->len))
+    edbgrdwr((unsigned long) data->adrs, &buf, data->len, data->write);
+
+    if (!data->write && copy_to_user((void __user *) data->val, buf, data->len))
         return -EFAULT;
     return 0;
 }

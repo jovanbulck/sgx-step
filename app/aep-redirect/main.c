@@ -52,7 +52,8 @@ void fault_handler(int signal)
 int main( int argc, char **argv )
 {
 	sgx_launch_token_t token = {0};
-	int updated = 0;
+	int retval = 0, updated = 0;
+    char old = 0x00, new = 0xbb;
     sgx_enclave_id_t eid = 0;
 
    	info("Creating enclave...");
@@ -61,17 +62,22 @@ int main( int argc, char **argv )
     register_aep_cb(aep_cb_func);
     print_enclave_info();
 
+    info("reading/writing debug enclave memory..");
+    SGX_ASSERT( get_a_addr(eid, &a_pt) );
+    edbgrd(a_pt, &old, 1);
+    edbgwr(a_pt, &new, 1);
+    edbgrd(a_pt, &new, 1);
+    info("a at %p: old=0x%x; new=0x%x", a_pt, old & 0xff, new & 0xff);
+
     /* mprotect to provoke page faults during enclaved execution */
     info("revoking a access rights..");
-    SGX_ASSERT( get_a_addr(eid, &a_pt) );
-    info("a at %p", a_pt);
     print_pte_adrs(a_pt);
     ASSERT(!mprotect(a_pt, 4096, PROT_NONE));
     print_pte_adrs(a_pt);
     ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
 
     info("calling enclave..");
-    SGX_ASSERT( enclave_dummy_call(eid) );
+    SGX_ASSERT( enclave_dummy_call(eid, &retval) );
 
     ASSERT(fault_fired && aep_fired);
    	SGX_ASSERT( sgx_destroy_enclave( eid ) );

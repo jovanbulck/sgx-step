@@ -18,15 +18,14 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-__attribute__((aligned(4096))) int a;
+__attribute__((aligned(4096))) int a = 0xaa;
 
 void* get_a_addr( void )
 {
     return &a;
 }
 
-void enclave_dummy_call(void)
+int enclave_dummy_call(void)
 {
-    a++;
-    return;
+    return a;
 }
