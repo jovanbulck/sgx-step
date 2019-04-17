@@ -18,7 +18,8 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-__attribute__((aligned(4096))) int a = 0xaa;
+__attribute__((aligned(4096))) int array[4096] = {0xaa};
+#define a array[0]
 
 void* get_a_addr( void )
 {
