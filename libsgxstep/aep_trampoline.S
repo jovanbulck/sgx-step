@@ -47,25 +47,25 @@
     .global sgx_step_aep_trampoline
     .type sgx_step_aep_trampoline, @function
 sgx_step_aep_trampoline:
-    mov %xbx, sgx_step_tcs
+    mov %xbx, sgx_step_tcs(%rip)
 
     /* optional C function callback */
-    lea sgx_step_aep_cb, %xax
+    lea sgx_step_aep_cb(%rip), %xax
     mov (%xax), %xax
     test %xax, %xax
     je .Leresume
     call *%xax
 
 .Leresume:
-    add $1, sgx_step_eresume_cnt
-    mov sgx_step_tcs, %xbx              /* TCS address */
-    lea sgx_step_aep_trampoline, %xcx   /* AEP address */
+    add $1, sgx_step_eresume_cnt(%rip)
+    mov sgx_step_tcs(%rip), %xbx              /* TCS address */
+    lea sgx_step_aep_trampoline(%rip), %xcx   /* AEP address */
 
-    prefetch (nemesis_tsc_eresume)
+    prefetch nemesis_tsc_eresume(%rip)
     mfence
 
     rdtsc
-    mov %eax, (nemesis_tsc_eresume)
+    mov %eax, nemesis_tsc_eresume(%rip)
 
     mov $3, %xax                        /* ERESUME leaf */
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */
