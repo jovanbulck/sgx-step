@@ -3,7 +3,7 @@
     .type sgx_step_irq_entry,@function
 sgx_step_irq_entry:
     rdtsc
-    mov %eax, (nemesis_tsc_aex)
+    mov %eax, nemesis_tsc_aex(%rip)
 
     /* HACK: restore edx:eax from AEX synthetic register state */
     mov $3, %rax
@@ -25,7 +25,7 @@ sgx_step_irq_entry:
 
     mov %rax, %rdi
     /* TODO support 256 possible IRQ handlers via asm macro */
-    movb (sgx_step_vector_hack), %sil
+    movb sgx_step_vector_hack(%rip), %sil
     call sgx_step_irq_handler_c
 
     pop %r11
