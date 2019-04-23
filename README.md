@@ -112,12 +112,13 @@ C-States and SpeedStep technology in the BIOS configuration. The table below
 lists currently supported Intel CPUs, together with their single-stepping APIC
 timer interval (`libsgxstep/config.h`).
 
-| Model name            | CPU                                               | Base frequency | APIC timer interval |
-|-----------------------|---------------------------------------------------|----------------|---------------------|
-| Dell Latitude 7490    | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 42                  |
-| Dell Inspiron 13 7359 | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
-| Dell Optiplex 7040    | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
-| Acer Aspire V15       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | 28                  |
+| Model name    | CPU                                               | Base frequency | APIC timer interval |
+|---------------|---------------------------------------------------|----------------|---------------------|
+| Skylake       | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
+| Skylake       | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
+| Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | 28                  |
+| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 34                  |
+| Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | 21                  |
 
 ### 1. Patch and install SGX SDK
 

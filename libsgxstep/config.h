@@ -46,6 +46,7 @@
 #define DELL_INSPIRON_7359          1
 #define DELL_OPTIPLEX_7040          2
 #define DELL_LATITUDE_7490          3
+#define I9_9900K	            4
 #if (SGX_STEP_PLATFORM == DELL_INSPIRON_7359)
     #define SGX_STEP_TIMER_INTERVAL 25
 #elif (SGX_STEP_PLATFORM == DELL_LATITUDE_7490)
@@ -54,6 +55,8 @@
     #define SGX_STEP_TIMER_INTERVAL 19
 #elif (SGX_STEP_PLATFORM == ACER_ASPIRE_V15)
     #define SGX_STEP_TIMER_INTERVAL 28
+#elif (SGX_STEP_PLATFORM == I9_9900K)
+    #define SGX_STEP_TIMER_INTERVAL 21
 #else
     #warning Unsupported SGX_STEP_PLATFORM; configure timer interval manually...
 #endif
