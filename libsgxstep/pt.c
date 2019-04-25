@@ -90,6 +90,11 @@ void *remap(uint64_t phys)
     return (void*) virt;
 }
 
+void free_map(void *p)
+{
+    ASSERT( !munmap((void*)(((uintptr_t) p) & ~PFN_MASK), 0x1000) );
+}
+
 void *remap_page_table_level( void *address, pt_level_t level )
 {
 	address_mapping_t *map = get_mappings( address );
@@ -241,6 +246,7 @@ void print_pte_adrs( void *adrs)
     uint64_t *pte = NULL;
     ASSERT( pte = remap_page_table_level( adrs, PTE) );
     print_pte(pte);
+    free_map(pte);
 }
 
 void print_pte( uint64_t *pte )
