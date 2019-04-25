@@ -12,6 +12,7 @@ sudo apt-get install alien
 sudo apt-get install uuid-dev libxml2-dev cmake pkg-config
 #sudo apt install ocamlbuild
 
+make -j`nproc`
 make sdk_install_pkg
 make psw_install_pkg
 
