@@ -35,7 +35,7 @@ void mem_open( void )
     if (fd_mem == -1)
     {
         ASSERT((fd_mem = open("/dev/mem", O_RDWR)) >= 0);
-        info("/dev/mem opened!");
+        libsgxstep_info("/dev/mem opened!");
     }
 }
 
@@ -44,7 +44,7 @@ void step_open( void )
     if (fd_step == -1)
     {
         ASSERT((fd_step = open("/dev/sgx-step", O_RDWR)) >= 0);
-        info("/dev/sgx-step opened!");
+        libsgxstep_info("/dev/sgx-step opened!");
     }
 }
 

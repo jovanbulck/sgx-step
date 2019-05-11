@@ -31,7 +31,7 @@ void map_gdt(gdt_t *gdt)
 
     ASSERT( gdtr.base );
     gdt_base = remap_page_table_level((void*) gdtr.base, PAGE);
-    info("established user space GDT mapping at %p", gdt_base);
+    libsgxstep_info("established user space GDT mapping at %p", gdt_base);
     ASSERT(gdt_base);
 
     gdt->base = (desc_t*) gdt_base;

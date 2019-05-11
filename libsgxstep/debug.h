@@ -54,6 +54,12 @@ extern sgx_status_t sgx_step_rv;
         fflush(stdout);                                                 \
     } while(0)
 
+#if LIBSGXSTEP_SILENT
+    #define libsgxstep_info(msg, ...)
+#else
+    #define libsgxstep_info(msg, ...) info(msg, ##__VA_ARGS__)
+#endif
+
 #define info_event(msg, ...)                                                                        \
 do {                                                                                                \
     printf("\n--------------------------------------------------------------------------------\n"); \

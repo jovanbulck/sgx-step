@@ -27,7 +27,7 @@ int file_read_offset(const char *path, uint8_t *buf, int len, off_t offset)
 {
     int rv, fd;
 
-    info("reading buffer from '%s' (size=%d)", path, len);
+    libsgxstep_info("reading buffer from '%s' (size=%d)", path, len);
     ASSERT( (fd = open(path, O_RDONLY)) >= 0 );
     rv = pread(fd, buf, len, offset);
     close(fd);
@@ -44,7 +44,7 @@ int file_write_offset(const char *path, uint8_t *buf, int len, off_t offset)
 {
     int rv, fd;
 
-    info("writing buffer to '%s' (size=%d)", path, len);
+    libsgxstep_info("writing buffer to '%s' (size=%d)", path, len);
     ASSERT( (fd = open(path, O_WRONLY)) >= 0 );
     rv = pwrite(fd, buf, len, offset);
     close(fd);

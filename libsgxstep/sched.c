@@ -31,7 +31,7 @@ int claim_cpu(int cpu)
     CPU_ZERO(&cpuset);
     CPU_SET(cpu, &cpuset);
     ASSERT(sched_setaffinity(0, sizeof(cpuset), &cpuset) >= 0);
-    info("continuing on CPU %d", cpu);
+    libsgxstep_info("continuing on CPU %d", cpu);
     return 0;
 }
 

@@ -90,7 +90,7 @@ uint64_t edbgrd_ssa(int ssa_field_offset)
     uint64_t ret;
     void *ssa_field_addr, *tcs_addr = sgx_get_tcs();
 
-    if (!ossa)
+    //if (!ossa)
     {
         edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
     }

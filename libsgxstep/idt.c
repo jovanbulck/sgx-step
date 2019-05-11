@@ -36,7 +36,7 @@ void map_idt(idt_t *idt)
 
     ASSERT( idtr.base );
     idt_base = remap_page_table_level((void*) idtr.base, PAGE);
-    info("established user space IDT mapping at %p", idt_base);
+    libsgxstep_info("established user space IDT mapping at %p", idt_base);
     ASSERT(idt_base);
 
     idt->base = (idt_gate_t*) idt_base;
@@ -76,6 +76,6 @@ void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector)
     gate->type = GATE_TRAP;
     gate->ist = 0;
 
-    info("installed IRQ handler with target_rip=%p", handler);
+    libsgxstep_info("installed IRQ handler with target_rip=%p", handler);
     dump_gate(gate, vector);
 }

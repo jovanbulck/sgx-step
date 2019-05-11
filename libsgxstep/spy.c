@@ -41,7 +41,7 @@ void *spy_init(void *arg)
     claim_cpu(init->cpu);
     spy_created = 1;
 
-    info("continuing on CPU %d; calling spy at %p", get_designated_cpu(), init->fct);
+    libsgxstep_info("continuing on CPU %d; calling spy at %p", get_designated_cpu(), init->fct);
     init->fct(init->eid);
 }
 

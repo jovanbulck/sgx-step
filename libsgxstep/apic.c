@@ -56,9 +56,9 @@ void apic_init(void)
     #endif
 
     apic_base = remap(apic_base_addr);
-    info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
+    libsgxstep_info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
 
-    info("APIC_ID=%x; LVTT=%x; TDCR=%x", apic_read(APIC_ID),
+    libsgxstep_info("APIC_ID=%x; LVTT=%x; TDCR=%x", apic_read(APIC_ID),
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
     ASSERT(apic_read(APIC_ID) != -1);
 }
@@ -73,7 +73,7 @@ int apic_timer_oneshot(uint8_t vector)
     apic_write(APIC_TDCR, APIC_TDR_DIV_2);
     // NOTE: APIC seems not to handle divide by 1 properly (?)
     // see also: http://wiki.osdev.org/APIC_timer)
-    info("APIC timer one-shot mode with division 2 (lvtt=%x/tdcr=%x)",
+    libsgxstep_info("APIC timer one-shot mode with division 2 (lvtt=%x/tdcr=%x)",
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
 }
 
@@ -81,7 +81,7 @@ int apic_timer_deadline(void)
 {
     apic_write(APIC_LVTT, apic_lvtt);
     apic_write(APIC_TDCR, apic_tdcr);
-    info("Restored APIC_LVTT=%x/TDCR=%x)",
+    libsgxstep_info("Restored APIC_LVTT=%x/TDCR=%x)",
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
 
     /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
