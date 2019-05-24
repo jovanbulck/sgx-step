@@ -7,7 +7,7 @@ extern void sgx_step_irq_entry(void);
 irq_cb_t sgx_step_irq_cb_table[256] = {0};
 uint8_t sgx_step_vector_hack = 0;
 
-void dump_gate(idt_gate_t *gate, int idx)
+void dump_gate(gate_desc_t *gate, int idx)
 {
     info("IDT[%3d] @%p = %p (seg sel 0x%x); p=%d; dpl=%d; type=%02d; ist=%d",
         idx, gate, (void*) gate_offset(gate), gate->segment, gate->p, gate->dpl, gate->type, gate->ist);
@@ -31,7 +31,7 @@ void map_idt(idt_t *idt)
 
     asm volatile ("sidt %0\n\t"
                   :"=m"(idtr) :: );
-    entries = (idtr.size+1)/sizeof(idt_gate_t);
+    entries = (idtr.size+1)/sizeof(gate_desc_t);
     dump_dtr(&idtr, entries);
 
     ASSERT( idtr.base );
@@ -39,7 +39,7 @@ void map_idt(idt_t *idt)
     libsgxstep_info("established user space IDT mapping at %p", idt_base);
     ASSERT(idt_base);
 
-    idt->base = (idt_gate_t*) idt_base;
+    idt->base = (gate_desc_t*) idt_base;
     idt->entries = entries;
 }
 
@@ -55,7 +55,7 @@ void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector)
 {
     ASSERT(vector >= 0 && vector < idt->entries);
 
-    idt_gate_t *gate = gate_ptr(idt->base, vector);
+    gate_desc_t *gate = gate_ptr(idt->base, vector);
     gate->offset_low    = PTR_LOW(sgx_step_irq_entry);
     gate->offset_middle = PTR_MIDDLE(sgx_step_irq_entry);
     gate->offset_high   = PTR_HIGH(sgx_step_irq_entry);

@@ -44,3 +44,35 @@ desc_t *get_desc(gdt_t *gdt, int idx)
 
     return desc_ptr(gdt->base, idx);
 }
+
+gate_desc_t *get_gate_desc(gdt_t *gdt, int idx)
+{
+    /* System descriptors are expanded to 16 bytes (occupying the space of two entries). */
+    ASSERT(idx >= 0 && idx < (gdt->entries-1));
+
+    return (gate_desc_t*) (desc_ptr(gdt->base, idx));
+}
+
+void install_user_call_gate(gdt_t *gdt, call_gate_cb_t handler, int vector)
+{
+    ASSERT(vector >= 0 && vector < (gdt->entries-1));
+    ASSERT( !get_desc(gdt, vector)->p && !get_desc(gdt, vector+1)->p );
+
+    gate_desc_t *g = get_gate_desc(gdt, vector);
+    g->offset_low    = PTR_LOW(handler);
+    g->offset_middle = PTR_MIDDLE(handler);
+    g->offset_high   = PTR_HIGH(handler);
+    g->p             = 1;
+    g->segment       = USER_CS;
+    g->dpl           = USER_DPL;
+    g->type          = GATE_CALL;
+    g->ist           = 0;
+}
+
+void do_far_user_call(int gdt_idx)
+{
+    call_gate_pt_t p = {
+        .segment = (gdt_idx*8+USER_DPL)
+    };
+    asm("lcall *%0\n\t"::"m"(p):);
+}

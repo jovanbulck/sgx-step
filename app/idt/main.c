@@ -50,6 +50,12 @@ void hello_world(uint8_t *rsp)
     irq_fired = 1;
 }
 
+void call_gate_func(void);
+void say_hi(void)
+{
+    info("hello world from call gate!");
+}
+
 int main( int argc, char **argv )
 {
     idt_t idt = {0};
@@ -65,6 +71,12 @@ int main( int argc, char **argv )
         user_cs->type = 15;
     #endif
     dump_gdt(&gdt);
+
+    info_event("Installing call gate @%p", call_gate_func);
+    install_user_call_gate(&gdt, call_gate_func, GDT_VECTOR);
+    dump_gate(get_gate_desc(&gdt, GDT_VECTOR), GDT_VECTOR);
+    do_far_user_call(GDT_VECTOR);
+    info("back from call gate!");
 
     info_event("Establishing user space IDT mapping");
     map_idt(&idt);

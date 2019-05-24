@@ -24,32 +24,8 @@
 #include "desc.h"
 #include "debug.h"
 
-/* IA-64: 16-byte gate (from Linux kernel arch/x86/include/asm/desc_defs.h) */
 typedef struct {
-    uint16_t offset_low;
-    uint16_t segment;
-    unsigned ist : 3, zero0 : 5, type : 5, dpl : 2, p : 1;
-    uint16_t offset_middle;
-    uint32_t offset_high;
-    uint32_t zero1;
-} __attribute__((packed)) idt_gate_t;
-
-enum {
-    GATE_INTERRUPT = 0xE,
-    GATE_TRAP = 0xF,
-    GATE_CALL = 0xC,
-    GATE_TASK = 0x5,
-};
-
-#define PTR_LOW(x) ((unsigned long long)(x) & 0xFFFF)
-#define PTR_MIDDLE(x) (((unsigned long long)(x) >> 16) & 0xFFFF)
-#define PTR_HIGH(x) ((unsigned long long)(x) >> 32)
-
-#define gate_offset(g) ((g)->offset_low | ((unsigned long)(g)->offset_middle << 16) | ((unsigned long)(g)->offset_high << 32))
-#define gate_ptr(idt_base, idx) ((idt_gate_t*) (((void*) idt_base) + idx*sizeof(idt_gate_t)))
-
-typedef struct {
-    idt_gate_t *base;
+    gate_desc_t *base;
     size_t     entries;
 } idt_t;
 
@@ -57,7 +33,7 @@ typedef void (*irq_cb_t)(uint8_t *rsp);
 
 void map_idt(idt_t *idt);
 void dump_idt(idt_t *idt);
-void dump_gate(idt_gate_t *gate, int idx);
+void dump_gate(gate_desc_t *gate, int idx);
 
 void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector);
 

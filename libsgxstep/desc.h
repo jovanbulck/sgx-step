@@ -23,6 +23,35 @@
 
 #include <stdint.h>
 
+/* IA-64: 16-byte gate (from Linux kernel arch/x86/include/asm/desc_defs.h) */
+typedef struct {
+    uint16_t offset_low;
+    uint16_t segment;
+    unsigned ist : 3, zero0 : 5, type : 5, dpl : 2, p : 1;
+    uint16_t offset_middle;
+    uint32_t offset_high;
+    uint32_t zero1;
+} __attribute__((packed)) gate_desc_t;
+
+enum {
+    GATE_INTERRUPT = 0xE,
+    GATE_TRAP = 0xF,
+    GATE_CALL = 0xC,
+    GATE_TASK = 0x5,
+};
+
+typedef struct {
+    uint32_t offset;
+    uint16_t segment;
+} __attribute__((packed)) call_gate_pt_t;
+
+#define PTR_LOW(x) ((unsigned long long)(x) & 0xFFFF)
+#define PTR_MIDDLE(x) (((unsigned long long)(x) >> 16) & 0xFFFF)
+#define PTR_HIGH(x) ((unsigned long long)(x) >> 32)
+
+#define gate_offset(g) ((g)->offset_low | ((unsigned long)(g)->offset_middle << 16) | ((unsigned long)(g)->offset_high << 32))
+#define gate_ptr(base, idx) ((gate_desc_t*) (((void*) base) + idx*sizeof(gate_desc_t)))
+
 /*
  * From Linux kernel arch/x86/include/asm/segment.h 
  *                   arch/x86/include/asm/desc_defs.h
