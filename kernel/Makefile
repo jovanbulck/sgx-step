@@ -1,5 +1,6 @@
 LKM             = sgx-step
 SGX_DRIVER_DIR  = ../
+PWD            := $(shell pwd)
 
 ifndef NO_SGX
    export NO_SGX=0
