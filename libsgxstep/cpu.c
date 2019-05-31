@@ -104,3 +104,17 @@ void clflush(void *p)
       : "c" (p)
       : "rax");
 }
+
+uint64_t rdmsr(uint32_t msr)
+{
+    uint64_t lo, hi;
+    asm volatile("rdmsr" : "=a"(lo), "=d"(hi) : "c"(msr));
+    return ((hi<<32) | lo);
+}
+
+void wrmsr(uint32_t msr, uint64_t val)
+{
+    uint32_t hi = (uint32_t) (val>>32);
+    uint32_t lo = (uint32_t) val;
+    asm volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
+}

@@ -49,10 +49,12 @@ typedef void (*call_gate_cb_t)(void);
 void map_gdt(gdt_t *gdt);
 void dump_gdt(gdt_t *gdt);
 void dump_desc(desc_t *desc, int idx);
-void install_user_call_gate(gdt_t *gdt, call_gate_cb_t handler, int vector);
-void do_far_user_call(int call_gate_idx);
+void install_call_gate(gdt_t *gdt, int gdt_idx, cs_t cs, call_gate_cb_t handler);
+void do_far_call(int gdt_idx);
 
 desc_t *get_desc(gdt_t *gdt, int idx);
 gate_desc_t *get_gate_desc(gdt_t *gdt, int idx);
+
+int get_cpl(void);
 
 #endif

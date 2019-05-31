@@ -53,23 +53,33 @@ gate_desc_t *get_gate_desc(gdt_t *gdt, int idx)
     return (gate_desc_t*) (desc_ptr(gdt->base, idx));
 }
 
-void install_user_call_gate(gdt_t *gdt, call_gate_cb_t handler, int vector)
+int get_cpl(void)
 {
-    ASSERT(vector >= 0 && vector < (gdt->entries-1));
-    ASSERT( !get_desc(gdt, vector)->p && !get_desc(gdt, vector+1)->p );
+    int rv;
+    asm("mov %%cs, %0\n\t"
+        "and $0x3, %0\n\t"
+        :"=r"(rv)::);
+    return rv;
+}
 
-    gate_desc_t *g = get_gate_desc(gdt, vector);
+/* NOTE: make sure SMAP/SMEP are disabled when installing ring0 user space call gates */
+void install_call_gate(gdt_t *gdt, int gdt_idx, cs_t cs, call_gate_cb_t handler)
+{
+    ASSERT(gdt_idx >= 0 && gdt_idx < (gdt->entries-1));
+    ASSERT( !get_desc(gdt, gdt_idx)->p && !get_desc(gdt, gdt_idx+1)->p );
+
+    gate_desc_t *g = get_gate_desc(gdt, gdt_idx);
     g->offset_low    = PTR_LOW(handler);
     g->offset_middle = PTR_MIDDLE(handler);
     g->offset_high   = PTR_HIGH(handler);
     g->p             = 1;
-    g->segment       = USER_CS;
+    g->segment       = cs;
     g->dpl           = USER_DPL;
     g->type          = GATE_CALL;
     g->ist           = 0;
 }
 
-void do_far_user_call(int gdt_idx)
+void do_far_call(int gdt_idx)
 {
     call_gate_pt_t p = {
         .segment = (gdt_idx*8+USER_DPL)

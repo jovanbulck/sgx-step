@@ -19,13 +19,11 @@
  */
 
 #include "libsgxstep/idt.h"
-#include "libsgxstep/gdt.h"
 #include "libsgxstep/apic.h"
 #include "libsgxstep/cpu.h"
 #include "libsgxstep/sched.h"
 #include "libsgxstep/config.h"
 
-#define USER_CS_CONFIRMING          0
 #define DO_APIC_TMR_IRQ             1
 #define DO_APIC_SW_IRQ              1
 
@@ -50,33 +48,10 @@ void hello_world(uint8_t *rsp)
     irq_fired = 1;
 }
 
-void call_gate_func(void);
-void say_hi(void)
-{
-    info("hello world from call gate!");
-}
-
 int main( int argc, char **argv )
 {
     idt_t idt = {0};
-    gdt_t gdt = {0};
-    desc_t *user_cs = NULL;
-
     ASSERT( !claim_cpu(VICTIM_CPU) );
-
-    info_event("Establishing user space GDT mapping");
-    map_gdt(&gdt);
-    #if USER_CS_CONFIRMING
-        user_cs = get_desc(&gdt, GDT_ENTRY_USER_CS);
-        user_cs->type = 15;
-    #endif
-    dump_gdt(&gdt);
-
-    info_event("Installing call gate @%p", call_gate_func);
-    install_user_call_gate(&gdt, call_gate_func, GDT_VECTOR);
-    dump_gate(get_gate_desc(&gdt, GDT_VECTOR), GDT_VECTOR);
-    do_far_user_call(GDT_VECTOR);
-    info("back from call gate!");
 
     info_event("Establishing user space IDT mapping");
     map_idt(&idt);

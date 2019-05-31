@@ -59,9 +59,12 @@ typedef struct {
 #define KERNEL_DPL          0
 #define USER_DPL            3
 #define GDT_ENTRY_USER_CS   6
-#define USER_CS             (GDT_ENTRY_USER_CS*8+USER_DPL)
 #define GDT_ENTRY_KERNEL_CS 2
-#define KERNEL_CS           (GDT_ENTRY_KERNEL_CS*8+KERNEL_DPL)
+
+typedef enum {
+    KERNEL_CS = GDT_ENTRY_KERNEL_CS*8+KERNEL_DPL,
+    USER_CS   = GDT_ENTRY_USER_CS*8+USER_DPL,
+} cs_t;
 
 typedef struct {
     uint16_t size;

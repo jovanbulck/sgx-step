@@ -97,13 +97,14 @@ below.
 | `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).             |
 | `iomem=relaxed, no_timer_check`  | Suppress unneeded warning messages in the kernel logs.                                                                          |
 | `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.                                                                          |
+| `nosmap, nosmep`                 | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates) |
 | `dis_ucode_ldr`                  | Disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations may affect single-stepping interval). |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check isolcpus=1"
+  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap isolcpus=1 dis_ucode_ldr"
 $ sudo update-grub && sudo reboot
 ```
 
