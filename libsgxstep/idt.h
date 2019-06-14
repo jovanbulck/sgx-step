@@ -36,5 +36,6 @@ void dump_idt(idt_t *idt);
 void dump_gate(gate_desc_t *gate, int idx);
 
 void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector);
+void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector);
 
 #endif

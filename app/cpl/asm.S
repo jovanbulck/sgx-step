@@ -2,8 +2,7 @@
 #define IA32_APIC_BASE          0x1b
 
     .text
-    .global call_gate_func
-call_gate_func:
+do_rdmsr:
     # store CPL (i.e., ring 0)
     call get_cpl
     mov %rax, gate_cpl(%rip)
@@ -13,5 +12,16 @@ call_gate_func:
     call rdmsr
     mov %rax, gate_msr(%rip)
 
-    # return to user space caller
+    ret
+
+    .global call_gate_func
+call_gate_func:
+    call do_rdmsr
+    # long return to user space caller
     lretq
+
+    .global irq_gate_func
+irq_gate_func:
+    call do_rdmsr
+    # interrupt return to user space caller (this will re-enable IRQs)
+    iretq

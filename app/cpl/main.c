@@ -24,26 +24,50 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/config.h"
 
+#define USE_CALL_GATE       1
+#define USE_IRQ_GATE        1
+
 int gate_cpl = -1;
 uint64_t gate_msr = -1;
 void call_gate_func(void);
+void irq_gate_func(void);
 
 int main( int argc, char **argv )
 {
-    gdt_t gdt = {0};
-
     ASSERT( !claim_cpu(VICTIM_CPU) );
 
+#if USE_CALL_GATE
+    gdt_t gdt = {0};
     info_event("Establishing user space GDT mapping");
     map_gdt(&gdt);
     dump_gdt(&gdt);
 
-    info_event("Installing ring0 call gate");
+    info_event("Installing and calling ring0 call gate");
     install_call_gate(&gdt, GDT_VECTOR, KERNEL_CS, call_gate_func);
     dump_gate(get_gate_desc(&gdt, GDT_VECTOR), GDT_VECTOR);
+
+    gate_msr = gate_cpl = -1;
     do_far_call(GDT_VECTOR);
 
     info("back from call gate w CPL prev/cur=%d/%d; RDMSR=%p",
         gate_cpl, get_cpl(), gate_msr);
+#endif
+
+#if USE_IRQ_GATE
+    idt_t idt = {0};
+    info_event("Establishing user space IDT mapping");
+    map_idt(&idt);
+    dump_idt(&idt);
+
+    info_event("Installing and calling ring0 irq gate");
+    install_kernel_irq_handler(&idt, irq_gate_func, IRQ_VECTOR);
+
+    gate_msr = gate_cpl = -1;
+    asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+
+    info("back from irq gate w CPL prev/cur=%d/%d; RDMSR=%p",
+        gate_cpl, get_cpl(), gate_msr);
+#endif
+
     return 0;
 }
