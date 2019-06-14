@@ -77,7 +77,9 @@ void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector)
     gate->ist = 0;
 
     libsgxstep_info("installed ring3 IRQ handler with target_rip=%p", handler);
-    dump_gate(gate, vector);
+    #if !LIBSGXSTEP_SILENT
+        dump_gate(gate, vector);
+    #endif
 }
 
 void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
@@ -96,5 +98,7 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
     gate->ist = 0;
 
     libsgxstep_info("installed ring0 IRQ handler with target_rip=%p", asm_handler);
-    dump_gate(gate, vector);
+    #if !LIBSGXSTEP_SILENT
+        dump_gate(gate, vector);
+    #endif
 }
