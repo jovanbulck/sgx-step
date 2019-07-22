@@ -71,8 +71,8 @@ typedef struct {
     uint64_t base;
 } __attribute__((packed)) dtr_t;
 
-#define dump_dtr(dtr, entries)                      \
-    info("DTR.base=%p/size=%d (%d entries)",       \
+#define dump_dtr(dtr, entries)                          \
+    libsgxstep_info("DTR.base=%p/size=%d (%d entries)", \
         (void*) (dtr)->base, (dtr)->size, entries);
 
 #endif
