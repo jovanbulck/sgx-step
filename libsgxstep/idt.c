@@ -1,10 +1,13 @@
 #include "idt.h"
 #include "pt.h"
 #include "apic.h"
+#include "sched.h"
 
 /* See irq_entry.S to see how these are used. */
 extern void sgx_step_irq_entry(void);
+extern void sgx_step_irq_gate_func(void);
 irq_cb_t sgx_step_irq_cb_table[256] = {0};
+exec_priv_cb_t sgx_step_irq_gate_cb = NULL;
 uint8_t sgx_step_vector_hack = 0;
 
 void dump_gate(gate_desc_t *gate, int idx)
@@ -101,4 +104,23 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
     #if !LIBSGXSTEP_SILENT
         dump_gate(gate, vector);
     #endif
+}
+
+int sgx_step_irq_gate_installed = 0;
+
+void exec_priv(exec_priv_cb_t cb)
+{
+    idt_t idt;
+    if (!sgx_step_irq_gate_installed)
+    {
+        libsgxstep_info("installing and calling ring0 irq gate");
+        ASSERT( !claim_cpu(VICTIM_CPU) );
+        map_idt(&idt);
+        install_kernel_irq_handler(&idt, sgx_step_irq_gate_func, IRQ_VECTOR+4);
+        free_map(idt.base);
+        sgx_step_irq_gate_installed = 1;
+    }
+
+    sgx_step_irq_gate_cb = cb;
+    asm("int %0\n\t" ::"i"(IRQ_VECTOR+4):);
 }

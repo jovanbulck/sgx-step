@@ -40,3 +40,9 @@ sgx_step_irq_entry:
     pop %rbx
     pop %rax
     iretq
+
+    .global sgx_step_irq_gate_func
+sgx_step_irq_gate_func:
+    call *sgx_step_irq_gate_cb(%rip)
+    /* interrupt return to user space caller (this will re-enable IRQs) */
+    iretq

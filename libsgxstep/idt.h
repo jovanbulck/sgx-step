@@ -30,6 +30,9 @@ typedef struct {
 } idt_t;
 
 typedef void (*irq_cb_t)(uint8_t *rsp);
+typedef void (*exec_priv_cb_t)(void);
+
+void exec_priv(exec_priv_cb_t cb);
 
 void map_idt(idt_t *idt);
 void dump_idt(idt_t *idt);
