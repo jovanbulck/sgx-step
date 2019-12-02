@@ -1,6 +1,10 @@
 set -e
-#git clone https://github.com/intel/linux-sgx-driver.git
+
+git submodule init
+git submodule update
 cd linux-sgx-driver
+
+# ----------------------------------------------------------------------
 sudo apt-get install linux-headers-$(uname -r)
 make
 sudo mkdir -p "/lib/modules/"`uname -r`"/kernel/drivers/intel/sgx"    

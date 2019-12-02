@@ -88,7 +88,7 @@ interrupting and resuming an SGX enclave through our framework.
 
 SGX-Step requires an [SGX-capable](https://github.com/ayeks/SGX-hardware) Intel
 processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
-i7-6500U/6700 CPUs, running Ubuntu 16.04 with a stock Linux 4.15.0 kernel.
+i7-6500U/6700 CPUs, running Ubuntu 18.04 with a stock Linux 4.15.0 kernel.
 We summarize Linux [kernel parameters](https://wiki.archlinux.org/index.php/Kernel_parameters)
 below.
 
@@ -130,12 +130,11 @@ apply our patches.
 ```bash
 $ git submodule init
 $ git submodule update
-$ ./install_SGX_driver.sh # tested on Ubuntu 16.04
-$ ./patch_sdk.sh
-$ ./install_SGX_SDK.sh    # tested on Ubuntu 16.04
+$ ./install_SGX_driver.sh # tested on Ubuntu 18.04
+$ ./install_SGX_SDK.sh    # tested on Ubuntu 18.04
 ```
 
-The above install scripts are tested on Ubuntu 16.04 LTS.
+The above install scripts are tested on Ubuntu 18.04 LTS.
 For other GNU/Linux distributions, please follow the instructions in the
 [linux-sgx](https://github.com/01org/linux-sgx) project to build and install
 the Intel SGX SDK and PSW packages. You will also need to build and load an
