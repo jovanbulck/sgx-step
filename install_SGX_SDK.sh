@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 
 git submodule init
@@ -18,13 +20,23 @@ sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool 
 sudo apt-get install libssl-dev libcurl4-openssl-dev protobuf-compiler libprotobuf-dev debhelper cmake
 
 # ----------------------------------------------------------------------
-echo "[ building PSW/SDK ]"
+echo "[ building SDK ]"
 ./download_prebuilt.sh
 make -j`nproc`
 make sdk_install_pkg
-make psw_install_pkg
+
+echo "[ installing SDK system-wide ]"
+cd linux/installer/bin/
+sudo ./sgx_linux_x64_sdk_*.bin << EOF
+no
+/opt/intel
+EOF
+cd ../../../
 
 # ----------------------------------------------------------------------
+echo "[ building PSW ]"
+make psw_install_pkg
+
 echo "[ installing PSW/SDK system-wide ]"
 cd linux/installer/bin/
 
@@ -33,10 +45,5 @@ then
     sudo /opt/intel/sgxpsw/uninstall.sh
 fi
 sudo ./sgx_linux_x64_psw_*.bin
-sudo ./sgx_linux_x64_sdk_*.bin << EOF
-no
-/opt/intel
-EOF
 
-source /opt/intel/sgxsdk/environment
 echo "SGX SDK succesfully installed!"
