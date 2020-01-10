@@ -3,12 +3,14 @@
 <img src="logo.svg" width=160 alt="logo" align="left" />
 
 SGX-Step is an open-source framework to facilitate side-channel attack research
-on Intel SGX platforms.  SGX-Step consists of an adversarial Linux kernel
-driver and user space library that allow to configure untrusted page table
-entries and/or x86 APIC timer interrupts completely from user space. Our
-research results have demonstrated several new and improved enclaved execution
-attacks that gather side-channel observations at a maximal temporal resolution
-(i.e., by interrupting the victim enclave after _every_ single instruction).
+on Intel x86 processors in general and Intel SGX platforms in particular.
+SGX-Step consists of an adversarial Linux kernel driver and a small user-space
+operating system library that allows to configure untrusted page table entries
+and/or x86 APIC timer interrupts completely from user space.  SGX-Step has been
+leveraged in our own research, as well as by independent researchers, to enable
+several new and improved enclaved execution attacks that gather side-channel
+observations at a maximal temporal resolution (i.e., by interrupting the victim
+enclave after _every_ single instruction).
 
 **License.** SGX-Step is free software, licensed under
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0). The SGX-Step logo is derived
@@ -20,10 +22,13 @@ photo frames to reveal overall horse gait properties.
 
 | SGX-Step release | Publication details                                                  | Comments 		               |
 |------------------|----------------------------------------------------------------------|--------------------------------|
+| v1.4.0           | [Oakland'20](https://plundervolt.com/doc/plundervolt.pdf)            | Privileged interrupt/call gates (Plundervolt attack).|
 | v1.3.0           | [USEC'18](https://foreshadowattack.eu/foreshadow.pdf)                | Transient execution (Foreshadow attack).|
 | v1.2.0           | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling (Nemesis interrupt timing attack). |
 | v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
 | v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
+
+*A full list of known projects using SGX-Step is included at the bottom of this README.*
 
 ## Abstract
 
@@ -95,10 +100,10 @@ below.
 | Linux kernel parameter           | Motivation                                                                                                                      |
 |----------------------------------|-------------------------------------------------------------------------------------------------------------------------------  |
 | `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).             |
-| `iomem=relaxed, no_timer_check`  | Suppress unneeded warning messages in the kernel logs.                                                                          |
+| `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.                                                                          |
 | `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.                                                                          |
-| `nosmap, nosmep`                 | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates) |
-| `dis_ucode_ldr`                  | Disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations may affect single-stepping interval). |
+| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates) |
+| `dis_ucode_ldr`                  | Optionally disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations may affect single-stepping interval). |
 
 Pass the desired boot parameters to the kernel as follows:
 
@@ -125,7 +130,7 @@ timer interval (`libsgxstep/config.h`).
 
 To enable easy registration of a custom Asynchronous Exit Pointer (AEP) stub,
 we modified the untrusted runtime of the official Intel SGX SDK. Proceed as
-follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.6 and
+follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.7.1 and
 apply our patches.
 
 ```bash
@@ -171,7 +176,7 @@ $ make clean load
 
 **Note (/dev/isgx).** Our driver uses some internal symbols and data structures
 from the official Intel `/dev/isgx` driver. We therefore include a git submodule
-that points to an unmodified v2.1
+that points to an unmodified v2.6
 [linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
 
 **Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
@@ -188,8 +193,17 @@ User-space applications can link to the `libsgxstep` library to make use of
 SGX-Step's single-stepping and page table manipulation features. Have a look at
 the example applications in the "app" directory.
 
-For example, to build and run the `strlen` attack from the paper for a
-benchmark enclave that processes the secret string 100 repeated times, execute:
+For example, to build and run an elementary example application to test page
+table manipulation features and SDK patches:
+
+```bash
+$ cd app/aep-redirect
+$ make run
+```
+
+To test timer single-stepping functionality, try for example building and
+running the `strlen` attack from the paper for a benchmark enclave that
+processes the secret string 100 repeated times:
 
 ```bash
 $ cd app/bench
@@ -227,8 +241,27 @@ submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules):
 
 ```bash
 $ cd my/git/project
-$ git submodule add git@github.com:jovanbulck/sgx-step.git
+$ git submodule add https://github.com/jovanbulck/sgx-step.git
 $ cd sgx-step # Now build `/dev/sgx-step` and `libsgxstep` as described above
 ```
 Have a look at the Makefiles in the `app` directory to see how a client
 application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
+
+The following is a list of known projects that use SGX-Step. Feel free to open
+a pull request if your project uses SGX-Step but is not included below.
+
+| Title | Publication details | Source code | SGX-Step features used |
+|-------|---------------------|-------------|------------------------|
+| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [Oakland'20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
+| Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES'20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
+| Fallout: Leaking Data on Meltdown-resistant CPUs | [CCS'19](https://mdsattacks.com/files/fallout.pdf) | - | Page-table manipulation (A/D) |
+| A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes | [CCS'19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf) | [link](https://github.com/jovanbulck/0xbadc0de) | Single-stepping, page-table manipulation |
+| ZombieLoad: Cross-Privilege-Boundary Data Sampling | [CCS'19](https://zombieloadattack.com/zombieload.pdf) | [link](https://github.com/IAIK/ZombieLoad/) | Single-stepping, zero-stepping, page-table manipulation |
+| SPOILER: Speculative Load Hazards Boost Rowhammer and Cache Attacks | [USEC'19](https://arxiv.org/pdf/1903.00446.pdf) | - | Single-stepping interrupt latency |
+| Nemesis: Studying Microarchitectural Timing Leaks in Rudimentary CPU Interrupt Logic | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf) | [link](https://github.com/jovanbulck/nemesis) | Single-stepping interrupt latency, page-table manipulation |
+| Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution | [USEC'18](https://foreshadowattack.eu/foreshadow.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/foreshadow) | Single-stepping, zero-stepping, page-table manipulation |
+| Single Trace Attack Against RSA Key Generation in Intel SGX SSL | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf) | - | Page-table manipulation |
+| Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page-table manipulation |
+| SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page-table manipulation |
+
+

@@ -1,14 +1,12 @@
 #!/bin/bash
-
 set -e
 
 git submodule init
 git submodule update
-cd linux-sgx
 
 # ----------------------------------------------------------------------
 echo "[ patching SDK ]"
-if ! grep -Rq "sgx_set_aep"
+if ! grep -Rq "sgx_set_aep" linux-sgx
 then
     ../patch_sdk.sh
 fi
@@ -21,6 +19,7 @@ sudo apt-get install libssl-dev libcurl4-openssl-dev protobuf-compiler libprotob
 
 # ----------------------------------------------------------------------
 echo "[ building SDK ]"
+cd linux-sgx
 ./download_prebuilt.sh
 make -j`nproc`
 make sdk_install_pkg

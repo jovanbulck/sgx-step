@@ -36,6 +36,9 @@ CLEANDIRS            = $(SUBDIRS:%=clean-%)
 all: $(OUTPUT)
 	
 run: clean all
+	#TODO disable SMEP/SMAP at runtime through /dev/sgx-step
+	!(cat /proc/cpuinfo | grep -q smep) || (echo "smep not disabled!" && false)
+	!(cat /proc/cpuinfo | grep -q smap) || (echo "smap not disabled!" && false)
 	sudo $(URTS_LD_LIBRARY_PATH) ./app
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)

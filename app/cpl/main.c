@@ -24,13 +24,28 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/config.h"
 
-#define USE_CALL_GATE       1
-#define USE_IRQ_GATE        1
+#define USE_CALL_GATE           1
+#define USE_IRQ_GATE            1
+#define IA32_TIME_STAMP_COUNTER 0x10
 
 int gate_cpl = -1;
 uint64_t gate_msr = -1;
 void call_gate_func(void);
 void irq_gate_func(void);
+
+int my_cpl = -1;
+uint64_t my_tsc1 = -1;
+uint64_t my_tsc2 = -1;
+
+/* ------------------------------------------------------------ */
+/* This code will execute with ring0 privileges :) */
+void my_ring0_func(void)
+{
+    my_tsc1 = rdmsr(IA32_TIME_STAMP_COUNTER);
+    my_cpl = get_cpl();
+    my_tsc2 = rdmsr(IA32_TIME_STAMP_COUNTER);
+}
+/* ------------------------------------------------------------ */
 
 int main( int argc, char **argv )
 {
@@ -40,7 +55,7 @@ int main( int argc, char **argv )
     gdt_t gdt = {0};
     info_event("Establishing user space GDT mapping");
     map_gdt(&gdt);
-    dump_gdt(&gdt);
+    //dump_gdt(&gdt);
 
     info_event("Installing and calling ring0 call gate");
     install_call_gate(&gdt, GDT_VECTOR, KERNEL_CS, call_gate_func);
@@ -57,7 +72,7 @@ int main( int argc, char **argv )
     idt_t idt = {0};
     info_event("Establishing user space IDT mapping");
     map_idt(&idt);
-    dump_idt(&idt);
+    //dump_idt(&idt);
 
     info_event("Installing and calling ring0 irq gate");
     install_kernel_irq_handler(&idt, irq_gate_func, IRQ_VECTOR);
@@ -67,6 +82,11 @@ int main( int argc, char **argv )
 
     info("back from irq gate w CPL prev/cur=%d/%d; RDMSR=%p",
         gate_cpl, get_cpl(), gate_msr);
+
+    info_event("Calling ring0 function on user page with `exec_priv()`");
+    exec_priv(my_ring0_func);
+    info("back from my_ring0_func w CPL=%d and IA32_TIME_STAMP_COUNTER=%p/%p/%d",
+            my_cpl, my_tsc1, my_tsc2, (int) my_tsc2-my_tsc1);
 #endif
 
     return 0;
