@@ -113,10 +113,14 @@ int disable_turbo(void)
 
 int turbo_enabled( void )
 {
+#ifdef HAS_TURBO
 	int result;
-	
-    file_read_int( "/sys/devices/system/cpu/intel_pstate/no_turbo", &result);
+
+  file_read_int( "/sys/devices/system/cpu/intel_pstate/no_turbo", &result);
 	return (result == 0)? 1 : 0;
+#else
+  return 0;
+#endif
 }
 
 int restore_system_state(void)

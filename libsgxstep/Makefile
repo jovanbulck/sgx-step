@@ -4,7 +4,14 @@ CC          = gcc
 AS          = gcc
 AR          = ar
 ARFLAGS     = -rcs
-CFLAGS     += -DHAS_PSTATE -DHAS_TURBO
+
+ifneq "$(WITH_PSTATE)" "0"
+CPPFLAGS     += -DHAS_PSTATE
+endif
+
+ifneq "$(WITH_TURBO)" "0"
+CPPFLAGS     += -DHAS_TURBO
+endif
 
 ifeq ($(M32), 1)
 	ASFLAGS = -m32 -DM32=1
@@ -25,7 +32,7 @@ $(OUTPUT): $(OBJECTS)
 
 %.o : %.c
 	echo "$(INDENT)[CC] " $<
-	$(CC) $(CFLAGS) $(INCLUDE) -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDE) -c $<
 
 %.o : %.S
 	echo "$(INDENT)[AS] " $<
