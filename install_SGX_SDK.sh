@@ -8,7 +8,7 @@ git submodule update
 echo "[ patching SDK ]"
 if ! grep -Rq "sgx_set_aep" linux-sgx
 then
-    ../patch_sdk.sh
+    ./patch_sdk.sh
 fi
 echo "SGX-SDK successfully patched!"
 
