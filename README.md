@@ -22,11 +22,11 @@ photo frames to reveal overall horse gait properties.
 
 | SGX-Step release | Publication details                                                  | Comments 		               |
 |------------------|----------------------------------------------------------------------|--------------------------------|
-| v1.4.0           | [Oakland'20](https://plundervolt.com/doc/plundervolt.pdf)            | Privileged interrupt/call gates (Plundervolt attack).|
-| v1.3.0           | [USEC'18](https://foreshadowattack.eu/foreshadow.pdf)                | Transient execution (Foreshadow attack).|
-| v1.2.0           | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling (Nemesis interrupt timing attack). |
-| v1.1.0           | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
-| v1.0.0           | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
+| v1.4.0           | [Oakland20](https://plundervolt.com/doc/plundervolt.pdf)            | Privileged interrupt/call gates (Plundervolt attack).|
+| v1.3.0           | [USEC18](https://foreshadowattack.eu/foreshadow.pdf)                | Transient execution (Foreshadow attack).|
+| v1.2.0           | [CCS18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling (Nemesis interrupt timing attack). |
+| v1.1.0           | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
+| v1.0.0           | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
 
 *A full list of known projects using SGX-Step is included at the bottom of this README.*
 
@@ -52,7 +52,7 @@ discuss its implications for the design of effective defense mechanisms.
 
 > Jo Van Bulck, Frank Piessens, and Raoul Strackx. 2017. SGX-Step: A Practical
 > Attack Framework for Precise Enclave Execution Control. In Proceedings of the
-> 2nd Workshop on System Software for Trusted Execution (SysTEX '17). 
+> 2nd Workshop on System Software for Trusted Execution (SysTEX 17). 
 
 ## Overview
 
@@ -101,15 +101,16 @@ below.
 |----------------------------------|-------------------------------------------------------------------------------------------------------------------------------  |
 | `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).             |
 | `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.                                                                          |
+| nmi_watchdog=0                   | Suppress the kernel NMI watchdog. |
 | `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.                                                                          |
 | `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates) |
-| `dis_ucode_ldr`                  | Optionally disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations may affect single-stepping interval). |
+| `dis_ucode_ldr`                  | Disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations necessitate re-calibrating the single-stepping interval). |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap isolcpus=1 dis_ucode_ldr"
+  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap isolcpus=1 nmi_watchdog=0 dis_ucode_ldr"
 $ sudo update-grub && sudo reboot
 ```
 
@@ -252,16 +253,19 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
-| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [Oakland'20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
-| Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES'20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
-| Fallout: Leaking Data on Meltdown-resistant CPUs | [CCS'19](https://mdsattacks.com/files/fallout.pdf) | - | Page-table manipulation (A/D) |
-| A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes | [CCS'19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf) | [link](https://github.com/jovanbulck/0xbadc0de) | Single-stepping, page-table manipulation |
-| ZombieLoad: Cross-Privilege-Boundary Data Sampling | [CCS'19](https://zombieloadattack.com/zombieload.pdf) | [link](https://github.com/IAIK/ZombieLoad/) | Single-stepping, zero-stepping, page-table manipulation |
-| SPOILER: Speculative Load Hazards Boost Rowhammer and Cache Attacks | [USEC'19](https://arxiv.org/pdf/1903.00446.pdf) | - | Single-stepping interrupt latency |
-| Nemesis: Studying Microarchitectural Timing Leaks in Rudimentary CPU Interrupt Logic | [CCS'18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf) | [link](https://github.com/jovanbulck/nemesis) | Single-stepping interrupt latency, page-table manipulation |
-| Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution | [USEC'18](https://foreshadowattack.eu/foreshadow.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/foreshadow) | Single-stepping, zero-stepping, page-table manipulation |
+| CopyCat: Controlled Instruction-Level Attacks on Enclaves for Maximal Key Extraction | [arXiv20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page-table manipulation |
+| When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA | [CHES20](https://eprint.iacr.org/2020/055.pdf) | - | Single-stepping, page-table manipulation |
+| Big Numbers - Big Troubles: Systematically Analyzing Nonce Leakage in (EC)DSA Implementations | [USEC20](https://www.usenix.org/system/files/sec20summer_weiser_prepub_0.pdf) | - | Page-table manipulation |
+| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [Oakland20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
+| Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
+| Fallout: Leaking Data on Meltdown-resistant CPUs | [CCS19](https://mdsattacks.com/files/fallout.pdf) | - | Page-table manipulation (A/D) |
+| A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes | [CCS19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf) | [link](https://github.com/jovanbulck/0xbadc0de) | Single-stepping, page-table manipulation |
+| ZombieLoad: Cross-Privilege-Boundary Data Sampling | [CCS19](https://zombieloadattack.com/zombieload.pdf) | [link](https://github.com/IAIK/ZombieLoad/) | Single-stepping, zero-stepping, page-table manipulation |
+| SPOILER: Speculative Load Hazards Boost Rowhammer and Cache Attacks | [USEC19](https://arxiv.org/pdf/1903.00446.pdf) | - | Single-stepping interrupt latency |
+| Nemesis: Studying Microarchitectural Timing Leaks in Rudimentary CPU Interrupt Logic | [CCS18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf) | [link](https://github.com/jovanbulck/nemesis) | Single-stepping interrupt latency, page-table manipulation |
+| Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution | [USEC18](https://foreshadowattack.eu/foreshadow.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/foreshadow) | Single-stepping, zero-stepping, page-table manipulation |
 | Single Trace Attack Against RSA Key Generation in Intel SGX SSL | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf) | - | Page-table manipulation |
-| Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS'18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page-table manipulation |
-| SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX'17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page-table manipulation |
+| Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page-table manipulation |
+| SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page-table manipulation |
 
 
