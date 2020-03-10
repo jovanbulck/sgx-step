@@ -1,0 +1,14 @@
+app
+measurements.txt
+measurements_raw.txt
+outlier_idx.txt
+plot.pdf
+xlabels.gp
+
+*.swp
+*.o
+
+out.txt
+parsed.txt
+parsed_zz.txt
+parsed_strlen.txt
