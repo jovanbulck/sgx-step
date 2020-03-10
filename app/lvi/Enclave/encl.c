@@ -19,20 +19,7 @@
 #include <string.h>
 
 #define OFFSET                  20
-#define FILL_STORE_BUFFER       1
-
-#if FILL_STORE_BUFFER
-    char __attribute__((aligned(0x1000))) dummy_buf[4096 * 64];
-    inline void __attribute__((always_inline)) fill_store_buffer(int offset)
-    {
-        for(int i = 0; i < 64; i++)
-        {
-            dummy_buf[((offset + 67) % 4096) + i * 4096] = 0x1;
-        }
-    }
-#else
-    #define fill_store_buffer(offset)
-#endif
+#define LFENCE                  0
 
 inline void __attribute__((always_inline)) maccess(void *p)
 {
@@ -78,13 +65,16 @@ void ecall_lvi_store_user(uint64_t *user_pt, char *oracle)
         /* 0. Fence to protect against Spectre v1 */
         __builtin_ia32_lfence();
         transient_delay();
-        fill_store_buffer(OFFSET);
 
         /* 1. STORE to attacker-controlled _untrusted_ address */
         *user_pt = (uint64_t) 'S';
 
         /* 2. VICTIM LOAD: inject 'S' and override trusted value 'B' */
         volatile char valb = *pt_b;
+
+#if LFENCE
+        asm("lfence");
+#endif
 
         /* 3. VICTIM ENCODE: e.g., cache-based covert channel gadget */
         volatile char leak = oracle[4096*valb];
@@ -101,6 +91,11 @@ void ecall_lvi_remap_l1d(char *oracle)
 
     /* VICTIM LOAD: inject 'A' from remapped physical address for trusted load to 'B'*/
     volatile char valb = *pt_b;
+
+#if LFENCE
+        asm("lfence");
+#endif
+
     /* VICTIM ENCODE: e.g., cache-based covert channel gadget */
     volatile char leak = oracle[4096*valb];
 }

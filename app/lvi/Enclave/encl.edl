@@ -6,6 +6,9 @@ enclave {
 
         public void ecall_lvi_store_user([user_check] uint64_t *user_pt, [user_check] char *oracle);
         public void ecall_lvi_remap_l1d([user_check] char *oracle);
+
+        public void ecall_init_stack(void);
+        public int ecall_lvi_sb_rop([user_check] uint64_t *user_pt, [user_check] char *oracle);
     };
 	
 	untrusted {

