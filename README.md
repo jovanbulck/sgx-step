@@ -6,7 +6,7 @@ SGX-Step is an open-source framework to facilitate side-channel attack research
 on Intel x86 processors in general and Intel SGX platforms in particular.
 SGX-Step consists of an adversarial Linux kernel driver and a small user-space
 operating system library that allows to configure untrusted page table entries
-and/or x86 APIC timer interrupts completely from user space.  SGX-Step has been
+and/or x86 APIC timer interrupts completely from user space. SGX-Step has been
 leveraged in our own research, as well as by independent researchers, to enable
 several new and improved enclaved execution attacks that gather side-channel
 observations at a maximal temporal resolution (i.e., by interrupting the victim
@@ -20,15 +20,19 @@ Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
 photo frames to reveal overall horse gait properties.
 
-| SGX-Step release | Publication details                                                  | Comments 		               |
-|------------------|----------------------------------------------------------------------|--------------------------------|
-| v1.4.0           | [Oakland20](https://plundervolt.com/doc/plundervolt.pdf)            | Privileged interrupt/call gates (Plundervolt attack).|
-| v1.3.0           | [USEC18](https://foreshadowattack.eu/foreshadow.pdf)                | Transient execution (Foreshadow attack).|
-| v1.2.0           | [CCS18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)       | User space interrupt handling (Nemesis interrupt timing attack). |
-| v1.1.0           | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)   | IA32 support. 		           |
-| v1.0.0           | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | Original SGX-Step framework.   |
+| SGX-Step release | Comments 		                                                              |
+|------------------|----------------------------------------------------------------------------------|
+| v1.4.0           | Privileged interrupt/call gates (Plundervolt).                                   |
+| v1.3.0           | Transient-execution support (Foreshadow).                                        |
+| v1.2.0           | User-space interrupt handling and deterministic zero-step filtering (Nemesis).   |
+| v1.1.0           | IA32 support. 		                                                      |
+| v1.0.0           | User-space page table manipulation and APIC timer single-stepping.               |
 
-*A full list of known projects using SGX-Step is included at the bottom of this README.*
+**Publications.** SGX-Step has been employed by several independent research
+groups and has enabled a new line of high-resolution SGX attacks. A full
+up-to-date list of known projects using SGX-Step is included at the
+[bottom](#bottom) of this README. A copy of the original paper is available
+[here](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf).
 
 ## Abstract
 
@@ -50,9 +54,17 @@ approach to single-step enclaved execution at instruction-level granularity,
 and we show how SGX-Step enables several new or improved attacks. Finally, we
 discuss its implications for the design of effective defense mechanisms.
 
-> Jo Van Bulck, Frank Piessens, and Raoul Strackx. 2017. SGX-Step: A Practical
-> Attack Framework for Precise Enclave Execution Control. In Proceedings of the
-> 2nd Workshop on System Software for Trusted Execution (SysTEX 17). 
+```
+@inproceedings{vanbulck2017sgxstep,
+    title={{SGX-Step}: A practical attack framework for precise enclave execution control},
+    author = {Van Bulck, Jo and Piessens, Frank and Strackx, Raoul},
+    booktitle = {2nd Workshop on System Software for Trusted Execution ({SysTEX} 2017)},
+    month=Oct,
+    organization = {{ACM}},
+    year=2017,
+    pages = {4:1--4:6},
+}
+```
 
 ## Overview
 
@@ -248,15 +260,17 @@ $ cd sgx-step # Now build `/dev/sgx-step` and `libsgxstep` as described above
 Have a look at the Makefiles in the `app` directory to see how a client
 application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
 
+<a name="bottom"></a>
 The following is a list of known projects that use SGX-Step. Feel free to open
 a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
+| LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection | [S&P20](https://lviattack.eu/lvi.pdf) | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi) | Single-stepping, page-table manipulation |
 | CopyCat: Controlled Instruction-Level Attacks on Enclaves for Maximal Key Extraction | [arXiv20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
 | When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA | [CHES20](https://eprint.iacr.org/2020/055.pdf) | - | Single-stepping, page fault, PTE/AD |
 | Big Numbers - Big Troubles: Systematically Analyzing Nonce Leakage in (EC)DSA Implementations | [USEC20](https://www.usenix.org/system/files/sec20summer_weiser_prepub_0.pdf) | - | Page fault |
-| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [Oakland20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
+| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [S&P20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
 | Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
 | Fallout: Leaking Data on Meltdown-resistant CPUs | [CCS19](https://mdsattacks.com/files/fallout.pdf) | - | PTE A/D |
 | A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes | [CCS19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf) | [link](https://github.com/jovanbulck/0xbadc0de) | Single-stepping, page fault, PTE A/D |
@@ -267,5 +281,4 @@ a pull request if your project uses SGX-Step but is not included below.
 | Single Trace Attack Against RSA Key Generation in Intel SGX SSL | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf) | - | Page fault |
 | Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page fault |
 | SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page fault, PTE A/D|
-
 
