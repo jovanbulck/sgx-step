@@ -186,7 +186,7 @@ void attacker_config_page_table(void)
 int main( int argc, char **argv )
 {
 	sgx_launch_token_t token = {0};
-	int apic_fd, encl_strlen = 0, updated = 0;
+    int apic_fd, encl_strlen = 0, updated = 0, vec=0;
     idt_t idt = {0};
 
    	info_event("Creating enclave...");
@@ -204,8 +204,9 @@ int main( int argc, char **argv )
         //dump_idt(&idt);
         apic_timer_oneshot(IRQ_VECTOR);
     #else
-        info_event("Establishing user space APIC mapping (with kernel space handler)");
-        apic_timer_oneshot(LOCAL_TIMER_VECTOR);
+        vec = (apic_read(APIC_LVTT) & 0xff);
+        info_event("Establishing user space APIC mapping with kernel space handler (vector=%d)", vec);
+        apic_timer_oneshot(vec);
     #endif
 
     /* TODO for some reason the Dell Latitude machine first needs 2 SW IRQs

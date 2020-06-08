@@ -79,14 +79,17 @@ int apic_timer_oneshot(uint8_t vector)
 
 int apic_timer_deadline(void)
 {
-    apic_write(APIC_LVTT, apic_lvtt);
-    apic_write(APIC_TDCR, apic_tdcr);
-    libsgxstep_info("Restored APIC_LVTT=%x/TDCR=%x)",
-        apic_read(APIC_LVTT), apic_read(APIC_TDCR));
+    if (apic_lvtt)
+    {
+        apic_write(APIC_LVTT, apic_lvtt);
+        apic_write(APIC_TDCR, apic_tdcr);
+        libsgxstep_info("Restored APIC_LVTT=%x/TDCR=%x)",
+            apic_read(APIC_LVTT), apic_read(APIC_TDCR));
+        apic_lvtt = apic_tdcr = 0x0;
+    }
 
     /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
     #if APIC_CONFIG_MSR
         wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), 1);
     #endif
-    apic_lvtt = apic_tdcr = 0x0;
 }
