@@ -254,7 +254,7 @@ Some different microcode versions are provided for reference in the table below.
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | ?                 | 34                  |
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
 | Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
-| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1 GHz  | 0x32 (2019-07-05) | 135 |
+| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  | 0x32 (2019-07-05) | 135 |
 
 **Note (calibration).**
 Currently, the easiest way to configure a reliable timer interval is to
@@ -304,9 +304,12 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
+| CrossTalk: Speculative Data Leaks Across Cores Are Real | [S&P21](https://download.vusec.net/papers/crosstalk_sp21.pdf) | - | Single-stepping, page fault |
+| Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend | [arXiv20](https://arxiv.org/pdf/2005.11516.pdf) | - | Single-stepping interrupt latency, PTE A/D |
+| From A to Z: Projective coordinates leakage in the wild | [CHES20](https://eprint.iacr.org/2020/432.pdf) | - | Page fault |
 | LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection | [S&P20](https://lviattack.eu/lvi.pdf) | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi) | Single-stepping, page-table manipulation |
-| CopyCat: Controlled Instruction-Level Attacks on Enclaves for Maximal Key Extraction | [arXiv20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
-| When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA | [CHES20](https://eprint.iacr.org/2020/055.pdf) | - | Single-stepping, page fault, PTE/AD |
+| CopyCat: Controlled Instruction-Level Attacks on Enclaves | [USEC20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
+| When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA | [CHES20](https://eprint.iacr.org/2020/055.pdf) | - | Single-stepping, page fault, PTE A/D |
 | Big Numbers - Big Troubles: Systematically Analyzing Nonce Leakage in (EC)DSA Implementations | [USEC20](https://www.usenix.org/system/files/sec20summer_weiser_prepub_0.pdf) | - | Page fault |
 | Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [S&P20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
 | Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
