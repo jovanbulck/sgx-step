@@ -101,43 +101,34 @@ interrupting and resuming an SGX enclave through our framework.
 
 ## Building and Running
 
-### 0. System Requirements
+### 0. System requirements
 
 SGX-Step requires an [SGX-capable](https://github.com/ayeks/SGX-hardware) Intel
 processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
 i7-6500U/6700 CPUs, running Ubuntu 18.04 with a stock Linux 4.15.0 kernel.
-We summarize Linux [kernel parameters](https://wiki.archlinux.org/index.php/Kernel_parameters)
+We summarize Linux [kernel parameters](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)
 below.
 
 | Linux kernel parameter           | Motivation                                                                                                                      |
-|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------  |
-| `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).             |
-| `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.                                                                          |
-| nmi_watchdog=0                   | Suppress the kernel NMI watchdog. |
-| `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.                                                                          |
-| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates) |
-| `dis_ucode_ldr`                  | Disable CPU microcode updates ([Foreshadow](https://foreshadowattack.eu)/L1TF mitigations necessitate re-calibrating the single-stepping interval). |
+|----------------------------------|------------------------------------------------------------------  |
+| `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).   |
+| `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.             |
+| `nmi_watchdog=0`                 | Suppress the kernel NMI watchdog.                                  |
+| `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.             |
+| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates).                  |
+| `clearcpuid=514`                 | Disable User-Mode Instruction Prevention (on newer CPUs).          |
+| `dis_ucode_ldr`                  | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap isolcpus=1 nmi_watchdog=0 dis_ucode_ldr"
+  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 nmi_watchdog=0"
 $ sudo update-grub && sudo reboot
 ```
 
 Finally, in order to reproduce our experimental results, make sure to disable
-C-States and SpeedStep technology in the BIOS configuration. The table below
-lists currently supported Intel CPUs, together with their single-stepping APIC
-timer interval (`libsgxstep/config.h`).
-
-| Model name    | CPU                                               | Base frequency | APIC timer interval |
-|---------------|---------------------------------------------------|----------------|---------------------|
-| Skylake       | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | 19                  |
-| Skylake       | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | 25                  |
-| Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | 28                  |
-| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 34                  |
-| Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | 21                  |
+C-States and SpeedStep technology in the BIOS configuration.
 
 ### 1. Patch and install SGX SDK
 
@@ -245,6 +236,53 @@ frequency, and hence remains inherently platform-specific. Configure a suitable
 value in `/app/bench/main.c`. We established precise timer intervals for our
 evaluation platforms (see table above) by tweaking and observing the NOP
 microbenchmark enclave instruction pointer trace results.
+
+#### Calibrating the single-stepping interval
+
+The table below lists currently supported Intel CPUs, together with their
+single-stepping APIC timer interval (`libsgxstep/config.h`).
+Note that the exact single-stepping interval may depend on the microcode
+version of the processor when recent [transient-execution attack](https://transient.fail/) mitigations are
+in place to flush microarchitectural buffers on enclave entry/exit.
+Some different microcode versions are provided for reference in the table below.
+
+| Model name    | CPU                                               | Base frequency | ucode (date)      | APIC timer interval |
+|---------------|---------------------------------------------------|----------------|-------------------|---------------------|
+| Skylake       | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | ?                 | 19                  |
+| Skylake       | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | ?                 | 25                  |
+| Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | ?                 | 28                  |
+| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | ?                 | 34                  |
+| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
+| Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
+| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1 GHz  | 0x32 (2019-07-05) | 135 |
+
+**Note (calibration).**
+Currently, the easiest way to configure a reliable timer interval is to
+use the `app/bench` benchmarking tool with a long NOP slide and
+gradually increase/decrease `SGX_STEP_TIMER_INTERVAL`. You can probably
+start around 20 and then execute `NUM=100 make parse` to get a summary
+of single-steps, zero-steps, and multi-steps for a NOP slide of 100
+instructions (once you have a more or less stable interval you can
+switch to longer slides). Too many zero-steps indicate that you have to
+increase the timer interval, whereas multi-steps demand lowering the
+timer interval. Btw, don't worry when there's some zero-steps left, as
+long as you make progress, you can always deterministically filter out
+zero-steps by looking at the enclave's code PTE accessed bit (which is
+only set when the instruction actually retires and a single-step occured).
+
+**Note (microcode).**
+Another word of caution relates to recent Foreshadow/ZombieLoad/RIDL/etc
+microcode mitigations that flush leaky uarch buffers on enclave
+entry/exit. Be aware that when these mitigations are enabled, the timer
+interval will have to be increased as enclave entry takes longer (e.g.,
+on my i7-8650U CPU I found the single-step timer interval goes up to 54
+with recent ucode, from only 34 with pre-Foreshadow ucode).
+The additional flushing operations may furthermore somewhat increase the
+variance of enclave entry time, which implies that you might have to
+configure the timer more conservatively with more zero-steps (which can be
+deterministically filtered out as explained above). 
+
+
 
 ## Using SGX-Step in your own projects
 
