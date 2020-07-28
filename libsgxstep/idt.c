@@ -123,7 +123,9 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
     gate->p = 1;
     gate->segment = KERNEL_CS;
     gate->dpl = USER_DPL;
-    gate->type = GATE_INTERRUPT;
+    /* XXX we can also do GATE_INTERRUPT here but then exec_priv code would be uninterruptible */
+    gate->type = GATE_TRAP;
+    //gate->type = GATE_INTERRUPT;
     gate->ist = 0;
 
     libsgxstep_info("installed ring0 IRQ handler with target_rip=%p", asm_handler);

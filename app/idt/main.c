@@ -19,6 +19,7 @@
  */
 
 #include "libsgxstep/idt.h"
+#include "libsgxstep/gdt.h"
 #include "libsgxstep/apic.h"
 #include "libsgxstep/cpu.h"
 #include "libsgxstep/sched.h"
@@ -27,9 +28,28 @@
 #define DO_APIC_TMR_IRQ             1
 #define DO_APIC_SW_IRQ              0
 #define DO_USER_HANDLER             0
+#define DO_USER_LOOP                0
 
 void __ss_irq_handler(void);
 extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;
+
+/* ------------------------------------------------------------ */
+/* This code may execute with ring0 privileges */
+int my_cpl = -1;
+
+void do_irq_loop(void)
+{
+    my_cpl = get_cpl();
+    __ss_irq_fired = 0;
+    apic_timer_irq(10);
+    while(!__ss_irq_fired);
+}
+
+void my_ring0_func(void)
+{
+    my_cpl = get_cpl();
+}
+/* ------------------------------------------------------------ */
 
 int main( int argc, char **argv )
 {
@@ -38,12 +58,17 @@ int main( int argc, char **argv )
 
     info_event("Establishing user space IDT mapping");
     map_idt(&idt);
-#if DO_USER_HANDLER
-    install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
-#else
-    install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
-#endif
+    #if DO_USER_HANDLER
+        install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    #else
+        install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    #endif
     //dump_idt(&idt);
+
+    #if !DO_USER_LOOP
+        exec_priv(my_ring0_func);
+        info("back from my_ring0_func w CPL=%d", my_cpl);
+    #endif
 
     #if DO_APIC_SW_IRQ
         info_event("Triggering user space software interrupts");
@@ -58,10 +83,12 @@ int main( int argc, char **argv )
         for (int i=0; i < 3; i++)
         {
             //apic_send_ipi_self(IRQ_VECTOR);
-            __ss_irq_fired = 0;
-            apic_timer_irq(10);
-            while(!__ss_irq_fired);
-            info("returned from timer IRQ: CPL=%d; count=%d; flags=%p", __ss_irq_cpl, __ss_irq_count, read_flags());
+            #if DO_USER_LOOP
+                do_irq_loop();
+            #else
+                exec_priv(do_irq_loop);
+            #endif
+            info("returned from timer IRQ: my_cpl=%d; irq_cpl=%d; count=%d; flags=%p", my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags());
         }
 
         apic_timer_deadline();
