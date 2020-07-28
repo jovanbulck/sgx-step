@@ -55,7 +55,7 @@ int main( int argc, char **argv )
     gdt_t gdt = {0};
     info_event("Establishing user space GDT mapping");
     map_gdt(&gdt);
-    //dump_gdt(&gdt);
+    dump_gdt(&gdt);
 
     info_event("Installing and calling ring0 call gate");
     install_call_gate(&gdt, GDT_VECTOR, KERNEL_CS, call_gate_func);

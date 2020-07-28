@@ -25,28 +25,11 @@
 #include "libsgxstep/config.h"
 
 #define DO_APIC_TMR_IRQ             1
-#define DO_APIC_SW_IRQ              1
+#define DO_APIC_SW_IRQ              0
+#define DO_USER_HANDLER             0
 
-extern void my_irq_handler(void);
-uint64_t irq_handler_count = 0x0;
-
-int volatile irq_fired = 0, irq_count = 0;
-
-void hello_world(uint8_t *rsp)
-{
-    uint64_t *p = (uint64_t*) rsp;
-    printf("\n");
-    info("****** hello world from user space IRQ handler with count=%d ******",
-        irq_count++);
-
-    info("APIC TPR/PPR is %d/%d", apic_read(APIC_TPR), apic_read(APIC_PPR));
-    info("RSP at %p", rsp);
-    info("RIP is %p", *p++);
-    info("CS is %p", *p++);
-    info("EFLAGS is %p", *p++);
-
-    irq_fired = 1;
-}
+void __ss_irq_handler(void);
+extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;
 
 int main( int argc, char **argv )
 {
@@ -55,8 +38,12 @@ int main( int argc, char **argv )
 
     info_event("Establishing user space IDT mapping");
     map_idt(&idt);
-    install_user_irq_handler(&idt, hello_world, IRQ_VECTOR);
-    dump_idt(&idt);
+#if DO_USER_HANDLER
+    install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+#else
+    install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+#endif
+    //dump_idt(&idt);
 
     #if DO_APIC_SW_IRQ
         info_event("Triggering user space software interrupts");
@@ -71,15 +58,15 @@ int main( int argc, char **argv )
         for (int i=0; i < 3; i++)
         {
             //apic_send_ipi_self(IRQ_VECTOR);
-            irq_fired = 0;
+            __ss_irq_fired = 0;
             apic_timer_irq(10);
-            while(!irq_fired);
-            info("returned from timer IRQ: flags=%p", read_flags());
+            while(!__ss_irq_fired);
+            info("returned from timer IRQ: CPL=%d; count=%d; flags=%p", __ss_irq_cpl, __ss_irq_count, read_flags());
         }
 
         apic_timer_deadline();
     #endif
 
-    info("all is well; irq_handler_count=%d; exiting..", irq_count);
+    info("all is well; irq_count=%d; exiting..", __ss_irq_count);
     return 0;
 }

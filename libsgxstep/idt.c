@@ -85,6 +85,32 @@ void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector)
     #endif
 }
 
+void install_user_asm_irq_handler(idt_t *idt, void* asm_handler, int vector)
+{
+    ASSERT(vector >= 0 && vector < idt->entries);
+
+    gate_desc_t *gate = gate_ptr(idt->base, vector);
+    gate->offset_low    = PTR_LOW(asm_handler);
+    gate->offset_middle = PTR_MIDDLE(asm_handler);
+    gate->offset_high   = PTR_HIGH(asm_handler);
+
+    gate->p = 1;
+    gate->segment = USER_CS;
+    gate->dpl = USER_DPL;
+    /*
+     * XXX Note we explicitly use a trap gate here and not an interrupt gate,
+     * since the Interrupt Enable (IE) flag won't get reset on iretq in user
+     * space, resulting in a stalled CPU.
+     */
+    gate->type = GATE_TRAP;
+    gate->ist = 0;
+
+    libsgxstep_info("installed ring3 asm IRQ handler with target_rip=%p", asm_handler);
+    #if !LIBSGXSTEP_SILENT
+        dump_gate(gate, vector);
+    #endif
+}
+
 void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
 {
     ASSERT(vector >= 0 && vector < idt->entries);
