@@ -25,7 +25,7 @@ LDFLAGS             += -lsgx-step -lsgx_urts \
                        -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
 
 SOURCES              = $(shell ls *.c)
-OBJECTS              = $(SOURCES:.c=.o) asm.o
+OBJECTS              = $(SOURCES:.c=.o)
 OUTPUT               = app
 
 BUILDDIRS            = $(SUBDIRS:%=build-%)

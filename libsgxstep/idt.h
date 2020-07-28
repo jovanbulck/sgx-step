@@ -42,4 +42,7 @@ void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector);
 void install_user_asm_irq_handler(idt_t *idt, void* asm_handler, int vector);
 void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector);
 
+void __ss_irq_handler(void);
+extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;
+
 #endif

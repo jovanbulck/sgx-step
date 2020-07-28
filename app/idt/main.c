@@ -25,74 +25,112 @@
 #include "libsgxstep/sched.h"
 #include "libsgxstep/config.h"
 
+#define DO_APIC_SW_IRQ              1
 #define DO_APIC_TMR_IRQ             1
-#define DO_APIC_SW_IRQ              0
-#define DO_USER_HANDLER             0
-#define DO_USER_LOOP                0
-
-void __ss_irq_handler(void);
-extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;
+#define DO_EXEC_PRIV                1
 
 /* ------------------------------------------------------------ */
 /* This code may execute with ring0 privileges */
 int my_cpl = -1;
 
-void do_irq_loop(void)
+void pre_irq(void)
 {
     my_cpl = get_cpl();
     __ss_irq_fired = 0;
+}
+
+void do_irq_sw(void)
+{
+    pre_irq();
+    asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
+}
+
+void do_irq_tmr(void)
+{
+    pre_irq();
     apic_timer_irq(10);
     while(!__ss_irq_fired);
 }
 
-void my_ring0_func(void)
-{
-    my_cpl = get_cpl();
-}
 /* ------------------------------------------------------------ */
+
+void post_irq(void)
+{
+    ASSERT(__ss_irq_fired);
+    info("returned from IRQ: my_cpl=%d; irq_cpl=%d; count=%02d; flags=%p",
+            my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags());
+}
+
+void do_irq_test(int skip_priv)
+{
+    #if DO_APIC_SW_IRQ
+        printf("\n");
+        info("Triggering ring3 software interrupts..");
+        for (int i=0; i < 3; i++)
+        {
+            do_irq_sw();
+            post_irq();
+        }
+
+        #if DO_EXEC_PRIV
+        if (!skip_priv)
+        {
+            printf("\n");
+            info("Triggering ring0 software interrupts..");
+            for (int i=0; i < 3; i++)
+            {
+                exec_priv(do_irq_sw);
+                post_irq();
+            }
+        }
+        #endif
+    #endif
+
+    #if DO_APIC_TMR_IRQ
+        printf("\n");
+        info("Triggering ring3 APIC timer interrupts..");
+        apic_timer_oneshot(IRQ_VECTOR);
+
+        for (int i=0; i < 3; i++)
+        {
+            do_irq_tmr();
+            post_irq();
+        }
+
+        #if DO_EXEC_PRIV
+        if (!skip_priv)
+        {
+            printf("\n");
+            info("Triggering ring0 APIC timer interrupts..");
+            for (int i=0; i < 3; i++)
+            {
+                exec_priv(do_irq_tmr);
+                post_irq();
+            }
+        }
+        #endif
+
+        apic_timer_deadline();
+    #endif
+}
 
 int main( int argc, char **argv )
 {
     idt_t idt = {0};
     ASSERT( !claim_cpu(VICTIM_CPU) );
 
-    info_event("Establishing user space IDT mapping");
+    info_event("Installing and testing ring3 IDT handler");
     map_idt(&idt);
-    #if DO_USER_HANDLER
-        install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
-    #else
-        install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    do_irq_test(/*skip_priv=*/1);
+
+    info_event("Installing and testing ring0 IDT handler");
+    install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    #if DO_EXEC_PRIV
+        exec_priv(pre_irq);
+        info("back from exec_priv(pre_irq) with CPL=%d", my_cpl);
     #endif
-    //dump_idt(&idt);
-
-    #if !DO_USER_LOOP
-        exec_priv(my_ring0_func);
-        info("back from my_ring0_func w CPL=%d", my_cpl);
-    #endif
-
-    #if DO_APIC_SW_IRQ
-        info_event("Triggering user space software interrupts");
-        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
-        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
-    #endif
-
-    #if DO_APIC_TMR_IRQ
-        info_event("Triggering user space APIC timer interrupts");
-        apic_timer_oneshot(IRQ_VECTOR);
-
-        for (int i=0; i < 3; i++)
-        {
-            //apic_send_ipi_self(IRQ_VECTOR);
-            #if DO_USER_LOOP
-                do_irq_loop();
-            #else
-                exec_priv(do_irq_loop);
-            #endif
-            info("returned from timer IRQ: my_cpl=%d; irq_cpl=%d; count=%d; flags=%p", my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags());
-        }
-
-        apic_timer_deadline();
-    #endif
+    do_irq_test(/*skip_priv=*/0);
 
     info("all is well; irq_count=%d; exiting..", __ss_irq_count);
     return 0;
