@@ -2,6 +2,7 @@
 #include "pt.h"
 #include "apic.h"
 #include "sched.h"
+#include <sys/mman.h>
 
 /* See irq_entry.S to see how these are used. */
 extern void sgx_step_irq_entry(void);
@@ -151,4 +152,12 @@ void exec_priv(exec_priv_cb_t cb)
 
     sgx_step_irq_gate_cb = cb;
     asm("int %0\n\t" ::"i"(IRQ_VECTOR+4):);
+}
+
+void __attribute__((constructor)) init_sgx_step( void )
+{
+    /* Ensure IRQ handler asm code is not subject to demand-paging */
+    info("locking IRQ handlers..");
+    ASSERT( !mlock(&__ss_irq_handler, 0x1000) );
+    ASSERT( !mlock((void*) &__ss_irq_fired, 0x1000) );
 }

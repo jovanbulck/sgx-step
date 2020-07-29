@@ -1,17 +1,21 @@
 /* ********************************************************************** */
     .data
-    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl
+    .align 0x1000
+    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, apic_base
 __ss_irq_fired:
     .int 0x0
 __ss_irq_count:
     .int 0x0
 __ss_irq_cpl:
     .int 0xff
+apic_base:
+    .quad 0x0
     /* not sure there's a kernel stack we can use(?) */
 __ss_irq_rax:
     .quad 0x0
 
     .text
+    .align 0x1000
     .global __ss_irq_handler
 __ss_irq_handler:
     incl __ss_irq_fired(%rip)
