@@ -61,7 +61,7 @@ void post_irq(void)
             my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags());
 }
 
-void do_irq_test(int skip_priv)
+void do_irq_test(int do_exec_priv)
 {
     #if DO_APIC_SW_IRQ
         printf("\n");
@@ -72,8 +72,7 @@ void do_irq_test(int skip_priv)
             post_irq();
         }
 
-        #if DO_EXEC_PRIV
-        if (!skip_priv)
+        if (do_exec_priv)
         {
             printf("\n");
             info("Triggering ring0 software interrupts..");
@@ -83,7 +82,6 @@ void do_irq_test(int skip_priv)
                 post_irq();
             }
         }
-        #endif
     #endif
 
     #if DO_APIC_TMR_IRQ
@@ -97,8 +95,7 @@ void do_irq_test(int skip_priv)
             post_irq();
         }
 
-        #if DO_EXEC_PRIV
-        if (!skip_priv)
+        if (do_exec_priv)
         {
             printf("\n");
             info("Triggering ring0 APIC timer interrupts..");
@@ -108,7 +105,6 @@ void do_irq_test(int skip_priv)
                 post_irq();
             }
         }
-        #endif
 
         apic_timer_deadline();
     #endif
@@ -121,8 +117,8 @@ int main( int argc, char **argv )
 
     info_event("Installing and testing ring3 IDT handler");
     map_idt(&idt);
-    install_user_asm_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
-    do_irq_test(/*skip_priv=*/1);
+    install_user_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    do_irq_test(/*do_exec_priv=*/ 0);
 
     info_event("Installing and testing ring0 IDT handler");
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
@@ -130,7 +126,7 @@ int main( int argc, char **argv )
         exec_priv(pre_irq);
         info("back from exec_priv(pre_irq) with CPL=%d", my_cpl);
     #endif
-    do_irq_test(/*skip_priv=*/0);
+    do_irq_test(/*do_exec_priv=*/ DO_EXEC_PRIV);
 
     info("all is well; irq_count=%d; exiting..", __ss_irq_count);
     return 0;
