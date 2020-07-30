@@ -110,24 +110,6 @@ void fault_handler(int signal)
     // single-stepping mode.
 }
 
-int irq_count = 0;
-
-void irq_handler(uint8_t *rsp)
-{
-    uint64_t *p = (uint64_t*) rsp;
-#if 0
-    printf("\n");
-    info("****** hello world from user space IRQ handler with count=%d ******",
-        irq_count++);
-
-    info("APIC TPR/PPR is %d/%d", apic_read(APIC_TPR), apic_read(APIC_PPR));
-    info("RSP at %p", rsp);
-    info("RIP is %p", *p++);
-    info("CS is %p", *p++);
-    info("EFLAGS is %p", *p++);
-#endif
-}
-
 /* ================== ATTACKER INIT/SETUP ================= */
 
 /* Configure and check attacker untrusted runtime environment. */
@@ -197,25 +179,10 @@ int main( int argc, char **argv )
     attacker_config_runtime();
     attacker_config_page_table();
 
-    #if USER_IDT_ENABLE
-        info_event("Establishing user space APIC/IDT mappings");
-        map_idt(&idt);
-        install_user_irq_handler(&idt, irq_handler, IRQ_VECTOR);
-        //dump_idt(&idt);
-        apic_timer_oneshot(IRQ_VECTOR);
-    #else
-        vec = (apic_read(APIC_LVTT) & 0xff);
-        info_event("Establishing user space APIC mapping with kernel space handler (vector=%d)", vec);
-        apic_timer_oneshot(vec);
-    #endif
-
-    /* TODO for some reason the Dell Latitude machine first needs 2 SW IRQs
-     * before the timer IRQs even fire (??) */
-    #if USER_IDT_ENABLE
-        info_event("Triggering user space software interrupts");
-        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
-        asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
-    #endif
+    info_event("Establishing user-space APIC/IDT mappings");
+    map_idt(&idt);
+    install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
+    apic_timer_oneshot(IRQ_VECTOR);
 
     /* 2. Single-step enclaved execution. */
     info("calling enclave: attack=%d; num_runs=%d; timer=%d",
@@ -233,8 +200,8 @@ int main( int argc, char **argv )
 
     /* 3. Restore normal execution environment. */
     apic_timer_deadline();
-   	SGX_ASSERT( sgx_destroy_enclave( eid ) );
+    SGX_ASSERT( sgx_destroy_enclave( eid ) );
 
-    info_event("all done; counted %d IRQs", irq_cnt);
+    info_event("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt, __ss_irq_count);
     return 0;
 }

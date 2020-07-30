@@ -33,7 +33,7 @@
 extern void sgx_step_aep_trampoline(void);
 aep_cb_t sgx_step_aep_cb = NULL;
 uint64_t sgx_step_tcs    = 0x0;
-uint32_t nemesis_tsc_eresume = 0x0, nemesis_tsc_aex = 0x0;
+uint32_t nemesis_tsc_eresume = 0x0;
 int sgx_step_eresume_cnt = 0;
 
 extern int fd_step;

@@ -33,12 +33,12 @@ typedef struct {
     uint32_t zero1;
 } __attribute__((packed)) gate_desc_t;
 
-enum {
+typedef enum {
     GATE_INTERRUPT = 0xE,
     GATE_TRAP = 0xF,
     GATE_CALL = 0xC,
     GATE_TASK = 0x5,
-};
+} gate_type_t;
 
 typedef struct {
     uint32_t offset;

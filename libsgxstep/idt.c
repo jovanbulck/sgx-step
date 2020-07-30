@@ -2,13 +2,11 @@
 #include "pt.h"
 #include "apic.h"
 #include "sched.h"
+#include <sys/mman.h>
 
 /* See irq_entry.S to see how these are used. */
-extern void sgx_step_irq_entry(void);
-extern void sgx_step_irq_gate_func(void);
-irq_cb_t sgx_step_irq_cb_table[256] = {0};
+void sgx_step_irq_gate_func(void);
 exec_priv_cb_t sgx_step_irq_gate_cb = NULL;
-uint8_t sgx_step_vector_hack = 0;
 
 void dump_gate(gate_desc_t *gate, int idx)
 {
@@ -46,46 +44,7 @@ void map_idt(idt_t *idt)
     idt->entries = entries;
 }
 
-void sgx_step_irq_handler_c(uint8_t *rsp, uint8_t vector)
-{
-    if (sgx_step_irq_cb_table[vector])
-        sgx_step_irq_cb_table[vector](rsp);
-
-    apic_write(APIC_EOI, 0x0);
-}
-
-void install_user_irq_handler(idt_t *idt, irq_cb_t handler, int vector)
-{
-    ASSERT(vector >= 0 && vector < idt->entries);
-
-    gate_desc_t *gate = gate_ptr(idt->base, vector);
-    gate->offset_low    = PTR_LOW(sgx_step_irq_entry);
-    gate->offset_middle = PTR_MIDDLE(sgx_step_irq_entry);
-    gate->offset_high   = PTR_HIGH(sgx_step_irq_entry);
-    sgx_step_irq_cb_table[vector] = handler;
-    
-    ASSERT(!sgx_step_vector_hack &&
-            "SGX-Step currently only supports a single user space IRQ vector");
-    sgx_step_vector_hack = vector;
-
-    gate->p = 1;
-    gate->segment = USER_CS;
-    gate->dpl = USER_DPL;
-    /*
-     * XXX Note we explicitly use a trap gate here and not an interrupt gate,
-     * since the Interrupt Enable (IE) flag won't get reset on iretq in user
-     * space, resulting in a stalled CPU.
-     */
-    gate->type = GATE_TRAP;
-    gate->ist = 0;
-
-    libsgxstep_info("installed ring3 IRQ handler with target_rip=%p", handler);
-    #if !LIBSGXSTEP_SILENT
-        dump_gate(gate, vector);
-    #endif
-}
-
-void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
+void install_irq_handler(idt_t *idt, void* asm_handler, int vector, cs_t seg, gate_type_t type)
 {
     ASSERT(vector >= 0 && vector < idt->entries);
 
@@ -93,34 +52,56 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
     gate->offset_low    = PTR_LOW(asm_handler);
     gate->offset_middle = PTR_MIDDLE(asm_handler);
     gate->offset_high   = PTR_HIGH(asm_handler);
-    
+
     gate->p = 1;
-    gate->segment = KERNEL_CS;
+    gate->segment = seg;
     gate->dpl = USER_DPL;
-    gate->type = GATE_INTERRUPT;
+    gate->type = type;
     gate->ist = 0;
 
-    libsgxstep_info("installed ring0 IRQ handler with target_rip=%p", asm_handler);
+    libsgxstep_info("installed asm IRQ handler at %x:%p", seg, asm_handler);
     #if !LIBSGXSTEP_SILENT
         dump_gate(gate, vector);
     #endif
 }
 
-int sgx_step_irq_gate_installed = 0;
+void install_user_irq_handler(idt_t *idt, void* asm_handler, int vector)
+{
+    /*
+     * Note we explicitly use a trap gate here and not an interrupt gate,
+     * since the Interrupt Enable (IE) flag won't get reset on iretq in user
+     * space, resulting in a stalled CPU.
+     */
+    install_irq_handler(idt, asm_handler, vector, USER_CS, GATE_TRAP);
+}
+
+void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
+{
+    /* We can use an interrupt gate to make the ring0 handler uninterruptible. */
+    install_irq_handler(idt, asm_handler, vector, KERNEL_CS, GATE_INTERRUPT);
+}
 
 void exec_priv(exec_priv_cb_t cb)
 {
     idt_t idt;
-    if (!sgx_step_irq_gate_installed)
+    if (!sgx_step_irq_gate_cb)
     {
         libsgxstep_info("installing and calling ring0 irq gate");
         ASSERT( !claim_cpu(VICTIM_CPU) );
         map_idt(&idt);
-        install_kernel_irq_handler(&idt, sgx_step_irq_gate_func, IRQ_VECTOR+4);
+        /* We use a trap gate to make the exec_priv code interruptible. */
+        install_irq_handler(&idt, sgx_step_irq_gate_func, IRQ_VECTOR+4, KERNEL_CS, GATE_TRAP);
         free_map(idt.base);
-        sgx_step_irq_gate_installed = 1;
     }
 
     sgx_step_irq_gate_cb = cb;
     asm("int %0\n\t" ::"i"(IRQ_VECTOR+4):);
+}
+
+void __attribute__((constructor)) init_sgx_step( void )
+{
+    /* Ensure IRQ handler asm code is not subject to demand-paging */
+    info("locking IRQ handlers..");
+    ASSERT( !mlock(&__ss_irq_handler, 0x1000) );
+    ASSERT( !mlock((void*) &__ss_irq_fired, 0x1000) );
 }
