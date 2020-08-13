@@ -140,8 +140,10 @@ apply our patches.
 ```bash
 $ git submodule init
 $ git submodule update
-$ ./install_SGX_driver.sh # tested on Ubuntu 18.04
-$ ./install_SGX_SDK.sh    # tested on Ubuntu 18.04
+$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04
+$ ./install_SGX_SDK.sh                 # tested on Ubuntu 18.04/20.04
+$ source /opt/intel/sgxsdk/environment # add to ~/.bashrc to preserve across terminal sessions
+$ sudo service aesmd status            # stop/start aesmd service if needed
 ```
 
 The above install scripts are tested on Ubuntu 18.04 LTS.
