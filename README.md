@@ -134,7 +134,7 @@ C-States and SpeedStep technology in the BIOS configuration.
 
 To enable easy registration of a custom Asynchronous Exit Pointer (AEP) stub,
 we modified the untrusted runtime of the official Intel SGX SDK. Proceed as
-follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.7.1 and
+follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.11 and
 apply our patches.
 
 ```bash
@@ -182,7 +182,7 @@ $ make clean load
 
 **Note (/dev/isgx).** Our driver uses some internal symbols and data structures
 from the official Intel `/dev/isgx` driver. We therefore include a git submodule
-that points to an unmodified v2.6
+that points to an unmodified v2.11
 [linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
 
 **Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
