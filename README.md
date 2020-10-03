@@ -87,8 +87,8 @@ interrupting and resuming an SGX enclave through our framework.
 2. The processor executes the AEX procedure that securely stores execution
    context in the enclave’s SSA frame, initializes CPU registers, and vectors
    to the (user space) interrupt handler registered in the IDT.
-3. At this point, any attack-specific, spy code can easily be plugged in. 
-4. The library returns to the user space AEP trampoline. We modified the 
+3. At this point, any attack-specific, spy code can easily be plugged in.
+4. The library returns to the user space AEP trampoline. We modified the
    untrusted runtime of the official SGX SDK to allow easy registration of a
    custom AEP stub. Furthermore, to enable precise evaluation of our approach on
    attacker-controlled benchmark debug enclaves, SGX-Step can *optionally* be
@@ -123,8 +123,8 @@ Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 nmi_watchdog=0"
-$ sudo update-grub && sudo reboot
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 nmi_watchdog=0"
+$ sudo update-grub && reboot
 ```
 
 Finally, in order to reproduce our experimental results, make sure to disable
@@ -282,7 +282,7 @@ with recent ucode, from only 34 with pre-Foreshadow ucode).
 The additional flushing operations may furthermore somewhat increase the
 variance of enclave entry time, which implies that you might have to
 configure the timer more conservatively with more zero-steps (which can be
-deterministically filtered out as explained above). 
+deterministically filtered out as explained above).
 
 
 
@@ -324,4 +324,3 @@ a pull request if your project uses SGX-Step but is not included below.
 | Single Trace Attack Against RSA Key Generation in Intel SGX SSL | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf) | - | Page fault |
 | Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page fault |
 | SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page fault, PTE A/D|
-
