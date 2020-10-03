@@ -1,6 +1,27 @@
 #!/bin/bash
 set -e
 
+OS_VERS=$(lsb_release -r 2>/dev/null | awk '{ print $2 }')
+UBUNTU=$(uname -v | grep -c Ubuntu)
+
+echo $OS_VERS
+
+if [ "$UBUNTU" = 1 ]; then
+    if [ "$OS_VERS" = "18.04" ]; then
+        OS_STR="ubuntu18.04"
+    else
+        if [ "$OS_VERS" = "20.04" ]; then
+            OS_STR="ubuntu20.04"
+        else
+            echo "Unsupported OS version"
+            exit 1
+        fi
+    fi
+else
+    echo "Please set your operating system manually"
+    exit 1
+fi
+
 git submodule init
 git submodule update
 
@@ -20,7 +41,9 @@ sudo apt-get install libssl-dev libcurl4-openssl-dev protobuf-compiler libprotob
 # ----------------------------------------------------------------------
 echo "[ building SDK ]"
 cd linux-sgx
-./download_prebuilt.sh
+make preparation
+pwd
+sudo cp "external/toolset/$OS_STR/"* /usr/local/bin
 make -j`nproc`
 make sdk_install_pkg
 
