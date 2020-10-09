@@ -1,6 +1,6 @@
 # A Practical Attack Framework for Precise Enclave Execution Control
 
-<img src="logo.svg" width=160 alt="logo" align="left" />
+<img src="doc/logo.svg" width=160 alt="logo" align="left" />
 
 SGX-Step is an open-source framework to facilitate side-channel attack research
 on Intel x86 processors in general and Intel SGX platforms in particular.
@@ -78,7 +78,7 @@ timer one-shot/periodic interrupt source, (iii) trigger inter-processor
 interrupts, and (iv) register custom interrupt handlers completely _within_
 user space.
 
-![sgx-step-framework](framework.png)
+![doc/sgx-step-framework](framework.png)
 
 The above figure summarizes the sequence of hardware and software steps when
 interrupting and resuming an SGX enclave through our framework.
@@ -99,7 +99,17 @@ interrupting and resuming an SGX enclave through our framework.
    by writing into the initial-count MMIO register, just before executing (6)
    `ERESUME`.
 
-## Building and Running
+## Source code overview
+
+This repository is organized as follows:
+
+- `app/` Collection of sample client applications using SGX-Step to attack different victim enclave scenarios.
+- `doc/` Papers and reference material.
+- `kernel/` Minimal dynamically loadable Linux kernel driver to export physical memory to user space and bootstrap `libsgxstep`.
+- `libsgxstep/` Small user-space operating system library that implements the actual SGX-Step functionality, including x86 page-table and APIC timer manipulations.
+- `sdk/` Bindings to use SGX-Step with different SGX SDKs and libOSs.
+
+## Building and running
 
 ### 0. System requirements
 
@@ -130,7 +140,36 @@ $ sudo update-grub && reboot
 Finally, in order to reproduce our experimental results, make sure to disable
 C-States and SpeedStep technology in the BIOS configuration.
 
-### 1. Patch and install SGX SDK
+### 1. Build and load `/dev/sgx-step`
+
+SGX-Step comes with a loadable kernel module that exports an IOCTL interface to
+the `libsgxstep` user-space library. The driver is mainly responsible for (i)
+hooking the APIC timer interrupt handler, (ii) collecting untrusted page table
+mappings, and optionally (iii) fetching the interrupted instruction pointer for
+benchmark enclaves.
+
+To build and load the `/dev/sgx-step` driver, execute:
+
+```bash
+$ cd kernel/
+$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04
+$ make clean load
+```
+
+**Note (/dev/isgx).** Our driver uses some internal symbols and data structures
+from the official Intel `/dev/isgx` out-of-tree driver. We therefore include a
+git submodule that points to an unmodified v2.11
+[linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
+
+**Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
+user-level virtual memory mappings for APIC physical memory-mapped I/O
+registers and page table entries of interest. Recent Linux distributions
+typically enable the `CONFIG_STRICT_DEVMEM` option which prevents such use,
+however. Our `/dev/sgx-step` driver therefore includes an
+[approach](https://www.libcrack.so/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/)
+to bypass `devmem_is_allowed` checks, without having to recompile the kernel.
+
+### 2. Patch and install SGX SDK
 
 To enable easy registration of a custom Asynchronous Exit Pointer (AEP) stub,
 we modified the untrusted runtime of the official Intel SGX SDK. Proceed as
@@ -138,9 +177,7 @@ follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.11 and
 apply our patches.
 
 ```bash
-$ git submodule init
-$ git submodule update
-$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04
+$ cd sdk/intel-sdk/
 $ ./install_SGX_SDK.sh                 # tested on Ubuntu 18.04/20.04
 $ source /opt/intel/sgxsdk/environment # add to ~/.bashrc to preserve across terminal sessions
 $ sudo service aesmd status            # stop/start aesmd service if needed
@@ -164,34 +201,6 @@ Makefile targets furthermore dynamically link against the patched
 
 **Note (32-bit support).** Instructions for building 32-bit versions of
 the SGX SDK and SGX-Step can be found in [README-m32.md](README-m32.md).
-
-### 2. Build and load `/dev/sgx-step`
-
-SGX-Step comes with a loadable kernel module that exports an IOCTL interface to
-the `libsgxstep` user-space library. The driver is mainly responsible for (i)
-hooking the APIC timer interrupt handler, (ii) collecting untrusted page table
-mappings, and optionally (iii) fetching the interrupted instruction pointer for
-benchmark enclaves.
-
-To build and load the `/dev/sgx-step` driver, execute:
-
-```bash
-$ cd kernel
-$ make clean load
-```
-
-**Note (/dev/isgx).** Our driver uses some internal symbols and data structures
-from the official Intel `/dev/isgx` driver. We therefore include a git submodule
-that points to an unmodified v2.11
-[linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
-
-**Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
-user-level virtual memory mappings for APIC physical memory-mapped I/O
-registers and page table entries of interest. Recent Linux distributions
-typically enable the `CONFIG_STRICT_DEVMEM` option which prevents such use,
-however. Our `/dev/sgx-step` driver therefore includes an
-[approach](https://www.libcrack.so/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/)
-to bypass `devmem_is_allowed` checks, without having to recompile the kernel.
 
 ### 3. Build and run test applications
 

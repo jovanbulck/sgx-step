@@ -33,6 +33,8 @@ then
 fi
 echo "SGX-SDK successfully patched!"
 
+exit
+
 # ----------------------------------------------------------------------
 echo "[ installing prerequisites ]"
 sudo apt-get install build-essential ocaml ocamlbuild automake autoconf libtool wget python libssl-dev
