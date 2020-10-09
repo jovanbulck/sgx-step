@@ -1,4 +1,4 @@
-# A Practical Attack Framework for Precise Enclave Execution Control
+# A Practical Attack Framework for Precise Enclave Execution Control [![Build Status](https://travis-ci.org/jovanbulck/sgx-step.svg?branch=master)](https://travis-ci.org/jovanbulck/sgx-step)
 
 <img src="doc/logo.svg" width=160 alt="logo" align="left" />
 
@@ -33,13 +33,6 @@ groups and has enabled a new line of high-resolution SGX attacks. A full
 up-to-date list of known projects using SGX-Step is included at the
 [bottom](#bottom) of this README. A copy of the original paper is available
 [here](https://jovanbulck.github.io/files/systex17-sgxstep.pdf).
-
-This paper presents SGX-Step, an open-source Linux kernel framework that allows
-an untrusted host process to configure APIC timer interrupts and track page
-table entries directly from user space. We contribute and evaluate an improved
-approach to single-step enclaved execution at instruction-level granularity,
-and we show how SGX-Step enables several new or improved attacks. Finally, we
-discuss its implications for the design of effective defense mechanisms.
 
 ```
 @inproceedings{vanbulck2017sgxstep,
@@ -103,7 +96,7 @@ This repository is organized as follows:
 └── sdk        -- Bindings to use SGX-Step with different SGX SDKs and libOSs.
 ```
 
-## Building and running
+## Building and running [![Build Status](https://travis-ci.org/jovanbulck/sgx-step.svg?branch=master)](https://travis-ci.org/jovanbulck/sgx-step)
 
 ### 0. System requirements
 
