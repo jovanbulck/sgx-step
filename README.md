@@ -32,20 +32,7 @@ photo frames to reveal overall horse gait properties.
 groups and has enabled a new line of high-resolution SGX attacks. A full
 up-to-date list of known projects using SGX-Step is included at the
 [bottom](#bottom) of this README. A copy of the original paper is available
-[here](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf).
-
-## Abstract
-
-Trusted execution environments such as Intel SGX hold the promise of protecting
-sensitive computations from a potentially compromised operating system. Recent
-research convincingly demonstrated, however, that SGX's strengthened adversary
-model also gives rise to to a new class of powerful, low-noise side-channel
-attacks leveraging first-rate control over hardware. These attacks commonly
-rely on frequent enclave preemptions to obtain fine-grained side-channel
-observations. A maximal temporal resolution is achieved when the victim state
-is measured after every instruction. Current state-of-the-art enclave
-execution control schemes, however, do not generally achieve such
-instruction-level granularity.
+[here](https://jovanbulck.github.io/files/systex17-sgxstep.pdf).
 
 This paper presents SGX-Step, an open-source Linux kernel framework that allows
 an untrusted host process to configure APIC timer interrupts and track page
@@ -56,13 +43,13 @@ discuss its implications for the design of effective defense mechanisms.
 
 ```
 @inproceedings{vanbulck2017sgxstep,
-    title={{SGX-Step}: A practical attack framework for precise enclave execution control},
-    author = {Van Bulck, Jo and Piessens, Frank and Strackx, Raoul},
-    booktitle = {2nd Workshop on System Software for Trusted Execution ({SysTEX} 2017)},
-    month=Oct,
-    organization = {{ACM}},
-    year=2017,
-    pages = {4:1--4:6},
+    title     = {{SGX-Step}: A Practical Attack Framework for Precise Enclave Execution Control},
+    author    = {Van Bulck, Jo and Piessens, Frank and Strackx, Raoul},
+    booktitle = {2nd Workshop on System Software for Trusted Execution {(SysTEX)}},
+    publisher = {{ACM}},
+    pages     = {4:1--4:6},
+    month     = Oct,
+    year      = 2017,
 }
 ```
 
@@ -78,7 +65,7 @@ timer one-shot/periodic interrupt source, (iii) trigger inter-processor
 interrupts, and (iv) register custom interrupt handlers completely _within_
 user space.
 
-![doc/sgx-step-framework](framework.png)
+![sgx-step-framework](doc/framework.png)
 
 The above figure summarizes the sequence of hardware and software steps when
 interrupting and resuming an SGX enclave through our framework.
@@ -103,11 +90,18 @@ interrupting and resuming an SGX enclave through our framework.
 
 This repository is organized as follows:
 
-- `app/` Collection of sample client applications using SGX-Step to attack different victim enclave scenarios.
-- `doc/` Papers and reference material.
-- `kernel/` Minimal dynamically loadable Linux kernel driver to export physical memory to user space and bootstrap `libsgxstep`.
-- `libsgxstep/` Small user-space operating system library that implements the actual SGX-Step functionality, including x86 page-table and APIC timer manipulations.
-- `sdk/` Bindings to use SGX-Step with different SGX SDKs and libOSs.
+```
+.
+├── app        -- Collection of sample client applications using SGX-Step to
+│                 attack different victim enclave scenarios.
+├── doc        -- Papers and reference material.
+├── kernel     -- Minimal dynamically loadable Linux kernel driver to export
+│                 physical memory to user space and bootstrap `libsgxstep`.
+├── libsgxstep -- Small user-space operating system library that implements the
+│                 actual SGX-Step functionality, including x86 page-table and
+│                 APIC timer manipulations.
+└── sdk        -- Bindings to use SGX-Step with different SGX SDKs and libOSs.
+```
 
 ## Building and running
 
