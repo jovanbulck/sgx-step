@@ -178,7 +178,7 @@ int main( int argc, char **argv )
             step_cnt_prev = step_cnt;
         }
     }
-    printf("\n\n");
+    printf(COLOR_RESET_ALL "\n\n");
 #endif
 
     /* 3. Restore normal execution environment. */
