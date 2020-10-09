@@ -1,0 +1,11 @@
+enclave {
+	
+	trusted {
+        public int memcmp_pwd([in,string] char *pwd);
+        public void  *get_memcmp_adrs( void );
+        public void  *get_trigger_adrs( void );
+	};
+	
+	untrusted {
+	};
+};
