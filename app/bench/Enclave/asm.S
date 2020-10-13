@@ -104,7 +104,7 @@ zigzag_bench:
 
 block0:     lea_pic block1, %r15
             lea_pic block2, %r14
-            cmp $0, a(%rip)
+            cmpl $0, a(%rip)
             cmove %r14, %r15
 block0.j:   jmp zz1
 block1:     nop
@@ -112,7 +112,7 @@ block1:     nop
 block1.j:   jmp zz2
 block2:     lea_pic block3, %r15
             lea_pic block4, %r14
-            cmp $0, b(%rip)
+            cmpl $0, b(%rip)
             cmove %r14, %r15
 block2.j:   jmp zz3
 block3:     nop

@@ -32,8 +32,8 @@ __ss_irq_handler:
     /* IRQ bookkeeping */
     incl __ss_irq_fired(%rip)
     incl __ss_irq_count(%rip)
-    mov %cs,  __ss_irq_cpl(%rip)
-    and $0x3, __ss_irq_cpl(%rip)
+    movw %cs,  __ss_irq_cpl(%rip)
+    andw $0x3, __ss_irq_cpl(%rip)
 
     /* apic_write(APIC_EOI, 0x0); */
     lea apic_base(%rip), %rax

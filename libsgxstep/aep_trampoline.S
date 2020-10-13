@@ -57,7 +57,7 @@ sgx_step_aep_trampoline:
     call *%xax
 
 .Leresume:
-    add $1, sgx_step_eresume_cnt(%rip)
+    incl sgx_step_eresume_cnt(%rip)
     mov sgx_step_tcs(%rip), %xbx              /* TCS address */
     lea sgx_step_aep_trampoline(%rip), %xcx   /* AEP address */
 
