@@ -32,7 +32,7 @@ LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
                        -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib$(LIB_SUFX)/ \
                        -L$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
 
-SOURCES              = $(shell ls *.c)
+SOURCES              = main.c #$(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)
 OUTPUT               = app
 

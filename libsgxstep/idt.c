@@ -104,7 +104,4 @@ void __attribute__((constructor)) init_sgx_step( void )
     info("locking IRQ handler pages %p/%p", &__ss_irq_handler, &__ss_irq_fired);
     ASSERT( !mlock(&__ss_irq_handler, 0x1000) );
     ASSERT( !mlock((void*) &__ss_irq_fired, 0x1000) );
-
-    print_page_table(__ss_irq_handler);
-    print_page_table(init_sgx_step);
 }

