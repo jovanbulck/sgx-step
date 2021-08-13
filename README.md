@@ -303,7 +303,7 @@ a pull request if your project uses SGX-Step but is not included below.
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
 | CrossTalk: Speculative Data Leaks Across Cores Are Real | [S&P21](https://download.vusec.net/papers/crosstalk_sp21.pdf) | - | Single-stepping, page fault |
-| Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend | [arXiv20](https://arxiv.org/pdf/2005.11516.pdf) | - | Single-stepping interrupt latency, PTE A/D |
+| Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend | [USEC21](https://www.usenix.org/system/files/sec21-puddu.pdf) | [link](https://github.com/dn0sar/frontal_poc) | Single-stepping interrupt latency, PTE A/D |
 | From A to Z: Projective coordinates leakage in the wild | [CHES20](https://eprint.iacr.org/2020/432.pdf) | - | Page fault |
 | LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection | [S&P20](https://lviattack.eu/lvi.pdf) | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi) | Single-stepping, page-table manipulation |
 | CopyCat: Controlled Instruction-Level Attacks on Enclaves | [USEC20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
