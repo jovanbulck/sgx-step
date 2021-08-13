@@ -302,8 +302,12 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
+| Online Template Attacks: Revisited | [CHES21](https://tches.iacr.org/index.php/TCHES/article/view/8967/8545) | [link](https://zenodo.org/record/4680071) | Single-stepping, page fault, PTE A/D |
+| Aion Attacks: Manipulating Software Timers in Trusted Execution Environment | [DIMVA21](http://individual.utoronto.ca/shengjiexu/publication/whuang-dimva2021-aion_v2.pdf) | - | Single-stepping, interrupts(?) |
+| Platypus: Software-based Power Side-Channel Attacks on x86 | [S&P21](https://platypusattack.com/platypus.pdf) | [link](https://github.com/0xhilbert/Platypus) | Single-stepping, zero-stepping |
 | CrossTalk: Speculative Data Leaks Across Cores Are Real | [S&P21](https://download.vusec.net/papers/crosstalk_sp21.pdf) | - | Single-stepping, page fault |
 | Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend | [USEC21](https://www.usenix.org/system/files/sec21-puddu.pdf) | [link](https://github.com/dn0sar/frontal_poc) | Single-stepping interrupt latency, PTE A/D |
+| SpeechMiner: A Framework for Investigating andMeasuring Speculative Execution Vulnerabilities | [NDSS20](https://www.ndss-symposium.org/wp-content/uploads/2020/02/23105-paper.pdf) | [link](https://github.com/teecert/SpeechMiner) | Page-table manipulation |
 | From A to Z: Projective coordinates leakage in the wild | [CHES20](https://eprint.iacr.org/2020/432.pdf) | - | Page fault |
 | LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection | [S&P20](https://lviattack.eu/lvi.pdf) | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi) | Single-stepping, page-table manipulation |
 | CopyCat: Controlled Instruction-Level Attacks on Enclaves | [USEC20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
