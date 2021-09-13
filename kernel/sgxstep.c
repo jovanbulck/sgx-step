@@ -32,9 +32,15 @@
 #include <linux/uaccess.h>
 #include <linux/kprobes.h>
 
-#include <linux/kallsyms.h>
 #include <linux/clockchips.h>
 #include <linux/version.h>
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0))
+    #include <linux/kernel.h>
+    #include <linux/module.h>
+#else
+    #include <linux/kallsyms.h>
+#endif
 
 #if !NO_SGX
     #include "linux-sgx-driver/sgx.h"
@@ -46,7 +52,77 @@ MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave E
 
 int target_cpu = -1;
 
-typedef long (*apvm_t)(struct task_struct *tsk, unsigned long addr, void *buf, int len, int write);
+typedef long (*apvm_t)(struct task_struct *tsk, unsigned long addr, void *buf, int len, unsigned int write);
+
+// This workaround for the lack of kallsyms_lookup_name was taken from https://github.com/zizzu0/LinuxKernelModules
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0))
+    #define KPROBE_PRE_HANDLER(fname) static int __kprobes fname(struct kprobe *p, struct pt_regs *regs)
+    #define kallsyms_lookup_name(fname) kln_pointer(fname)
+
+    long unsigned int kln_addr = 0;
+    unsigned long (*kln_pointer)(const char *name) = NULL;
+
+    static struct kprobe kp0, kp1;
+
+    KPROBE_PRE_HANDLER(handler_pre0)
+    {
+        kln_addr = (--regs->ip);
+        
+        return 0;
+    }
+
+    KPROBE_PRE_HANDLER(handler_pre1)
+    {
+        return 0;
+    }
+
+    static int do_register_kprobe(struct kprobe *kp, char *symbol_name, void *handler)
+    {
+        int ret;
+        
+        kp->symbol_name = symbol_name;
+        kp->pre_handler = handler;
+        
+        ret = register_kprobe(kp);
+        if (ret < 0) {
+            err("register_probe() for symbol %s failed, returned %d", symbol_name, ret);
+            return ret;
+        }
+        
+        log("Planted kprobe for symbol %s at %p", symbol_name, kp->addr);
+        
+        return ret;
+    }
+
+    int kallsym_init(void) {
+        int ret;
+        
+        ret = do_register_kprobe(&kp0, "kallsyms_lookup_name", handler_pre0);
+        if (ret < 0)
+            return ret;
+        
+        ret = do_register_kprobe(&kp1, "kallsyms_lookup_name", handler_pre1);
+        if (ret < 0) {
+            unregister_kprobe(&kp0);
+            return ret;
+        }
+        
+        unregister_kprobe(&kp0);
+        unregister_kprobe(&kp1);
+        
+        log("kallsyms_lookup_name address = %#lx", kln_addr);
+        
+        kln_pointer = (unsigned long (*)(const char *name)) kln_addr;
+        
+        log("kallsyms_lookup_name address = %#lx\n", kln_pointer("kallsyms_lookup_name"));
+
+        return 0;
+    }
+
+#endif
+
+
+
 
 int step_open(struct inode *inode, struct file *file)
 {
@@ -96,16 +172,39 @@ long edbgrdwr(unsigned long addr, void *buf, int len, int write)
 
 long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
 {
+    long ret_status = 0;
     edbgrd_t *data = (edbgrd_t*) arg;
-    uint8_t buf[data->len];
-    if (data->write && copy_from_user(buf, (void __user *) data->val, data->len))
-        return -EFAULT;
+    uint8_t *buf = NULL;
+    
+    if (data->len > PAGE_SIZE) {
+        err("Error allocating more than a page size (%ldB) of memory is currently not supported..", PAGE_SIZE);
+        // Note that 'kree(NULL)' executes gracefully 
+        ret_status = -ENOMEM;
+        goto func_cleanup;
+    }
 
-    edbgrdwr((unsigned long) data->adrs, &buf, data->len, data->write);
+    buf = (uint8_t *)kmalloc_array(data->len, sizeof(uint8_t), GFP_KERNEL);
+    if (!buf) {
+        err("Could not allocate kernel buffer..");
+        ret_status = -ENOMEM;
+        goto func_cleanup;
+    }
 
-    if (!data->write && copy_to_user((void __user *) data->val, buf, data->len))
-        return -EFAULT;
-    return 0;
+    if (data->write && copy_from_user(buf, (void __user *) data->val, data->len)) {
+        ret_status = -EFAULT;
+        goto func_cleanup;
+    }
+
+    edbgrdwr((unsigned long) data->adrs, buf, data->len, data->write);
+
+    if (!data->write && copy_to_user((void __user *) data->val, (void *)buf, data->len)) {
+        ret_status = -EFAULT;
+        goto func_cleanup;
+    }
+
+func_cleanup:
+    kfree(buf);
+    return ret_status;
 }
 
 typedef void (*ftlb_t)(void);
@@ -256,6 +355,14 @@ int init_module(void)
         step_dev.this_device = NULL;
         return -EINVAL;
     }
+
+    #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0))
+    if (kallsym_init()) {
+        err("Could not initialize kallsym..");
+        step_dev.this_device = NULL;
+        return -EINVAL;
+    }
+    #endif
 
     /* Activate a kretprobe to bypass CONFIG_STRICT_DEVMEM kernel compilation option */
     krp.kp.symbol_name = "devmem_is_allowed";
