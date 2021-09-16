@@ -32,7 +32,6 @@
 #include <linux/uaccess.h>
 #include <linux/kprobes.h>
 
-#include <linux/kallsyms.h>
 #include <linux/clockchips.h>
 #include <linux/version.h>
 
@@ -45,8 +44,6 @@ MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.s
 MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control");
 
 int target_cpu = -1;
-
-typedef long (*apvm_t)(struct task_struct *tsk, unsigned long addr, void *buf, int len, int write);
 
 int step_open(struct inode *inode, struct file *file)
 {
@@ -87,11 +84,13 @@ long sgx_step_ioctl_info(struct file *filep, unsigned int cmd, unsigned long arg
 
 long edbgrdwr(unsigned long addr, void *buf, int len, int write)
 {
-    apvm_t apvm;
+    struct vm_area_struct *vma = NULL;
 
-    /* access_process_vm will use the vm_operations defined by the isgx driver */
-    RET_ASSERT(apvm = (apvm_t) kallsyms_lookup_name("access_process_vm"));
-    return apvm(current, addr, buf, len, write);
+    /* use the vm_operations defined by the isgx driver
+     * (so we don't have to worry about illegal ptrs or #PFs etc) */
+    vma = find_vma(current->mm, addr);
+    RET_ASSERT(vma && vma->vm_ops && vma->vm_ops->access);
+    return vma->vm_ops->access(vma, addr, buf, len, write);
 }
 
 long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -108,14 +107,14 @@ long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long a
     return 0;
 }
 
-typedef void (*ftlb_t)(void);
-
+/* Convenience function when editing PTEs from user space (but normally not
+ * needed, since SGX already flushes the TLB on enclave entry/exit) */
 long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-    ftlb_t ftlb;
-    RET_ASSERT(ftlb = (ftlb_t) kallsyms_lookup_name("flush_tlb_all"));
+    uint64_t addr = ((invpg_t *) arg)->adrs;
 
-    ftlb();
+    asm volatile("invlpg (%0)" ::"r" (addr) : "memory");
+
     return 0;
 }
 
