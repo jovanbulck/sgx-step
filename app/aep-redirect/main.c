@@ -26,8 +26,9 @@
 #include "libsgxstep/debug.h"
 #include "libsgxstep/pt.h"
 
-void *a_pt;
+void *data_pt = NULL, *data_page = NULL, *code_pt = NULL;
 int fault_fired = 0, aep_fired = 0;
+sgx_enclave_id_t eid = 0;
 
 void aep_cb_func(void)
 {
@@ -41,12 +42,72 @@ void aep_cb_func(void)
     aep_fired++;
 }
 
-void fault_handler(int signal)
+void fault_handler(int signo, siginfo_t * si, void  *ctx)
 {
-	info("Caught fault %d! Restoring access rights..", signal);
-    ASSERT(!mprotect(a_pt, 4096, PROT_READ | PROT_WRITE));
-    print_pte_adrs(a_pt);
+    switch ( signo )
+    {
+      case SIGSEGV:
+        info("Caught page fault (base address=%p)", si->si_addr);
+        break;
+
+      default:
+        info("Caught unknown signal '%d'", signo);
+        abort();
+    }
+
+    if (si->si_addr == data_page)
+    {
+        info("Restoring data access rights..");
+        ASSERT(!mprotect(data_page, 4096, PROT_READ | PROT_WRITE));
+        print_pte_adrs(data_pt);
+    }
+    else if (si->si_addr == code_pt)
+    {
+        info("Restoring code access rights..");
+        ASSERT(!mprotect(code_pt, 4096, PROT_READ | PROT_WRITE));
+        print_pte_adrs(code_pt);
+    }
+    else
+    {
+        info("Unknown #PF address!");
+    }
+
     fault_fired++;
+}
+
+void attacker_config_page_table(void)
+{
+    struct sigaction act, old_act;
+
+    /* NOTE: finer-grained permissions can be revoked using
+     * `remap_page_table_level` and directly editing PTEs (e.g., app/memcmp),
+     * but care needs to be taken as the Linux kernel expects PTE inversion
+     * when unmapping PTEs (only relevant for MARK_NOT_PRESENT). We simply use
+     * mprotect here as we don't need fine-grained permissions or performance
+     * for this example, and mprotect transparently takes care of PTE
+     * inversion.
+     */
+    info("revoking data page access rights..");
+    SGX_ASSERT( get_a_addr(eid, &data_pt) );
+    data_page = (void*) ((uintptr_t) data_pt & ~PFN_MASK);
+    print_pte_adrs(data_pt);
+    ASSERT(!mprotect(data_page, 4096, PROT_NONE));
+    print_pte_adrs(data_pt);
+
+    info("revoking code page access rights..");
+    SGX_ASSERT( get_code_addr(eid, &code_pt) );
+    print_pte_adrs(code_pt);
+    ASSERT(!mprotect(code_pt, 4096, PROT_NONE));
+    print_pte_adrs(code_pt);
+
+    /* Specify #PF handler with signinfo arguments */
+    memset(&act, sizeof(sigaction), 0);
+    act.sa_sigaction = fault_handler;
+    act.sa_flags = SA_RESTART | SA_SIGINFO;
+
+    /* Block all signals while the signal is being handled */
+    sigfillset(&act.sa_mask);
+    ASSERT(!sigaction( SIGSEGV, &act, &old_act ));
 }
 
 int main( int argc, char **argv )
@@ -54,7 +115,6 @@ int main( int argc, char **argv )
 	sgx_launch_token_t token = {0};
 	int retval = 0, updated = 0;
     char old = 0x00, new = 0xbb;
-    sgx_enclave_id_t eid = 0;
 
    	info("Creating enclave...");
 	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
@@ -62,26 +122,22 @@ int main( int argc, char **argv )
     register_aep_cb(aep_cb_func);
     print_enclave_info();
 
-    info("reading/writing debug enclave memory..");
-    SGX_ASSERT( get_a_addr(eid, &a_pt) );
-    edbgrd(a_pt, &old, 1);
-    edbgwr(a_pt, &new, 1);
-    edbgrd(a_pt, &new, 1);
-    info("a at %p: old=0x%x; new=0x%x", a_pt, old & 0xff, new & 0xff);
+    attacker_config_page_table();
 
-    /* mprotect to provoke page faults during enclaved execution */
-    info("revoking a access rights..");
-    print_pte_adrs(a_pt);
-    ASSERT(!mprotect(a_pt, 4096, PROT_NONE));
-    print_pte_adrs(a_pt);
-    ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
+    info_event("reading/writing debug enclave memory..");
+    edbgrd(data_pt, &old, 1);
+    edbgwr(data_pt, &new, 1);
+    edbgrd(data_pt, &new, 1);
+    info("data at %p (page %p): old=0x%x; new=0x%x", data_pt, data_page, old & 0xff, new & 0xff);
 
-    info("calling enclave..");
+    info_event("calling enclave..");
     SGX_ASSERT( enclave_dummy_call(eid, &retval) );
 
-    ASSERT(fault_fired && aep_fired);
-   	SGX_ASSERT( sgx_destroy_enclave( eid ) );
+    info_event("calling enclave..");
+    SGX_ASSERT( page_aligned_func(eid) );
 
     info("all is well; exiting..");
+    ASSERT(fault_fired && aep_fired);
+   	SGX_ASSERT( sgx_destroy_enclave( eid ) );
 	return 0;
 }

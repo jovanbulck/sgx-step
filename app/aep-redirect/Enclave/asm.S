@@ -18,22 +18,11 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-__attribute__((aligned(4096))) int array[4096] = {0xaa};
-#define a array[100]
-
-void* get_a_addr( void )
-{
-    return &a;
-}
-
-void page_aligned_func(void);
-
-void* get_code_addr( void )
-{
-    return page_aligned_func;
-}
-
-int enclave_dummy_call(void)
-{
-    return a;
-}
+    .text
+    .global page_aligned_func
+    .align 0x1000   /* 4KiB */
+    .type page_aligned_func,@function
+page_aligned_func:
+    nop
+    ret
+    .space 0x1000   /* 4KiB */
