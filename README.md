@@ -153,7 +153,7 @@ user-level virtual memory mappings for APIC physical memory-mapped I/O
 registers and page table entries of interest. Recent Linux distributions
 typically enable the `CONFIG_STRICT_DEVMEM` option which prevents such use,
 however. Our `/dev/sgx-step` driver therefore includes an
-[approach](https://www.libcrack.so/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/)
+[approach](https://www.libcrack.so/index.php/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/)
 to bypass `devmem_is_allowed` checks, without having to recompile the kernel.
 
 ### 2. Patch and install SGX SDK

@@ -232,7 +232,7 @@ static struct miscdevice step_dev = {
     .mode   = S_IRUGO | S_IWUGO
 };
 
-/* Code from: <https://www.libcrack.so/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/> */
+/* Code from: <https://www.libcrack.so/index.php/2012/09/02/bypassing-devmem_is_allowed-with-kprobes/> */
 static int devmem_is_allowed_handler (struct kretprobe_instance *rp, struct pt_regs *regs)
 {
     if (regs->ax == 0) {
