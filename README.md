@@ -302,7 +302,10 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
-| Util::Lookup: Exploiting Key Decoding in Cryptographic Libraries | [CCS21](https://dl.acm.org/doi/abs/10.1145/3460120.3484783) | [link](https://github.com/UzL-ITS/util-lookup) | Single-Stepping, Prime&Probe, PTE A/D |
+| Side-Channeling the Kalyna Key Expansion | [CT-RSA22](https://cs.adelaide.edu.au/~yval/pdfs/ChuengsatiansupGYZ22.pdf) | - | Single-Stepping, PTE A/D |
+| Rapid Prototyping for Microarchitectural Attacks | [USENIX22](https://www.usenix.org/system/files/sec22summer_easdon.pdf) | [link](https://github.com/libtea/frameworks) | Single-stepping, page fault, PTE A/D, etc. |
+| Util::Lookup: Exploiting Key Decoding in Cryptographic Libraries | [CCS21](https://dl.acm.org/doi/abs/10.1145/3460120.3484783) | [link](https://github.com/UzL-ITS/util-lookup) | Single-Stepping, PTE A/D |
+| SmashEx: Smashing SGX Enclaves Using Exceptions | [CCS21](https://dl.acm.org/doi/pdf/10.1145/3460120.3484821) | - | Single-Stepping |
 | Online Template Attacks: Revisited | [CHES21](https://tches.iacr.org/index.php/TCHES/article/view/8967/8545) | [link](https://zenodo.org/record/4680071) | Single-stepping, page fault, PTE A/D |
 | Aion Attacks: Manipulating Software Timers in Trusted Execution Environment | [DIMVA21](http://individual.utoronto.ca/shengjiexu/publication/whuang-dimva2021-aion_v2.pdf) | - | Single-stepping, interrupts(?) |
 | Platypus: Software-based Power Side-Channel Attacks on x86 | [S&P21](https://platypusattack.com/platypus.pdf) | [link](https://github.com/0xhilbert/Platypus) | Single-stepping, zero-stepping |
