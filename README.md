@@ -160,7 +160,7 @@ to bypass `devmem_is_allowed` checks, without having to recompile the kernel.
 
 To enable easy registration of a custom Asynchronous Exit Pointer (AEP) stub,
 we modified the untrusted runtime of the official Intel SGX SDK. Proceed as
-follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.11 and
+follows to checkout [linux-sgx](https://github.com/01org/linux-sgx) v2.16 and
 apply our patches.
 
 ```bash
