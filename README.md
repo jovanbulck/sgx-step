@@ -145,7 +145,7 @@ $ make clean load
 
 **Note (/dev/isgx).** Our driver uses some internal symbols and data structures
 from the official Intel `/dev/isgx` out-of-tree driver. We therefore include a
-git submodule that points to an unmodified v2.11
+git submodule that points to an unmodified v2.14
 [linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
 
 **Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
