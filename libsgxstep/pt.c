@@ -77,7 +77,7 @@ void *remap(uint64_t phys)
     volatile uint8_t force_mapping;
 
     mem_open();
-    map = mmap(0, 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED,
+    map = mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED,
                fd_mem, phys & ~PFN_MASK );
     ASSERT(map != MAP_FAILED);
 
