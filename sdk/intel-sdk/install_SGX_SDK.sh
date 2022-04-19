@@ -1,10 +1,15 @@
 #!/bin/bash
 set -e
 
-## helper function to supress output to fit in Travis-CI max log length
-function travis_silent() {
-    if [ -n "$TRAVIS" ]; then
-        "$@" > /dev/null
+## helper function to supress output to fit in CI max log length
+function ci_silent() {
+    if [ -n "$CI" ]; then
+        ("$@" > ci_out.txt) || (\
+          echo "FAIL: command '$@' returned with status $?; dumping stdout"; \
+          echo "--------------------------------------------------------------------------------"; \
+          tail -n 100 ci_out.txt; \
+          echo "--------------------------------------------------------------------------------"; \
+          exit 1 )
     else
         "$@"
     fi
@@ -36,7 +41,7 @@ cd linux-sgx
 make preparation
 sudo cp "external/toolset/$OS_STR/"* /usr/local/bin
 
-travis_silent make -j`nproc` sdk_install_pkg
+ci_silent make -j`nproc` sdk_install_pkg
 
 echo "[ installing SDK system-wide ]"
 cd linux/installer/bin/
@@ -48,7 +53,7 @@ cd ../../../
 
 # ----------------------------------------------------------------------
 echo "[ building PSW ]"
-travis_silent make -j`nproc` psw_install_pkg
+ci_silent make -j`nproc` psw_install_pkg
 
 echo "[ installing PSW/SDK system-wide ]"
 cd linux/installer/bin/

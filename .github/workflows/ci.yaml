@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+  pull_request:
+  # trigger a cron job every monday at 8am
+  schedule:
+    - cron: '00 08 * * MON'
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Build and load /dev/sgx-step
+        run: |
+          cd $GITHUB_WORKSPACE/kernel/
+          ./install_SGX_driver.sh
+          make clean load
+
+      - name: Patch and install SGX SDK
+        run: |
+          cd $GITHUB_WORKSPACE/sdk/intel-sdk/
+          bash -x ./install_SGX_SDK.sh
+          source /opt/intel/sgxsdk/environment
+          sudo service aesmd status
+
+      - name: Run SampleCode in SGX-SDK simulator
+        run: |
+          source /opt/intel/sgxsdk/environment
+          cd $GITHUB_WORKSPACE/sdk/intel-sdk/linux-sgx/SampleCode/LocalAttestation
+          make SGX_MODE=SIM
+          cd bin
+          ldd ./app
+          ./app
+
+      - name: Build SGX-Step sample applications
+        run: |
+          source /opt/intel/sgxsdk/environment
+          for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done

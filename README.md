@@ -1,4 +1,4 @@
-# A Practical Attack Framework for Precise Enclave Execution Control [![Build Status](https://travis-ci.org/jovanbulck/sgx-step.svg?branch=master)](https://travis-ci.org/jovanbulck/sgx-step)
+# A Practical Attack Framework for Precise Enclave Execution Control [![CI](https://github.com/jovanbulck/sgx-step/actions/workflows/ci.yaml/badge.svg)](https://github.com/jovanbulck/sgx-step/actions/workflows/ci.yaml)
 
 <img src="doc/logo.svg" width=160 alt="logo" align="left" />
 
