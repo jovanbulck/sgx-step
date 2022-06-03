@@ -101,8 +101,9 @@ This repository is organized as follows:
 ### 0. System requirements
 
 SGX-Step requires an [SGX-capable](https://github.com/ayeks/SGX-hardware) Intel
-processor, and an off-the-shelf Linux kernel. Our evaluation was performed on
+processor, and an off-the-shelf Linux kernel. Our original evaluation was performed on
 i7-6500U/6700 CPUs, running Ubuntu 18.04 with a stock Linux 4.15.0 kernel.
+More recent Linux kernels and distributions are also supported.
 We summarize Linux [kernel parameters](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)
 below.
 
@@ -112,20 +113,24 @@ below.
 | `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.             |
 | `nmi_watchdog=0`                 | Suppress the kernel NMI watchdog.                                  |
 | `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.             |
-| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (only when using SGX-Step's ring0 call gates).                  |
+| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
 | `clearcpuid=514`                 | Disable User-Mode Instruction Prevention (on newer CPUs).          |
+| `noexec=off`                     | Disable non-executable pages (only when KPTI is enabled for Meltdown-vulnerable CPUs). |
 | `dis_ucode_ldr`                  | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 nmi_watchdog=0"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 noexec=off isolcpus=1 nmi_watchdog=0"
 $ sudo update-grub && reboot
+  # to inspect the boot parameters of the currently running kernel, execute:
+$ cat /proc/cmdline
 ```
 
-Finally, in order to reproduce our experimental results, make sure to disable
-C-States and SpeedStep technology in the BIOS configuration.
+Finally, to improve overall execution time stability, you may opt to
+additionally disable C-States and SpeedStep technology in the BIOS
+configuration.
 
 ### 1. Build and load `/dev/sgx-step`
 
