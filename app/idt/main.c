@@ -28,15 +28,19 @@
 #define DO_APIC_SW_IRQ              1
 #define DO_APIC_TMR_IRQ             1
 #define DO_EXEC_PRIV                1
+#define NUM                         100
+#define NEMESIS_HIGH                1
 
 /* ------------------------------------------------------------ */
 /* This code may execute with ring0 privileges */
 int my_cpl = -1;
+extern uint64_t nemesis_tsc_aex, nemesis_tsc_eresume;
 
 void pre_irq(void)
 {
     my_cpl = get_cpl();
     __ss_irq_fired = 0;
+    nemesis_tsc_eresume = rdtsc_begin();
 }
 
 void do_irq_sw(void)
@@ -45,11 +49,19 @@ void do_irq_sw(void)
     asm("int %0\n\t" ::"i"(IRQ_VECTOR):);
 }
 
+
 void do_irq_tmr(void)
 {
     pre_irq();
     apic_timer_irq(10);
-    while(!__ss_irq_fired);
+    while(!__ss_irq_fired)
+    {
+        #if NEMESIS_HIGH
+            asm("rdrand %rax\n\t");
+        #else
+            asm("nop\n\t");
+        #endif
+    }
 }
 
 /* ------------------------------------------------------------ */
@@ -57,8 +69,8 @@ void do_irq_tmr(void)
 void post_irq(void)
 {
     ASSERT(__ss_irq_fired);
-    info("returned from IRQ: my_cpl=%d; irq_cpl=%d; count=%02d; flags=%p",
-            my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags());
+    info("returned from IRQ: my_cpl=%d; irq_cpl=%d; count=%02d; flags=%p; nemesis=%d",
+            my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags(), nemesis_tsc_aex - nemesis_tsc_eresume);
 }
 
 void do_irq_test(int do_exec_priv)
@@ -66,7 +78,7 @@ void do_irq_test(int do_exec_priv)
     #if DO_APIC_SW_IRQ
         printf("\n");
         info("Triggering ring3 software interrupts..");
-        for (int i=0; i < 3; i++)
+        for (int i=0; i < NUM; i++)
         {
             do_irq_sw();
             post_irq();
@@ -76,7 +88,7 @@ void do_irq_test(int do_exec_priv)
         {
             printf("\n");
             info("Triggering ring0 software interrupts..");
-            for (int i=0; i < 3; i++)
+            for (int i=0; i < NUM; i++)
             {
                 exec_priv(do_irq_sw);
                 post_irq();
@@ -89,7 +101,7 @@ void do_irq_test(int do_exec_priv)
         info("Triggering ring3 APIC timer interrupts..");
         apic_timer_oneshot(IRQ_VECTOR);
 
-        for (int i=0; i < 3; i++)
+        for (int i=0; i < NUM; i++)
         {
             do_irq_tmr();
             post_irq();
@@ -99,7 +111,7 @@ void do_irq_test(int do_exec_priv)
         {
             printf("\n");
             info("Triggering ring0 APIC timer interrupts..");
-            for (int i=0; i < 3; i++)
+            for (int i=0; i < NUM; i++)
             {
                 exec_priv(do_irq_tmr);
                 post_irq();
@@ -114,11 +126,14 @@ int main( int argc, char **argv )
 {
     idt_t idt = {0};
     ASSERT( !claim_cpu(VICTIM_CPU) );
-
-    info_event("Installing and testing ring3 IDT handler");
     map_idt(&idt);
+
+    #if 0
+    // ring 0 timer irq handlers may #GP when interrupting the kernel..
+    info_event("Installing and testing ring3 IDT handler");
     install_user_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
     do_irq_test(/*do_exec_priv=*/ 0);
+    #endif
 
     info_event("Installing and testing ring0 IDT handler");
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);

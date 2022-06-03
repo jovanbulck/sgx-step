@@ -20,6 +20,6 @@ unload:
 	sudo rmmod $(LKM).ko || true
 
 load: unload all
-	sudo modprobe -a isgx msr
+	sudo modprobe -a isgx msr || true
 	sudo insmod $(LKM).ko
 	sudo dmesg | tail
