@@ -115,14 +115,14 @@ below.
 | `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.             |
 | `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
 | `clearcpuid=514`                 | Disable User-Mode Instruction Prevention (on newer CPUs).          |
-| `noexec=off`                     | Disable non-executable pages (only when KPTI is enabled for Meltdown-vulnerable CPUs). |
+| `kpti=0`                         | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers). |
 | `dis_ucode_ldr`                  | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 noexec=off isolcpus=1 nmi_watchdog=0"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0"
 $ sudo update-grub && reboot
   # to inspect the boot parameters of the currently running kernel, execute:
 $ cat /proc/cmdline
