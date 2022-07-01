@@ -41,7 +41,8 @@ CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
 WATCH                = watch -n 0.1 #-e
 
-.SILENT:
+MAKEFLAGS           += --silent
+
 all: $(OUTPUT)
 	
 run: clean all

@@ -28,12 +28,19 @@ echo "SGX-SDK successfully patched!"
 
 # ----------------------------------------------------------------------
 echo "[ installing prerequisites ]"
-sudo apt-get -yqq install build-essential ocaml ocamlbuild automake autoconf libtool wget python libssl-dev git cmake perl
+sudo apt-get -yqq install build-essential ocaml ocamlbuild automake autoconf libtool wget python2 libssl-dev git cmake perl
 sudo apt-get -yqq install libssl-dev libcurl4-openssl-dev protobuf-compiler libprotobuf-dev debhelper cmake reprepro unzip lsb-release
 
 OS_ID=$(lsb_release -si | tr '[:upper:]' '[:lower:]')
 OS_REL=$(lsb_release -sr)
 OS_STR=$OS_ID$OS_REL
+
+if [ $OS_STR = "ubuntu22.04" ]; then
+       echo "Warning: Ubuntu 22.04 LTS currently not yet officially supported by linux-sgx Intel SDK; overriding to Ubuntu 20.04 .."
+       OS_STR="ubuntu20.04"
+       sudo ln -fs /usr/bin/python2 /usr/bin/python
+       python --version
+fi
 
 # ----------------------------------------------------------------------
 echo "[ building SDK ]"

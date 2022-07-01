@@ -38,7 +38,8 @@ OUTPUT               = app
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
-.SILENT:
+MAKEFLAGS           += --silent
+
 all: $(OUTPUT)
 	
 run: clean all

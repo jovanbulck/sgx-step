@@ -44,6 +44,8 @@ void aep_cb_func(void)
 
 void fault_handler(int signo, siginfo_t * si, void  *ctx)
 {
+    ASSERT( fault_fired < 5);
+
     switch ( signo )
     {
       case SIGSEGV:
@@ -64,7 +66,7 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
     else if (si->si_addr == code_pt)
     {
         info("Restoring code access rights..");
-        ASSERT(!mprotect(code_pt, 4096, PROT_READ | PROT_WRITE));
+        ASSERT(!mprotect(code_pt, 4096, PROT_READ | PROT_EXEC));
         print_pte_adrs(code_pt);
     }
     else
@@ -90,12 +92,14 @@ void attacker_config_page_table(void)
     info("revoking data page access rights..");
     SGX_ASSERT( get_a_addr(eid, &data_pt) );
     data_page = (void*) ((uintptr_t) data_pt & ~PFN_MASK);
+    info("data at %p with PTE:", data_pt);
     print_pte_adrs(data_pt);
     ASSERT(!mprotect(data_page, 4096, PROT_NONE));
     print_pte_adrs(data_pt);
 
     info("revoking code page access rights..");
     SGX_ASSERT( get_code_addr(eid, &code_pt) );
+    info("code at %p with PTE:", code_pt);
     print_pte_adrs(code_pt);
     ASSERT(!mprotect(code_pt, 4096, PROT_NONE));
     print_pte_adrs(code_pt);
@@ -119,10 +123,11 @@ int main( int argc, char **argv )
    	info("Creating enclave...");
 	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
                                     &token, &updated, &eid, NULL ) );
-    register_aep_cb(aep_cb_func);
-    print_enclave_info();
 
     attacker_config_page_table();
+
+    register_aep_cb(aep_cb_func);
+    print_enclave_info();
 
     info_event("reading/writing debug enclave memory..");
     edbgrd(data_pt, &old, 1);
@@ -130,10 +135,10 @@ int main( int argc, char **argv )
     edbgrd(data_pt, &new, 1);
     info("data at %p (page %p): old=0x%x; new=0x%x", data_pt, data_page, old & 0xff, new & 0xff);
 
-    info_event("calling enclave..");
+    info_event("calling enclave data page fault..");
     SGX_ASSERT( enclave_dummy_call(eid, &retval) );
 
-    info_event("calling enclave..");
+    info_event("calling enclave code page fault..");
     SGX_ASSERT( page_aligned_func(eid) );
 
     info("all is well; exiting..");

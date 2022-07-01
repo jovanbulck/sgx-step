@@ -57,7 +57,8 @@ export NUM
 
 CFLAGS              += -DATTACK_SCENARIO=$(ATTACK) -DNUM_RUNS=$(NUM)
 
-.SILENT:
+MAKEFLAGS           += --silent
+
 all: $(OUTPUT)
 	
 run: clean all

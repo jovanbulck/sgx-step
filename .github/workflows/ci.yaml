@@ -23,6 +23,7 @@ jobs:
       - name: Patch and install SGX SDK
         run: |
           cd $GITHUB_WORKSPACE/sdk/intel-sdk/
+          sudo apt-get update
           bash -x ./install_SGX_SDK.sh
           source /opt/intel/sgxsdk/environment
           sudo service aesmd status

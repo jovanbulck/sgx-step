@@ -32,7 +32,7 @@
 #include "libsgxstep/foreshadow.h"
 #include "libsgxstep/cache.h"
 
-#define USE_TSX             1
+#define USE_TSX             0
 #define DUMP_SSA            0
 #define ITER_RELOAD         1
 #define SECRET_BYTES        64      /* read entire cache line */

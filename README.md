@@ -116,13 +116,15 @@ below.
 | `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
 | `clearcpuid=514`                 | Disable User-Mode Instruction Prevention (on newer CPUs).          |
 | `kpti=0`                         | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers). |
+| `vdso=0`                         | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches). |
+| `nosgx`                          | Only on recent Linux kernels: disable in-kernel SGX driver (until #39 is resolved). |
 | `dis_ucode_ldr`                  | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0 vdso=0 nosgx"
 $ sudo update-grub && reboot
   # to inspect the boot parameters of the currently running kernel, execute:
 $ cat /proc/cmdline
@@ -258,6 +260,7 @@ Some different microcode versions are provided for reference in the table below.
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
 | Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
 | Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  | 0x32 (2019-07-05) | 135 |
+| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  |  0xb0 (2022-03-09) | 255 |
 
 **Note (calibration).**
 Currently, the easiest way to configure a reliable timer interval is to

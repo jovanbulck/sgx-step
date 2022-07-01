@@ -30,7 +30,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#define USE_TSX                     1
+#define USE_TSX                     0
 #define SLOT_SIZE			        0x1000
 #define NUM_SLOTS			        256
 #define ORACLE_SIZE                 (SLOT_SIZE * NUM_SLOTS)
