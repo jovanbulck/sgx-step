@@ -21,6 +21,7 @@ template = string.Template('''
 
 micro_done:
     ret
+    .space 0x1000
 ''')
 
 asm = (ASM_INST + '\n') * NB_INST

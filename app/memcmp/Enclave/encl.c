@@ -31,18 +31,18 @@ int memcmp_pwd(char *pwd)
 {
     int pwd_len = strlen(pwd);
     int secret_len = strlen(secret);
-    mwrite(trigger_page);
+    mwrite(&trigger_page);
     int rv = my_memcmp(pwd, pwd_len, secret, secret_len);
-    mwrite(trigger_page);
+    mwrite(&trigger_page);
     return rv;
 }
 
 void  *get_memcmp_adrs( void )
 {
-    return my_memcmp;
+    return &my_memcmp;
 }
 
 void  *get_trigger_adrs( void )
 {
-    return trigger_page;
+    return &trigger_page;
 }
