@@ -107,24 +107,26 @@ More recent Linux kernels and distributions are also supported.
 We summarize Linux [kernel parameters](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)
 below.
 
-| Linux kernel parameter           | Motivation                                                                                                                      |
-|----------------------------------|------------------------------------------------------------------  |
-| `nox2apic`                       | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).   |
-| `iomem=relaxed no_timer_check`   | Suppress unneeded warning messages in the kernel logs.             |
-| `nmi_watchdog=0`                 | Suppress the kernel NMI watchdog.                                  |
-| `isolcpus=1`                     | Affinitize the victim process to an isolated CPU core.             |
-| `nosmap nosmep`                  | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
-| `clearcpuid=514`                 | Disable User-Mode Instruction Prevention (on newer CPUs).          |
-| `kpti=0`                         | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers). |
-| `vdso=0`                         | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches). |
-| `nosgx`                          | Only on recent Linux kernels: disable in-kernel SGX driver (until #39 is resolved). |
-| `dis_ucode_ldr`                  | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
+| Linux kernel parameter               | Motivation                                                         |
+|--------------------------------------|------------------------------------------------------------------  |
+| `nox2apic`                           | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).   |
+| `iomem=relaxed no_timer_check`       | Suppress unneeded warning messages in the kernel logs.             |
+| `nmi_watchdog=0`                     | Suppress the kernel NMI watchdog.                                  |
+| `isolcpus=1`                         | Affinitize the victim process to an isolated CPU core.             |
+| `nosmap nosmep`                      | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
+| `clearcpuid=514`                     | Disable User-Mode Instruction Prevention (on newer CPUs).          |
+| `kpti=0`                             | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers). |
+| `rcuupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.) |
+| `msr.allow_writes=on`                | Suppress kernel warning messages for model-specific register (MSR) writes by SGX-Step. |
+| `vdso=0`                             | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches). |
+| `nosgx`                              | Only on recent Linux kernels: disable in-kernel SGX driver (until #39 is resolved). |
+| `dis_ucode_ldr`                      | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0 vdso=0 nosgx"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0 nosgx"
 $ sudo update-grub && reboot
   # to inspect the boot parameters of the currently running kernel, execute:
 $ cat /proc/cmdline
