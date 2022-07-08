@@ -24,18 +24,8 @@
 #include <linux/ioctl.h>
 
 #define SGX_STEP_IOCTL_MAGIC            'L'
-#define SGX_STEP_IOCTL_VICTIM_INFO      _IOWR(SGX_STEP_IOCTL_MAGIC, 0, struct sgx_step_enclave_info)
-#define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 1, address_mapping_t)
-#define SGX_STEP_IOCTL_EDBGRD           _IOWR(SGX_STEP_IOCTL_MAGIC, 2, edbgrd_t)
-#define SGX_STEP_IOCTL_INVPG            _IOWR(SGX_STEP_IOCTL_MAGIC, 3, invpg_t)
-
-struct sgx_step_enclave_info
-{
-    uint64_t base;
-    uint64_t size;
-    uint64_t aep;
-    uint64_t tcs;
-};
+#define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 0, address_mapping_t)
+#define SGX_STEP_IOCTL_INVPG            _IOWR(SGX_STEP_IOCTL_MAGIC, 1, invpg_t)
 
 typedef struct {
 	uint64_t virt;
@@ -46,13 +36,6 @@ typedef struct {
 	uint64_t pmd;
 	uint64_t pte;
 } address_mapping_t;
-
-typedef struct {
-    uint64_t adrs;
-    uint64_t val;
-    int64_t  len;
-    int      write;
-} edbgrd_t;
 
 typedef struct {
     uint64_t adrs;

@@ -35,10 +35,6 @@
 #include <linux/clockchips.h>
 #include <linux/version.h>
 
-#if !NO_SGX
-    #include "linux-sgx-driver/sgx.h"
-#endif
-
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.strackx@cs.kuleuven.be>");
 MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control");
@@ -61,49 +57,6 @@ int step_release(struct inode *inode, struct file *file)
 {
     target_cpu = -1;
 
-    return 0;
-}
-
-long sgx_step_ioctl_info(struct file *filep, unsigned int cmd, unsigned long arg)
-{
-    #if !NO_SGX
-        struct sgx_encl *enclave;
-        struct vm_area_struct *vma = NULL;
-        struct sgx_step_enclave_info *info = (struct sgx_step_enclave_info *) arg;
-
-        vma = find_vma(current->mm, (uint64_t) info->tcs);
-        RET_ASSERT(vma && (enclave = vma->vm_private_data));
-        RET_ASSERT(info->aep && info->tcs);
-
-        info->base = enclave->base;
-        info->size = enclave->size;
-    #endif
-
-    return 0;
-}
-
-long edbgrdwr(unsigned long addr, void *buf, int len, int write)
-{
-    struct vm_area_struct *vma = NULL;
-
-    /* use the vm_operations defined by the isgx driver
-     * (so we don't have to worry about illegal ptrs or #PFs etc) */
-    vma = find_vma(current->mm, addr);
-    RET_ASSERT(vma && vma->vm_ops && vma->vm_ops->access);
-    return vma->vm_ops->access(vma, addr, buf, len, write);
-}
-
-long sgx_step_ioctl_edbgrd(struct file *filep, unsigned int cmd, unsigned long arg)
-{
-    edbgrd_t *data = (edbgrd_t*) arg;
-    uint8_t buf[data->len];
-    if (data->write && copy_from_user(buf, (void __user *) data->val, data->len))
-        return -EFAULT;
-
-    edbgrdwr((unsigned long) data->adrs, &buf, data->len, data->write);
-
-    if (!data->write && copy_to_user((void __user *) data->val, buf, data->len))
-        return -EFAULT;
     return 0;
 }
 
@@ -188,14 +141,8 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
     switch (cmd)
     {
-        case SGX_STEP_IOCTL_VICTIM_INFO:
-            handler = sgx_step_ioctl_info;
-            break;
         case SGX_STEP_IOCTL_GET_PT_MAPPING:
             handler = sgx_step_get_pt_mapping;
-            break;
-        case SGX_STEP_IOCTL_EDBGRD:
-            handler = sgx_step_ioctl_edbgrd;
             break;
         case SGX_STEP_IOCTL_INVPG:
             handler = sgx_step_ioctl_invpg;

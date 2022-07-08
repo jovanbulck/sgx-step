@@ -2,6 +2,17 @@
 
 set -e
 
+if [ -e /dev/sgx_enclave ]; then
+    echo "Found in-kernel /dev/sgx_enclave driver; skipping installation of out-of-tree isgx driver!"
+    exit 0
+fi
+
+if [ -e /dev/isgx ]; then
+    echo "Found pre-installed out-of-tree /dev/isgx driver!"
+    exit 0
+fi
+echo "Building and installing out-of-tree isgx driver.."
+
 git submodule init
 git submodule update
 cd linux-sgx-driver

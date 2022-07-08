@@ -119,14 +119,13 @@ below.
 | `rcuupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.) |
 | `msr.allow_writes=on`                | Suppress kernel warning messages for model-specific register (MSR) writes by SGX-Step. |
 | `vdso=0`                             | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches). |
-| `nosgx`                              | Only on recent Linux kernels: disable in-kernel SGX driver (until #39 is resolved). |
 | `dis_ucode_ldr`                      | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0 nosgx"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 kpti=0 isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
 $ sudo update-grub && reboot
   # to inspect the boot parameters of the currently running kernel, execute:
 $ cat /proc/cmdline
@@ -148,14 +147,17 @@ To build and load the `/dev/sgx-step` driver, execute:
 
 ```bash
 $ cd kernel/
-$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04
+$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04/22.04
 $ make clean load
 ```
-
-**Note (/dev/isgx).** Our driver uses some internal symbols and data structures
-from the official Intel `/dev/isgx` out-of-tree driver. We therefore include a
-git submodule that points to an unmodified v2.14
-[linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
+**Note (/dev/sgx_enclave).** SGX-Step supports both the legacy Intel
+`/dev/isgx` out-of-tree driver that should work on all platforms, as well as
+well as the upstream `/dev/sgx_enclave` driver for platforms with recent Linux
+kernels >5.11 plus hardware support for flexible-launch control. The
+`install_SGX_driver.sh` script should automatically detect whether an in-tree
+`/dev/sgx_enclave` driver is available, and, if not, build and load the
+out-of-tree `/dev/isgx` driver via the git submodule that points to an
+unmodified v2.14 [linux-sgx-driver](https://github.com/intel/linux-sgx-driver).
 
 **Note (/dev/mem).** We rely on Linux's virtual `/dev/mem` device to construct
 user-level virtual memory mappings for APIC physical memory-mapped I/O

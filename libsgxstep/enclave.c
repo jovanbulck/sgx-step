@@ -25,6 +25,8 @@
 #include <inttypes.h>
 #include "../kernel/sgxstep_ioctl.h"
 #include "pt.h"
+#include <fcntl.h>
+#include <string.h>
 
 /* Includes custom AEP get/set functions from patched SGX SDK urts. */
 #include <sgx_urts.h>
@@ -39,6 +41,7 @@ int sgx_step_eresume_cnt = 0;
 extern int fd_step;
 struct sgx_step_enclave_info victim = {0};
 int ioctl_init = 0;
+int fd_self_mem = -1;
 
 void register_aep_cb(aep_cb_t cb)
 {
@@ -48,11 +51,63 @@ void register_aep_cb(aep_cb_t cb)
 
 void register_enclave_info(void)
 {
+    FILE *fd_self_maps;
+    uint64_t start, end, prev_end = 0;
+    char *pathname = NULL;
+    int is_enclave = 0, prev_is_enclave = 0, is_isgx, is_kern;
+    memset(&victim, 0x0, sizeof(victim));
+
+    /* Parse /proc/self/maps to detect any enclaves mapped in the address space.
+     * Expected format: "start-end perms offset dev inode optional_pathname"
+     *
+     * NOTES: - victim.tcs is set by the patched untrusted runtime on first
+     *          enclave entry (e.g., as part of sgx_create_enclave)
+     *        - enclave mappings are expected to be backed by a recognized SGX
+     *          driver (i.e., pathname /dev/isgx or /dev/sgx_enclave)
+     *        - only supports a single enclave that is expected to be
+     *          contiguously mapped in the address space
+     */
+    #if 0
+        info("cat /proc/self/maps");
+        char command[256];
+        sprintf(command, "cat /proc/%d/maps", getpid());
+        system(command);
+    #endif
+    ASSERT((fd_self_maps = fopen("/proc/self/maps", "r")) >= 0);
+    while (fscanf(fd_self_maps, "%lx-%lx %*s %*x %*d:%*d %*[0-9 ]%m[^\n]",
+                  &start, &end, &pathname) > 0)
+    {
+        //info("%p - %p %s", (void*) start, (void*) end, pathname);
+        is_isgx = (pathname != NULL) && strstr(pathname, "/dev/isgx") != NULL;
+        is_kern = (pathname != NULL) && strstr(pathname, "/dev/sgx_enclave") != NULL;
+        is_enclave = is_isgx || is_kern;
+
+        if (is_enclave && !prev_is_enclave && !victim.base)
+        {
+            //info("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
+            //ASSERT( !victim.base && "multiple enclaves found in /proc/self/maps");
+            victim.base = (uint64_t) start;
+            victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
+        }
+        else if (prev_is_enclave && !is_enclave)
+        {
+            victim.limit = (uint64_t) prev_end;
+        }
+
+        if (pathname != NULL)
+        {
+            free(pathname);
+            pathname = NULL;
+        }
+
+        prev_is_enclave = is_enclave;
+        prev_end = end;
+    }
+    ASSERT( victim.base && "no enclave found in /proc/self/maps");
+
     victim.tcs = (uint64_t) sgx_get_tcs();
     victim.aep = (uint64_t) sgx_get_aep();
-
-    step_open();
-    ASSERT(ioctl(fd_step, SGX_STEP_IOCTL_VICTIM_INFO, &victim) >= 0);
+    ASSERT( victim.tcs >= victim.base && victim.tcs < victim.limit);
     ioctl_init = 1;
 }
 
@@ -63,24 +118,51 @@ void *get_enclave_base(void)
     return (void*)((uintptr_t) victim.base);
 }
 
+void *get_enclave_limit(void)
+{
+    if (!ioctl_init) register_enclave_info();
+
+    return (void*)((uintptr_t) victim.limit);
+}
+
+char *get_enclave_drv(void)
+{
+    if (!ioctl_init) register_enclave_info();
+
+    return victim.drv;
+}
+
 int get_enclave_size(void)
 {
     if (!ioctl_init) register_enclave_info();
 
-    return (int) victim.size;
+    return (int) (victim.limit - victim.base);
 }
 
-void edbgrdwr(void *adrs, void* res, int len, int write)
+/*
+ * NOTE: we simply read from the standard Linux interface /proc/self/mem, which
+ * will call the associated SGX driver (i.e., /dev/isgx or /dev/sgx_enclave) to
+ * handle the memory read/write request. This is easier than calling the
+ * privileged EDBGRD/EDBGWR instructions directly ourselves, as this way we
+ * don't have to worry about illegal ptrs or #PFs etc.
+ *
+ * Returns the number of bytes successfully read/written, or a value <0 for
+ * production enclaves.
+ */
+int edbgrdwr(void *adrs, void* res, int len, int write)
 {
-    edbgrd_t edbgrd_data = {
-        .adrs = (uintptr_t) adrs,
-        .val = (uintptr_t) res,
-        .len = (int64_t) len,
-        .write = write
-    };
+    int rv;
+    if (fd_self_mem < 0)
+    {
+        ASSERT((fd_self_mem = open("/proc/self/mem", O_RDWR)) >= 0);
+    }
 
-    step_open();
-    ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_EDBGRD, &edbgrd_data) >= 0 );
+    if (!write)
+        rv = pread(fd_self_mem, res, len, (off_t) adrs);
+    else
+        rv = pwrite(fd_self_mem, res, len, (off_t) adrs);
+
+    return rv;
 }
 
 uint64_t edbgrd_ssa(int ssa_field_offset)
@@ -118,17 +200,19 @@ void print_enclave_info(void)
 {
     uint64_t read = 0xff;
 
-	printf( "==== Victim Enclave ====\n" );
-	printf( "    Base:   %p\n", get_enclave_base() );
-	printf( "    Size:   %d\n", get_enclave_size() );
+    printf( "==== Victim Enclave ====\n" );
+    printf( "    Driver: %s\n", get_enclave_drv());
+    printf( "    Base:   %p\n", get_enclave_base() );
+    printf( "    Limit:  %p\n", get_enclave_limit());
+    printf( "    Size:   %d\n", get_enclave_size() );
     printf( "    Limit:  %p\n", get_enclave_base()+get_enclave_size() );
-	printf( "    TCS:    %p\n", sgx_get_tcs() );
+    printf( "    TCS:    %p\n", sgx_get_tcs() );
     printf( "    SSA:    %p\n", get_enclave_ssa_gprsgx_adrs() );
-	printf( "    AEP:    %p\n", sgx_get_aep() );
+    printf( "    AEP:    %p\n", sgx_get_aep() );
 
     /* First 8 bytes of TCS must be zero */
-    edbgrd( sgx_get_tcs(), &read, 8);
-    printf( "    EDBGRD: %s\n", read ? "production" : "debug");
+    int rv = edbgrd( sgx_get_tcs(), &read, 8);
+    printf( "    EDBGRD: %s\n", rv < 0 ? "production" : "debug");
 }
 
 void dump_gprsgx_region(gprsgx_region_t *gprsgx_region)

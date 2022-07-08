@@ -26,13 +26,15 @@
 #include "libsgxstep/debug.h"
 #include "libsgxstep/pt.h"
 
+#define DBG_ENCL        1
+
 void *data_pt = NULL, *data_page = NULL, *code_pt = NULL;
 int fault_fired = 0, aep_fired = 0;
 sgx_enclave_id_t eid = 0;
 
 void aep_cb_func(void)
 {
-    gprsgx_region_t gprsgx;
+    gprsgx_region_t gprsgx = {0};
     uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
     info("Hello world from AEP callback with erip=%#llx! Resuming enclave..", erip); 
 
@@ -116,16 +118,19 @@ void attacker_config_page_table(void)
 
 int main( int argc, char **argv )
 {
-	sgx_launch_token_t token = {0};
-	int retval = 0, updated = 0;
+    sgx_launch_token_t token = {0};
+    int retval = 0, updated = 0;
     char old = 0x00, new = 0xbb;
 
-   	info("Creating enclave...");
-	SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
-                                    &token, &updated, &eid, NULL ) );
+    info("Creating enclave...");
+    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/DBG_ENCL,
+                                &token, &updated, &eid, NULL ) );
+
+    info("Dry run to allocate pages");
+    SGX_ASSERT( enclave_dummy_call(eid, &retval) );
+    SGX_ASSERT( page_aligned_func(eid) );
 
     attacker_config_page_table();
-
     register_aep_cb(aep_cb_func);
     print_enclave_info();
 

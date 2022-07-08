@@ -29,6 +29,7 @@
 #include <sys/ioctl.h>
 
 int fd_step = -1, fd_mem = -1;
+extern int fd_self_mem;
 
 void mem_open( void )
 {
@@ -58,6 +59,8 @@ void __attribute__((destructor)) tear_down_sgx_step( void )
         close(fd_step);
     if (fd_mem >= 0)
         close(fd_mem);
+    if (fd_self_mem >= 0)
+        close(fd_self_mem);
 }
 
 void flush_tlb(void *adrs)

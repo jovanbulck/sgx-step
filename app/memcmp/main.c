@@ -16,6 +16,7 @@
 #define MAX_LEN            15
 #define DO_STEP            1
 #define DEBUG              0
+#define DBG_ENCL           1
 #define ANIMATION_DELAY    50000000
 
 sgx_enclave_id_t eid = 0;
@@ -28,13 +29,13 @@ void *code_adrs, *trigger_adrs;
 /* Called before resuming the enclave after an Asynchronous Enclave eXit. */
 void aep_cb_func(void)
 {
-    uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
     #if DEBUG
+        uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
         info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
     #endif
     irq_cnt++;
 
-    if (do_irq && (irq_cnt > NUM_RUNS*500))
+    if (do_irq && (irq_cnt > NUM_RUNS*1000))
     {
         info("excessive interrupt rate detected (try adjusting timer interval " \
              "to avoid getting stuck in zero-stepping); aborting...");
@@ -123,7 +124,6 @@ void attacker_config_runtime(void)
     ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
     //print_system_settings();
 
-    register_aep_cb(aep_cb_func);
     register_enclave_info();
     print_enclave_info();
 
@@ -145,17 +145,20 @@ void attacker_config_page_table(void)
     info("enclave trigger at %p; code at %p", trigger_adrs, code_adrs);
 
     ASSERT( pte_encl    = remap_page_table_level( code_adrs, PTE) );
+    ASSERT( PRESENT(*pte_encl) );
     *pte_encl = MARK_NOT_ACCESSED(*pte_encl);
     info("enclave code at %p with PTE", code_adrs);
     print_pte_adrs( code_adrs );
 
     ASSERT( pte_trigger = remap_page_table_level( trigger_adrs, PTE) );
+    ASSERT( PRESENT(*pte_trigger) );
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
     ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
     info("enclave trigger at %p with PTE", trigger_adrs);
     print_pte_adrs( trigger_adrs );
 
     ASSERT( pmd_encl = remap_page_table_level( get_enclave_base(), PMD) );
+    ASSERT( PRESENT(*pmd_encl) );
 }
 
 /* ================== ATTACKER MAIN ================= */
@@ -170,7 +173,7 @@ int main( int argc, char **argv )
     int step_cnt_prev = 0;
 
     info_event("Creating enclave...");
-    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/1,
+    SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/DBG_ENCL,
                                     &token, &updated, &eid, NULL ) );
 
     /* 0. dry run */
@@ -179,6 +182,7 @@ int main( int argc, char **argv )
     /* 1. Setup attack execution environment. */
     attacker_config_runtime();
     attacker_config_page_table();
+    register_aep_cb(aep_cb_func);
 
 #if DO_STEP
     info_event("Establishing user-space APIC/IDT mappings");

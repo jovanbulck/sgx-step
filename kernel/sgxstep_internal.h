@@ -37,13 +37,4 @@
         }                                           \
     } while(0)
 
-/* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
-#define SGX_TCS_OSSA_OFFSET         16
-#define SGX_GPRSGX_SIZE             184
-#define SGX_GPRSGX_RIP_OFFSET       136
-
-/* HACK: to avoid having to retrieve the SSA framesize from the untrusted
-   runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
-#define SGX_SSAFRAMESIZE            4096
-
 #endif

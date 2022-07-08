@@ -24,6 +24,16 @@
 
 #include <stdint.h>
 
+struct sgx_step_enclave_info
+{
+    uint64_t base;
+    uint64_t limit;
+    uint64_t size;
+    uint64_t aep;
+    uint64_t tcs;
+    char *drv;
+};
+
 extern uint32_t nemesis_tsc_eresume, nemesis_tsc_aex;
 extern int sgx_step_eresume_cnt;
 
@@ -33,8 +43,10 @@ void register_aep_cb(aep_cb_t cb);
 void register_enclave_info(void);
 void print_enclave_info(void);
 void *get_enclave_base(void);
+void *get_enclave_limit(void);
+char *get_enclave_drv(void);
 int get_enclave_size(void);
-void edbgrdwr(void *adrs, void* res, int len, int write);
+int edbgrdwr(void *adrs, void* res, int len, int write);
 #define edbgrd(adrs, res, len)  edbgrdwr(adrs, res, len, 0)
 #define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)
 
