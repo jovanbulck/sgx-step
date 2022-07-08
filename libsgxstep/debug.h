@@ -44,6 +44,7 @@ extern sgx_status_t sgx_step_rv;
         if (!(cond))                                                    \
         {                                                               \
             perror("[" __FILE__ "] assertion '" #cond "' failed");      \
+            tear_down_sgx_step();                                       \
             abort();                                                    \
         }                                                               \
     } while(0)
@@ -68,5 +69,6 @@ do {                                                                            
 } while(0)
 
 void dump_hex(uint8_t *buf, int len);
+void tear_down_sgx_step( void );
 
 #endif
