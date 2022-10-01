@@ -59,6 +59,7 @@ void register_enclave_info(void)
 
     /* Parse /proc/self/maps to detect any enclaves mapped in the address space.
      * Expected format: "start-end perms offset dev inode optional_pathname"
+     * For documentation of /proc/pid/maps, see `man 5 proc`.
      *
      * NOTES: - victim.tcs is set by the patched untrusted runtime on first
      *          enclave entry (e.g., as part of sgx_create_enclave)
@@ -67,25 +68,25 @@ void register_enclave_info(void)
      *        - only supports a single enclave that is expected to be
      *          contiguously mapped in the address space
      */
-    #if 0
-        info("cat /proc/self/maps");
+    #if DEBUG
+        debug("cat /proc/self/maps");
         char command[256];
         sprintf(command, "cat /proc/%d/maps", getpid());
         system(command);
+        debug("------");
     #endif
     ASSERT((fd_self_maps = fopen("/proc/self/maps", "r")) >= 0);
-    while (fscanf(fd_self_maps, "%lx-%lx %*s %*x %*d:%*d %*[0-9 ]%m[^\n]",
+    while (fscanf(fd_self_maps, "%lx-%lx %*s %*x %*x:%*x %*[0-9 ]%m[^\n]",
                   &start, &end, &pathname) > 0)
     {
-        //info("%p - %p %s", (void*) start, (void*) end, pathname);
+        debug("%p - %p %s", (void*) start, (void*) end, pathname);
         is_isgx = (pathname != NULL) && strstr(pathname, "/dev/isgx") != NULL;
         is_kern = (pathname != NULL) && strstr(pathname, "/dev/sgx_enclave") != NULL;
         is_enclave = is_isgx || is_kern;
 
         if (is_enclave && !prev_is_enclave && !victim.base)
         {
-            //info("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
-            //ASSERT( !victim.base && "multiple enclaves found in /proc/self/maps");
+            debug("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
             victim.base = (uint64_t) start;
             victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
         }

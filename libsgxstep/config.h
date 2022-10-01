@@ -21,6 +21,8 @@
 #ifndef SGX_STEP_CONFIG
 #define SGX_STEP_CONFIG
 
+#define DEBUG                       0
+
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
 #define USER_IDT_ENABLE             1

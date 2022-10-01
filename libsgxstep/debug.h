@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "config.h"
 
 #if !NO_SGX
 #include <sgx_error.h>
@@ -54,6 +55,13 @@ extern sgx_status_t sgx_step_rv;
         printf("[" __FILE__ "] " msg "\n", ##__VA_ARGS__);              \
         fflush(stdout);                                                 \
     } while(0)
+
+#if DEBUG
+    #define debug(msg, ...)     info("DEBUG: " msg, ##__VA_ARGS__)
+#else
+    #define debug(msg, ...)
+#endif
+
 
 #if LIBSGXSTEP_SILENT
     #define libsgxstep_info(msg, ...)
