@@ -9,8 +9,17 @@
 > Intel SDK. As always, issues/PRs are welcome if you want to contribute
 > improvements for a work-in-progress Gramine port.
 
-1. First, apply the patches in the untrusted Gramine runtime `host_entry.S` to
-be able to link to `libsgxstep`:
+### Building the patched Gramine
+
+0. First, make sure to build `libsgxstep.a`:
+
+```bash
+$ cd ../../libsgxstep
+$ make clean all
+```
+
+1. Apply the patches in the untrusted Gramine runtime `host_entry.S` to
+be able to link to `libsgxstep.a`:
 
 ```bash
 $ ./patch_entry.sh
@@ -21,6 +30,7 @@ properly applied in the modified Gramine loader:
 
 ```bash
 $ cd gramine
+$ meson setup build/ --buildtype=release -Dsgx=enabled
 $ meson configure build/ -Dsgx=enabled
 $ ninja -C build
 $ objdump -d build/pal/src/host/linux-sgx/loader | grep sgx_set_aep
@@ -37,4 +47,21 @@ $ cd gramine
 $ ninja -C build
 $ objdump -d build/pal/src/host/linux-sgx/loader | grep sgx_step
    18631:	48 8d 05 2c 1c 00 00 	lea    0x1c2c(%rip),%rax        # 1a264 <sgx_step_aep_trampoline>
+```
+
+4. Install the patched Gramine.
+
+```bash
+$ sudo ninja -C build/ install
+```
+### Running a sample application with the patched Gramine
+
+Proceed as follows:
+
+```bash
+$ export PYTHONPATH=/usr/local  # Fix https://github.com/gramineproject/gramine/issues/492
+$ gramine-sgx-gen-private-key
+$ cd CI-Examples/helloworld
+$ make SGX=1
+$ gramine-sgx helloworld
 ```

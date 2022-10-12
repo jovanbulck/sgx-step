@@ -1,66 +1,66 @@
-From f3d05a71a513445e9c3eec9e2ab6d4ab30f52d46 Mon Sep 17 00:00:00 2001
+From 01802a7641e0090e3a4926239ca004d7de2e6a5c Mon Sep 17 00:00:00 2001
 From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date: Wed, 12 Oct 2022 16:58:07 +0200
+Date: Wed, 12 Oct 2022 19:14:24 +0200
 Subject: [PATCH 1/2] SGX-Step Gramine patches to reconfigure AEP/TCS.
 
 ---
- pal/src/host/linux-sgx/host_entry.S | 50 +++++++++++++++++++++++++++--
- pal/src/host/linux-sgx/meson.build  | 11 +++++++
- 2 files changed, 58 insertions(+), 3 deletions(-)
+ pal/src/host/linux-sgx/host_entry.S     | 52 +++++++++++++++++++++++--
+ pal/src/host/linux-sgx/host_exception.c | 13 +++++++
+ pal/src/host/linux-sgx/meson.build      | 11 ++++++
+ 3 files changed, 73 insertions(+), 3 deletions(-)
 
 diff --git a/pal/src/host/linux-sgx/host_entry.S b/pal/src/host/linux-sgx/host_entry.S
-index bb38ced4..b84803d2 100644
+index bb38ced4..013323d7 100644
 --- a/pal/src/host/linux-sgx/host_entry.S
 +++ b/pal/src/host/linux-sgx/host_entry.S
-@@ -2,6 +2,21 @@
+@@ -2,6 +2,18 @@
  
  #include "asm-offsets.h"
  
++/************************************************************************/
++/* XXX AEP hook for SGX-Step support */
 +    .data
++    .global g_aep_pointer
 +g_aep_pointer:
 +    .word 0x0
 +    .word 0x0
 +    .word 0x0
 +    .word 0x0
-+
-+    .data
-+g_tcs:
-+    .word 0x0
-+    .word 0x0
-+    .word 0x0
-+    .word 0x0
++/************************************************************************/
 +
 +    .text
      .extern tcs_base
      .extern g_in_aex_profiling
  
-@@ -36,11 +51,18 @@ sgx_ecall:
- 
-     # RBX has to be the TCS of the thread
+@@ -38,9 +50,17 @@ sgx_ecall:
      movq %gs:PAL_HOST_TCB_TCS, %rbx
-+    leaq        g_tcs(%rip), %rax
-+    movq        %rbx, (%rax)
  
      # RCX has to be the AEP (Asynchronous Exit Pointer)
 -    leaq async_exit_pointer(%rip), %rcx
 -
 -    movq $EENTER, %rax
++    /************************************************************************/
++    /* XXX support hookable AEP for SGX-Step */
 +    leaq        g_aep_pointer(%rip), %rax
 +    movq        (%rax), %rcx                    /* aep addr */
 +    cmp         $0x0, %rcx
 +    jnz 1f
 +    leaq        async_exit_pointer(%rip), %rcx
 +    movq        %rcx, (%rax)
++    /************************************************************************/
 +
 +1:  movq        $EENTER, %rax                /* EENTER leaf */
      ENCLU
  
      # currently only ECALL_THREAD_RESET returns
-@@ -178,3 +200,25 @@ sgx_raise:
+@@ -178,3 +198,29 @@ sgx_raise:
      # RSI - external event
      jmp .Ldo_ecall
      .cfi_endproc
 +
++
++/************************************************************************/
++/* XXX getter functions to be used in libsgxstep */
 +
 +.macro DECLARE_GLOBAL_FUNC name
 +    .globl \name
@@ -79,11 +79,39 @@ index bb38ced4..b84803d2 100644
 +    ret
 +
 +DECLARE_GLOBAL_FUNC sgx_get_tcs
-+    leaq        g_tcs(%rip), %rax
-+    movq        (%rax), %rax
++    movq %gs:PAL_HOST_TCB_TCS, %rax
 +    ret
++
++/************************************************************************/
+diff --git a/pal/src/host/linux-sgx/host_exception.c b/pal/src/host/linux-sgx/host_exception.c
+index f0aae5bd..7bdb092d 100644
+--- a/pal/src/host/linux-sgx/host_exception.c
++++ b/pal/src/host/linux-sgx/host_exception.c
+@@ -85,9 +85,22 @@ static enum pal_event signal_to_pal_event(int sig) {
+     }
+ }
+ 
++/* XXX support hookable AEP for SGX-Step */
++extern void *g_aep_pointer;
++
+ static bool interrupted_in_enclave(struct ucontext* uc) {
+     unsigned long rip = ucontext_get_ip(uc);
+ 
++    /************************************************************************/
++    if (g_aep_pointer)
++    {
++        /* XXX Note: we do _not_ report to the enclave if an exception happens
++         * _inside_ our custom SGX-Step AEP (i.e., contrary to the original
++         * Gramine code below). */
++        return (rip == (unsigned long) g_aep_pointer);
++    }
++    /************************************************************************/
++
+     /* in case of AEX, RIP can point to any instruction in the AEP/ERESUME trampoline code, i.e.,
+      * RIP can point to anywhere in [async_exit_pointer, async_exit_pointer_end) interval */
+     return rip >= (unsigned long)async_exit_pointer && rip < (unsigned long)async_exit_pointer_end;
 diff --git a/pal/src/host/linux-sgx/meson.build b/pal/src/host/linux-sgx/meson.build
-index 3e77bdcc..c40794fa 100644
+index 3e77bdcc..a1776fb8 100644
 --- a/pal/src/host/linux-sgx/meson.build
 +++ b/pal/src/host/linux-sgx/meson.build
 @@ -152,10 +152,21 @@ libpal_sgx_host = executable('loader',
@@ -92,7 +120,7 @@ index 3e77bdcc..c40794fa 100644
          '-fstack-protector-strong',
 +
 +        # XXX add libsgxstep include path
-+        '-I../../..',
++        '-I../../../..',
 +        # XXX FORTIFY_SOURCE conflicts with regular libc header includes in libsgxstep
 +        '-D_FORTIFY_SOURCE=0',
 +        # XXX libsgxstep needs Intel SDK headers (only for error reporting; can be hacked out if needed)
@@ -103,7 +131,7 @@ index 3e77bdcc..c40794fa 100644
          '-Wl,-znow',
 +
 +        # XXX link in libsgxstep library
-+        '-L../../../libsgxstep',
++        '-L../../../../libsgxstep',
 +        '-lsgx-step',
      ],
      pie: true,
