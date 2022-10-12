@@ -1,0 +1,113 @@
+From f3d05a71a513445e9c3eec9e2ab6d4ab30f52d46 Mon Sep 17 00:00:00 2001
+From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+Date: Wed, 12 Oct 2022 16:58:07 +0200
+Subject: [PATCH 1/2] SGX-Step Gramine patches to reconfigure AEP/TCS.
+
+---
+ pal/src/host/linux-sgx/host_entry.S | 50 +++++++++++++++++++++++++++--
+ pal/src/host/linux-sgx/meson.build  | 11 +++++++
+ 2 files changed, 58 insertions(+), 3 deletions(-)
+
+diff --git a/pal/src/host/linux-sgx/host_entry.S b/pal/src/host/linux-sgx/host_entry.S
+index bb38ced4..b84803d2 100644
+--- a/pal/src/host/linux-sgx/host_entry.S
++++ b/pal/src/host/linux-sgx/host_entry.S
+@@ -2,6 +2,21 @@
+ 
+ #include "asm-offsets.h"
+ 
++    .data
++g_aep_pointer:
++    .word 0x0
++    .word 0x0
++    .word 0x0
++    .word 0x0
++
++    .data
++g_tcs:
++    .word 0x0
++    .word 0x0
++    .word 0x0
++    .word 0x0
++
++    .text
+     .extern tcs_base
+     .extern g_in_aex_profiling
+ 
+@@ -36,11 +51,18 @@ sgx_ecall:
+ 
+     # RBX has to be the TCS of the thread
+     movq %gs:PAL_HOST_TCB_TCS, %rbx
++    leaq        g_tcs(%rip), %rax
++    movq        %rbx, (%rax)
+ 
+     # RCX has to be the AEP (Asynchronous Exit Pointer)
+-    leaq async_exit_pointer(%rip), %rcx
+-
+-    movq $EENTER, %rax
++    leaq        g_aep_pointer(%rip), %rax
++    movq        (%rax), %rcx                    /* aep addr */
++    cmp         $0x0, %rcx
++    jnz 1f
++    leaq        async_exit_pointer(%rip), %rcx
++    movq        %rcx, (%rax)
++
++1:  movq        $EENTER, %rax                /* EENTER leaf */
+     ENCLU
+ 
+     # currently only ECALL_THREAD_RESET returns
+@@ -178,3 +200,25 @@ sgx_raise:
+     # RSI - external event
+     jmp .Ldo_ecall
+     .cfi_endproc
++
++
++.macro DECLARE_GLOBAL_FUNC name
++    .globl \name
++    .type \name, @function
++\name:
++.endm
++
++DECLARE_GLOBAL_FUNC sgx_get_aep
++    leaq        g_aep_pointer(%rip), %rax
++    movq        (%rax), %rax
++    ret
++ 
++DECLARE_GLOBAL_FUNC sgx_set_aep
++    leaq        g_aep_pointer(%rip), %rax
++    movq        %rdi, (%rax)
++    ret
++
++DECLARE_GLOBAL_FUNC sgx_get_tcs
++    leaq        g_tcs(%rip), %rax
++    movq        (%rax), %rax
++    ret
+diff --git a/pal/src/host/linux-sgx/meson.build b/pal/src/host/linux-sgx/meson.build
+index 3e77bdcc..c40794fa 100644
+--- a/pal/src/host/linux-sgx/meson.build
++++ b/pal/src/host/linux-sgx/meson.build
+@@ -152,10 +152,21 @@ libpal_sgx_host = executable('loader',
+         # host part of PAL uses stack protector with standard parameters (not the ones defined for
+         # PAL/LibOS)
+         '-fstack-protector-strong',
++
++        # XXX add libsgxstep include path
++        '-I../../..',
++        # XXX FORTIFY_SOURCE conflicts with regular libc header includes in libsgxstep
++        '-D_FORTIFY_SOURCE=0',
++        # XXX libsgxstep needs Intel SDK headers (only for error reporting; can be hacked out if needed)
++        '-I/opt/intel/sgxsdk/include/'
+     ],
+     link_args: [
+         '-Wl,-zrelro',
+         '-Wl,-znow',
++
++        # XXX link in libsgxstep library
++        '-L../../../libsgxstep',
++        '-lsgx-step',
+     ],
+     pie: true,
+ 
+-- 
+2.34.1
+

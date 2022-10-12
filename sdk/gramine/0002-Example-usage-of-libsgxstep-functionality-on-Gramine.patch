@@ -1,0 +1,66 @@
+From 0a276da7b6ba82ced095a795f66ac7f3ad0870a1 Mon Sep 17 00:00:00 2001
+From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+Date: Wed, 12 Oct 2022 16:58:44 +0200
+Subject: [PATCH 2/2] Example usage of libsgxstep functionality on Gramine's
+ enclave entry.
+
+---
+ pal/src/host/linux-sgx/host_ecalls.c | 35 ++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/pal/src/host/linux-sgx/host_ecalls.c b/pal/src/host/linux-sgx/host_ecalls.c
+index 9387266b..a740df24 100644
+--- a/pal/src/host/linux-sgx/host_ecalls.c
++++ b/pal/src/host/linux-sgx/host_ecalls.c
+@@ -6,6 +6,31 @@
+ #include "pal_ecall_types.h"
+ #include "pal_rpc_queue.h"
+ 
++/*****************************************************************************/
++/* XXX SGX-Step library includes and callbacks */
++
++#define  SGX_STEP_ENABLE        1
++
++#if SGX_STEP_ENABLE
++    #include "libsgxstep/debug.h"
++    #include "libsgxstep/enclave.h"
++    
++    int aep_fired = 0;
++    
++    void aep_cb_func(void)
++    {
++        gprsgx_region_t gprsgx = {0};
++        uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
++        info("Hello world from AEP callback %d with erip=%#llx! Resuming enclave..", aep_fired, erip); 
++    
++        edbgrd(get_enclave_ssa_gprsgx_adrs(), &gprsgx, sizeof(gprsgx_region_t));
++        dump_gprsgx_region(&gprsgx);
++    
++        aep_fired++;
++    }
++#endif
++/*****************************************************************************/
++
+ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
+                         size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
+                         struct pal_topo_info* topo_info, struct pal_dns_host_conf* dns_conf) {
+@@ -32,6 +57,16 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
+     ms.ms_topo_info        = topo_info;
+     ms.ms_dns_host_conf    = dns_conf;
+     ms.rpc_queue           = g_rpc_queue;
++
++    /*****************************************************************************/
++    #if SGX_STEP_ENABLE
++        /* XXX example of custom SGX-Step code before entering the victim enclave */
++        info("entering victim enclave");
++        register_aep_cb(aep_cb_func);
++        print_enclave_info();
++    #endif
++    /*****************************************************************************/
++
+     return sgx_ecall(ECALL_ENCLAVE_START, &ms);
+ }
+ 
+-- 
+2.34.1
+
