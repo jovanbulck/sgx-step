@@ -18,7 +18,6 @@ ifeq ($(M32), 1)
 	CFLAGS += -m32 -DM32=1
 endif
 
-INCLUDE     = -I$(SGX_SDK)/include/
 SOURCES     = $(shell ls *.c)
 ASM         = $(shell ls *.S)
 OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)

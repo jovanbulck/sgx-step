@@ -27,18 +27,14 @@
 #include <stdint.h>
 #include "config.h"
 
-#if !NO_SGX
-#include <sgx_error.h>
+extern int sgx_step_rv;
 
-extern sgx_status_t sgx_step_rv;
-
-#define SGX_ASSERT(f)  { if ( SGX_SUCCESS != (sgx_step_rv = (f)) )      \
+#define SGX_ASSERT(f)  { if ( 0 != (sgx_step_rv = (f)) )                \
  {                                                                      \
        printf( "Error calling enclave at %s:%d (rv=0x%x)\n", __FILE__,  \
                                               __LINE__, sgx_step_rv);   \
         abort();                                                        \
  } }
-#endif
 
 #define ASSERT(cond)                                                    \
     do {                                                                \

@@ -28,8 +28,10 @@
 #include <fcntl.h>
 #include <string.h>
 
-/* Includes custom AEP get/set functions from patched SGX SDK urts. */
-#include <sgx_urts.h>
+/* Custom AEP get/set functions from patched SGX SDK urts. */
+void* sgx_get_aep(void);
+void sgx_set_aep(void* aep);
+void* sgx_get_tcs(void);
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);

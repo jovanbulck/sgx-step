@@ -114,7 +114,7 @@ diff --git a/pal/src/host/linux-sgx/meson.build b/pal/src/host/linux-sgx/meson.b
 index 3e77bdcc..a1776fb8 100644
 --- a/pal/src/host/linux-sgx/meson.build
 +++ b/pal/src/host/linux-sgx/meson.build
-@@ -152,10 +152,21 @@ libpal_sgx_host = executable('loader',
+@@ -152,10 +152,19 @@ libpal_sgx_host = executable('loader',
          # host part of PAL uses stack protector with standard parameters (not the ones defined for
          # PAL/LibOS)
          '-fstack-protector-strong',
@@ -123,8 +123,6 @@ index 3e77bdcc..a1776fb8 100644
 +        '-I../../../..',
 +        # XXX FORTIFY_SOURCE conflicts with regular libc header includes in libsgxstep
 +        '-D_FORTIFY_SOURCE=0',
-+        # XXX libsgxstep needs Intel SDK headers (only for error reporting; can be hacked out if needed)
-+        '-I/opt/intel/sgxsdk/include/'
      ],
      link_args: [
          '-Wl,-zrelro',
