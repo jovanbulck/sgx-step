@@ -84,9 +84,10 @@ void register_enclave_info(void)
         is_kern = (pathname != NULL) && strstr(pathname, "/dev/sgx_enclave") != NULL;
         is_enclave = is_isgx || is_kern;
 
-        if (is_enclave && !prev_is_enclave && !victim.base)
+        if (is_enclave && !victim.drv)
         {
             debug("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
+
             victim.base = (uint64_t) start;
             victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
         }
@@ -104,7 +105,7 @@ void register_enclave_info(void)
         prev_is_enclave = is_enclave;
         prev_end = end;
     }
-    ASSERT( victim.base && "no enclave found in /proc/self/maps");
+    ASSERT( victim.drv && "no enclave found in /proc/self/maps");
 
     victim.tcs = (uint64_t) sgx_get_tcs();
     victim.aep = (uint64_t) sgx_get_aep();
@@ -206,7 +207,6 @@ void print_enclave_info(void)
     printf( "    Base:   %p\n", get_enclave_base() );
     printf( "    Limit:  %p\n", get_enclave_limit());
     printf( "    Size:   %d\n", get_enclave_size() );
-    printf( "    Limit:  %p\n", get_enclave_base()+get_enclave_size() );
     printf( "    TCS:    %p\n", sgx_get_tcs() );
     printf( "    SSA:    %p\n", get_enclave_ssa_gprsgx_adrs() );
     printf( "    AEP:    %p\n", sgx_get_aep() );
