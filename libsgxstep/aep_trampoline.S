@@ -47,7 +47,13 @@
     .global sgx_step_aep_trampoline
     .type sgx_step_aep_trampoline, @function
 sgx_step_aep_trampoline:
-    mov %xbx, sgx_step_tcs(%rip)
+    /*
+     * Save TCS address thread-local on the stack
+     * NOTE: maintain 16-byte stack alignment (ABI calling convention)
+     */
+    push %xbx
+    mov %rsp, %rbp
+    and $~0xf, %rsp
 
     /* optional C function callback */
     lea sgx_step_aep_cb(%rip), %xax
@@ -58,7 +64,11 @@ sgx_step_aep_trampoline:
 
 .Leresume:
     incl sgx_step_eresume_cnt(%rip)
-    mov sgx_step_tcs(%rip), %xbx              /* TCS address */
+
+    /* restore stack and TCS address */
+    mov %rbp, %rsp
+    pop %xbx
+
     lea sgx_step_aep_trampoline(%rip), %xcx   /* AEP address */
 
     prefetch nemesis_tsc_eresume(%rip)
@@ -68,4 +78,7 @@ sgx_step_aep_trampoline:
     mov %eax, nemesis_tsc_eresume(%rip)
 
     mov $3, %xax                        /* ERESUME leaf */
+
+.global sgx_step_aep_eresume
+sgx_step_aep_eresume:
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */

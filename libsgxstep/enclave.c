@@ -36,7 +36,6 @@ void* sgx_get_tcs(void);
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);
 aep_cb_t sgx_step_aep_cb = NULL;
-uint64_t sgx_step_tcs    = 0x0;
 uint32_t nemesis_tsc_eresume = 0x0;
 int sgx_step_eresume_cnt = 0;
 
@@ -70,7 +69,7 @@ void register_enclave_info(void)
      *        - only supports a single enclave that is expected to be
      *          contiguously mapped in the address space
      */
-    #if DEBUG
+    #if LIBSGXSTEP_DEBUG
         debug("cat /proc/self/maps");
         char command[256];
         sprintf(command, "cat /proc/%d/maps", getpid());
@@ -166,22 +165,20 @@ int edbgrdwr(void *adrs, void* res, int len, int write)
     else
         rv = pwrite(fd_self_mem, res, len, (off_t) adrs);
 
+    debug("edbg%s at %p; len=%d; rv=%d", write ? "wr" : "rd", adrs, len, rv);
+    #if LIBSGXSTEP_DEBUG
+        printf("\tbuf = ");
+        dump_hex(res, rv);
+    #endif
+
+    //ASSERT(rv >= 0);
     return rv;
 }
 
-uint64_t edbgrd_ssa(int ssa_field_offset)
+uint64_t edbgrd_ssa_gprsgx(int gprsgx_field_offset)
 {
-    /* NOTE: we cache ossa here to avoid 2 EDBGRD IOCTL calls every time.. */
-    static uint64_t ossa = 0x0;
     uint64_t ret;
-    void *ssa_field_addr, *tcs_addr = sgx_get_tcs();
-
-    //if (!ossa)
-    {
-        edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
-    }
-    ssa_field_addr = get_enclave_base() + ossa + SGX_SSAFRAMESIZE
-                     - SGX_GPRSGX_SIZE + ssa_field_offset;
+    void *ssa_field_addr = get_enclave_ssa_gprsgx_adrs() + gprsgx_field_offset;
     edbgrd(ssa_field_addr, &ret, 8);
 
     return ret;
@@ -189,15 +186,13 @@ uint64_t edbgrd_ssa(int ssa_field_offset)
 
 void* get_enclave_ssa_gprsgx_adrs(void)
 {
-    /* NOTE: we cache ossa here to avoid 2 EDBGRD IOCTL calls every time.. */
-    static uint64_t ossa = 0x0;
+    uint64_t ossa = 0x0;
+    uint32_t cssa = 0x0;
     void *tcs_addr = sgx_get_tcs();
-    if (!ossa)
-    {
-        edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, 8);
-    }
+    edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, sizeof(ossa));
+    edbgrd(tcs_addr + SGX_TCS_CSSA_OFFSET, &cssa, sizeof(cssa));
 
-    return get_enclave_base() + ossa + SGX_SSAFRAMESIZE - SGX_GPRSGX_SIZE;
+    return get_enclave_base() + ossa + (cssa * SGX_SSAFRAMESIZE) - SGX_GPRSGX_SIZE;
 }
 
 void print_enclave_info(void)

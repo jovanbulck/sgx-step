@@ -52,12 +52,16 @@ int edbgrdwr(void *adrs, void* res, int len, int write);
 
 /* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
 #define SGX_TCS_OSSA_OFFSET         16
+#define SGX_TCS_CSSA_OFFSET         24
 #define SGX_GPRSGX_SIZE             184
 #define SGX_GPRSGX_RIP_OFFSET       136
 
 /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
    runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
 #define SGX_SSAFRAMESIZE            4096
+//TODO determine this at runtime..
+// SSA framesize for Gramine seems to be as follows
+// #define SGX_SSAFRAMESIZE            16384
 
 struct gprsgx_region {
     uint64_t rax;
@@ -99,8 +103,8 @@ typedef union {
 void* get_enclave_ssa_gprsgx_adrs(void);
 void dump_gprsgx_region(gprsgx_region_t *gprsgx_region);
 
-uint64_t edbgrd_ssa(int ssa_field_offset);
-#define edbgrd_erip() edbgrd_ssa(SGX_GPRSGX_RIP_OFFSET)
+uint64_t edbgrd_ssa_gprsgx(int gprsgx_field_offset);
+#define edbgrd_erip() edbgrd_ssa_gprsgx(SGX_GPRSGX_RIP_OFFSET)
 
 #endif
 #endif

@@ -52,7 +52,7 @@ extern int sgx_step_rv;
         fflush(stdout);                                                 \
     } while(0)
 
-#if DEBUG
+#if LIBSGXSTEP_DEBUG
     #define debug(msg, ...)     info("DEBUG: " msg, ##__VA_ARGS__)
 #else
     #define debug(msg, ...)
