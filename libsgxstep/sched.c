@@ -60,6 +60,29 @@ int get_cpu( void )
     return sched_getcpu();
 }
 
+int get_core_id(int cpu_id)
+{
+    FILE *fd;
+    ASSERT((fd = fopen("/proc/cpuinfo", "r")) >= 0);
+
+    int cur_cpu_id = -1, core_id = -1, core_id_prev = -1;
+    char buf[100];
+    while (fgets(buf, sizeof(buf), fd))
+    {
+        sscanf(buf, "core id : %d %*[^\n]", &core_id);
+        if (core_id != core_id_prev)
+        {
+            cur_cpu_id++;
+            if (cur_cpu_id == cpu_id) break;
+        }
+        core_id_prev = core_id;
+    }
+
+    debug("Found cpu_id=%d -> core_id=%d", cpu_id, core_id);
+    ASSERT( cur_cpu_id == cpu_id );
+    return core_id;
+}
+
 unsigned int pstate_max_perf_pct( void )
 {
 #if HAS_PSTATE

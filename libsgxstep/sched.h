@@ -28,4 +28,6 @@ int prepare_system_for_benchmark(int pstate_perf_pct);
 int restore_system_state(void);
 int print_system_settings(void);
 
+int get_core_id(int cpu_id);
+
 #endif
