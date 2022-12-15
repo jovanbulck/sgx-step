@@ -1,0 +1,43 @@
+diff --git a/libsgxstep/apic.c b/libsgxstep/apic.c
+index 67e4f5e..a4b707e 100644
+--- a/libsgxstep/apic.c
++++ b/libsgxstep/apic.c
+@@ -27,7 +27,7 @@
+ #include "../kernel/sgxstep_ioctl.h"
+ 
+ extern void *apic_base;
+-void *dummy_pt = NULL;
++//void *dummy_pt = NULL;
+ uint32_t apic_lvtt = 0x0, apic_tdcr = 0x0;
+ 
+ /*
+diff --git a/libsgxstep/apic.h b/libsgxstep/apic.h
+index 94a9a52..20857c6 100644
+--- a/libsgxstep/apic.h
++++ b/libsgxstep/apic.h
+@@ -72,7 +72,7 @@ static inline int apic_write(uint32_t reg, uint32_t v)
+     if (!apic_base) apic_init();
+ 
+     addr = (volatile uint32_t *)(apic_base + reg);
+-    asm volatile ("movl %1, %0\n\t"
++    __asm__ volatile ("movl %1, %0\n\t"
+         :"=m"(*addr):"r"(v):);
+ 
+     return 0;
+diff --git a/libsgxstep/enclave.h b/libsgxstep/enclave.h
+index 16855ec..c78bfbf 100644
+--- a/libsgxstep/enclave.h
++++ b/libsgxstep/enclave.h
+@@ -58,10 +58,10 @@ int edbgrdwr(void *adrs, void* res, int len, int write);
+ 
+ /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
+    runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
+-#define SGX_SSAFRAMESIZE            4096
++//#define SGX_SSAFRAMESIZE            4096
+ //TODO determine this at runtime..
+ // SSA framesize for Gramine seems to be as follows
+-// #define SGX_SSAFRAMESIZE            16384
++#define SGX_SSAFRAMESIZE            16384
+ 
+ struct gprsgx_region {
+     uint64_t rax;

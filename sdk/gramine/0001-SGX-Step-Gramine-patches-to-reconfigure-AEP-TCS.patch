@@ -1,22 +1,27 @@
-From 01802a7641e0090e3a4926239ca004d7de2e6a5c Mon Sep 17 00:00:00 2001
-From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date: Wed, 12 Oct 2022 19:14:24 +0200
-Subject: [PATCH 1/2] SGX-Step Gramine patches to reconfigure AEP/TCS.
-
----
- pal/src/host/linux-sgx/host_entry.S     | 52 +++++++++++++++++++++++--
- pal/src/host/linux-sgx/host_exception.c | 13 +++++++
- pal/src/host/linux-sgx/meson.build      | 11 ++++++
- 3 files changed, 73 insertions(+), 3 deletions(-)
-
+diff --git a/meson.build b/meson.build
+index 85dfcc6b..faae77cc 100644
+--- a/meson.build
++++ b/meson.build
+@@ -272,6 +272,10 @@ if sgx
+         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
+     endif
+ 
++  # XXX taken from: https://stackoverflow.com/questions/34663124/link-static-library-to-shared-library-or-to-a-binary
++  libsgxstepdir = '<ENTER ABSOLUTE PATH OF LIBSGXSTEP HERE>'
++  libsgxstep_dep = cc.find_library('libsgx-step', dirs : libsgxstepdir)
++
+   vtune_dep = []
+   dl_dep = []
+ 
 diff --git a/pal/src/host/linux-sgx/host_entry.S b/pal/src/host/linux-sgx/host_entry.S
-index bb38ced4..013323d7 100644
+index bb38ced4..f53ea26c 100644
 --- a/pal/src/host/linux-sgx/host_entry.S
 +++ b/pal/src/host/linux-sgx/host_entry.S
-@@ -2,6 +2,18 @@
+@@ -1,7 +1,18 @@
+ #include "sgx_arch.h"
  
  #include "asm-offsets.h"
- 
+-
 +/************************************************************************/
 +/* XXX AEP hook for SGX-Step support */
 +    .data
@@ -32,7 +37,7 @@ index bb38ced4..013323d7 100644
      .extern tcs_base
      .extern g_in_aex_profiling
  
-@@ -38,9 +50,17 @@ sgx_ecall:
+@@ -38,9 +49,17 @@ sgx_ecall:
      movq %gs:PAL_HOST_TCB_TCS, %rbx
  
      # RCX has to be the AEP (Asynchronous Exit Pointer)
@@ -53,7 +58,7 @@ index bb38ced4..013323d7 100644
      ENCLU
  
      # currently only ECALL_THREAD_RESET returns
-@@ -178,3 +198,29 @@ sgx_raise:
+@@ -178,3 +197,29 @@ sgx_raise:
      # RSI - external event
      jmp .Ldo_ecall
      .cfi_endproc
@@ -84,10 +89,10 @@ index bb38ced4..013323d7 100644
 +
 +/************************************************************************/
 diff --git a/pal/src/host/linux-sgx/host_exception.c b/pal/src/host/linux-sgx/host_exception.c
-index f0aae5bd..7bdb092d 100644
+index f0aae5bd..670ec638 100644
 --- a/pal/src/host/linux-sgx/host_exception.c
 +++ b/pal/src/host/linux-sgx/host_exception.c
-@@ -85,9 +85,22 @@ static enum pal_event signal_to_pal_event(int sig) {
+@@ -85,8 +85,21 @@ static enum pal_event signal_to_pal_event(int sig) {
      }
  }
  
@@ -96,7 +101,7 @@ index f0aae5bd..7bdb092d 100644
 +
  static bool interrupted_in_enclave(struct ucontext* uc) {
      unsigned long rip = ucontext_get_ip(uc);
- 
++    
 +    /************************************************************************/
 +    if (g_aep_pointer)
 +    {
@@ -106,34 +111,48 @@ index f0aae5bd..7bdb092d 100644
 +        return (rip == (unsigned long) g_aep_pointer);
 +    }
 +    /************************************************************************/
-+
+ 
      /* in case of AEX, RIP can point to any instruction in the AEP/ERESUME trampoline code, i.e.,
       * RIP can point to anywhere in [async_exit_pointer, async_exit_pointer_end) interval */
-     return rip >= (unsigned long)async_exit_pointer && rip < (unsigned long)async_exit_pointer_end;
 diff --git a/pal/src/host/linux-sgx/meson.build b/pal/src/host/linux-sgx/meson.build
-index 3e77bdcc..a1776fb8 100644
+index 3444d9b4..2d188bcd 100644
 --- a/pal/src/host/linux-sgx/meson.build
 +++ b/pal/src/host/linux-sgx/meson.build
-@@ -152,10 +152,19 @@ libpal_sgx_host = executable('loader',
+@@ -10,12 +10,15 @@ pal_sgx_inc = [
+     ),
+ ]
+ 
++sgxstepdir = '<ENTER ABSOLUTE PATH OF SGX-STEP HERE>'
++
+ sgx_inc = [
+     includes_pal_common,
+     pal_sgx_inc,
+     include_directories(
+         '../../../include/arch/@0@/linux'.format(host_machine.cpu_family()),
+         '../../../include/host/linux-common',
++        join_paths(sgxstepdir, 'sgx-step/')
+     ),
+ ]
+ 
+@@ -157,6 +160,12 @@ libpal_sgx_host = executable('loader',
          # host part of PAL uses stack protector with standard parameters (not the ones defined for
          # PAL/LibOS)
          '-fstack-protector-strong',
-+
-+        # XXX add libsgxstep include path
-+        '-I../../../..',
++        
 +        # XXX FORTIFY_SOURCE conflicts with regular libc header includes in libsgxstep
 +        '-D_FORTIFY_SOURCE=0',
++        # XXX libsgxstep needs Intel SDK headers (only for error reporting; can be hacked out if needed)
++        '-I/opt/intel/sgxsdk/include/'
++
      ],
      link_args: [
          '-Wl,-zrelro',
-         '-Wl,-znow',
-+
+@@ -169,6 +178,8 @@ libpal_sgx_host = executable('loader',
+         protobuf_dep,
+         vtune_dep,
+         dl_dep,
 +        # XXX link in libsgxstep library
-+        '-L../../../../libsgxstep',
-+        '-lsgx-step',
++        libsgxstep_dep
      ],
-     pie: true,
  
--- 
-2.34.1
-
+     install: true,
