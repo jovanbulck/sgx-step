@@ -1,0 +1,77 @@
+diff --git a/host/sgx/linux/enter.c b/host/sgx/linux/enter.c
+index f413bd94f..91dae2a32 100644
+--- a/host/sgx/linux/enter.c
++++ b/host/sgx/linux/enter.c
+@@ -6,11 +6,44 @@
+ #include <openenclave/internal/constants_x64.h>
+ #include <openenclave/internal/registers.h>
+ #include <openenclave/internal/sgx/ecall_context.h>
++#include <stdio.h>
+ #include "../asmdefs.h"
+ #include "../enclave.h"
+ #include "../vdso.h"
+ #include "../xstate.h"
+ 
++/* XXX runtime reconfigurable indirect Asynchronous Exit Pointer (AEP)
++ * (ld complains when initializing __default_async_exit_pointer here, so we have
++ * to do it at runtime, when EENTERing, below in .Ldo_eenter.
++ */
++uint64_t g_aep_pointer = (uint64_t) NULL;
++/* XXX HACK: SGX stores TCS address in rbx on interrupt, but this value is
++ * somehow not properly stored in Linux's pt_regs struct available to our
++ * driver's interrupt handler. We therefore store TCS address here in the
++ * untrusted runtime, so as to be able to explicitly communicate TCS to our
++ * driver...
++ */
++void *g_tcs = NULL;
++
++
++void* sgx_get_aep(void)
++{
++    printf("[ OE uRTS Debug ] sgx_get_aep: g_aep_pointer=%p\n", (void*)g_aep_pointer); 
++    return (void*) g_aep_pointer; 
++}
++
++void* sgx_get_tcs(void)
++{
++    printf("[ OE uRTS Debug ] sgx_get_tcs\n"); 
++    return (void*) g_tcs; 
++}
++
++void sgx_set_aep(void *aep)
++{
++    g_aep_pointer = (uint64_t) aep; 
++}
++
++
+ /* Note: The code was originally made to work on both Linux and Windows.
+  * Given that the diversity increases with the support of vDSO, we make
+  * the copy of the code to each OS, sgx/linux/enter.c and sgx/windows/enter.c,
+@@ -188,6 +221,12 @@ OE_INLINE oe_result_t _enter_impl(
+         if (oe_is_avx_enabled)
+             OE_VZEROUPPER;
+ 
++        // XXX 
++        g_tcs = tcs; 
++        if (g_aep_pointer != (uint64_t) NULL){
++            aep = g_aep_pointer; 
++        }
++
+         // Define register bindings and initialize the registers.
+         // On Windows, explicitly setup rbp as a Linux ABI style frame-pointer.
+         // On Linux, the frame-pointer is set up by compiling the file with the
+diff --git a/include/openenclave/host.h b/include/openenclave/host.h
+index d0f279ec5..bac693ea0 100644
+--- a/include/openenclave/host.h
++++ b/include/openenclave/host.h
+@@ -440,6 +440,10 @@ void oe_free_key(
+     uint8_t* key_info,
+     size_t key_info_size);
+ 
++void* sgx_get_aep(void);
++void  sgx_set_aep(void *aep);
++void* sgx_get_tcs(void);
++
+ OE_EXTERNC_END
+ 
+ #endif /* _OE_HOST_H */

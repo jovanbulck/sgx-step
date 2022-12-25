@@ -28,10 +28,9 @@
 #include <fcntl.h>
 #include <string.h>
 
+
 /* Custom AEP get/set functions from patched SGX SDK urts. */
-void* sgx_get_aep(void);
-void sgx_set_aep(void* aep);
-void* sgx_get_tcs(void);
+#include <openenclave/host.h>
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);
@@ -55,7 +54,7 @@ void register_enclave_info(void)
     FILE *fd_self_maps;
     uint64_t start, end, prev_end = 0;
     char *pathname = NULL;
-    int is_enclave = 0, prev_is_enclave = 0, is_isgx, is_kern;
+    int is_enclave = 0, prev_is_enclave = 0, is_isgx, is_kern, is_dcap;
     memset(&victim, 0x0, sizeof(victim));
 
     /* Parse /proc/self/maps to detect any enclaves mapped in the address space.
@@ -83,14 +82,21 @@ void register_enclave_info(void)
         debug("%p - %p %s", (void*) start, (void*) end, pathname);
         is_isgx = (pathname != NULL) && strstr(pathname, "/dev/isgx") != NULL;
         is_kern = (pathname != NULL) && strstr(pathname, "/dev/sgx_enclave") != NULL;
-        is_enclave = is_isgx || is_kern;
+        is_dcap =  (pathname != NULL) && strstr(pathname, "/dev/sgx/enclave") != NULL; 
+        is_enclave = is_isgx || is_kern || is_dcap;
 
         if (is_enclave && !victim.drv)
         {
             debug("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
 
             victim.base = (uint64_t) start;
-            victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
+            if (is_dcap){
+                victim.drv = "/dev/sgx/enclave"; 
+            }else if (is_kern){
+                victim.drv = "/dev/sgx_enclave"; 
+            }else if (is_isgx){
+                victim.drv = "/dev/isgx"; 
+            }
         }
         else if (prev_is_enclave && !is_enclave)
         {

@@ -7,3 +7,6 @@
 [submodule "sdk/gramine"]
 	path = sdk/gramine/gramine
 	url = https://github.com/gramineproject/gramine.git
+[submodule "sdk/oe-sdk/openenclave"]
+	path = sdk/oe-sdk/openenclave
+	url = https://github.com/openenclave/openenclave.git

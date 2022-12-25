@@ -18,6 +18,8 @@ ifeq ($(M32), 1)
 	CFLAGS += -m32 -DM32=1
 endif
 
+
+INCLUDE		= -I$(OE_HOME)/include
 SOURCES     = $(shell ls *.c)
 ASM         = $(shell ls *.S)
 OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)
