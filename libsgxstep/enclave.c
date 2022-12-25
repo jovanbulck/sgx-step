@@ -30,7 +30,9 @@
 
 
 /* Custom AEP get/set functions from patched SGX SDK urts. */
-#include <openenclave/host.h>
+extern void* sgx_get_aep(void);
+extern void  sgx_set_aep(void *aep);
+extern void* sgx_get_tcs(void);
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);

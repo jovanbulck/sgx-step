@@ -1,4 +1,4 @@
-# Open Enclave and SGX-Step Integration (Ubuntu 18)
+# Open Enclave and SGX-Step Integration Demo (Ubuntu 18)
 
 ## Configure the Intel and Microsoft APT repositories
 
