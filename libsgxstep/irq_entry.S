@@ -1,5 +1,5 @@
 /* ********************************************************************** */
-    .data
+    .section isr_section,"awx",@progbits
     .align 0x1000
     .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, apic_base, nemesis_tsc_aex
 __ss_irq_fired:
@@ -19,7 +19,7 @@ __ss_irq_rdx:
     .quad 0x0
 
 /* ********************************************************************** */
-    .text
+    .section isr_section,"awx",@progbits
     .align 0x1000
     .global __ss_irq_handler
 __ss_irq_handler:
@@ -46,8 +46,11 @@ __ss_irq_handler:
     mov __ss_irq_rax(%rip), %rax
     mov __ss_irq_rdx(%rip), %rdx
     iretq
-
 /* ********************************************************************** */
+/* don't put the custom user handler in the mapped ISR region (yet)! */
+/* the pointer could point to data outside the ISR region */
+    .text
+    .align 0x1000
     .global sgx_step_irq_gate_func
 sgx_step_irq_gate_func:
     call *sgx_step_irq_gate_cb(%rip)

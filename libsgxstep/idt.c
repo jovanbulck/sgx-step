@@ -3,10 +3,55 @@
 #include "apic.h"
 #include "sched.h"
 #include <sys/mman.h>
+#include <sys/ioctl.h>
+  #include <sched.h>
 
 /* See irq_entry.S to see how these are used. */
 void sgx_step_irq_gate_func(void);
 exec_priv_cb_t sgx_step_irq_gate_cb = NULL;
+
+uint64_t sgx_step_isr_kernel_map_offset = 0;
+
+// this externs will be created by the compiler pointing to the ISR section.
+extern void *__start_isr_section;
+extern void *__stop_isr_section;
+
+extern int fd_step;
+
+static int is_in_isr_section(void *handler) {
+    return (void*)(&__start_isr_section) <= handler && handler < (void*)(&__stop_isr_section);
+}
+
+static void setup_isr_map()
+{
+    setup_isr_map_t param;
+
+    param.isr_start = (uint64_t)&__start_isr_section;
+    param.isr_stop = (uint64_t)&__stop_isr_section;
+
+    info("setting up isr mapping: from 0x%lx to 0x%lx", param.isr_start, param.isr_stop);
+
+    step_open();
+    ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_SETUP_ISR_MAP, &param) >= 0 );
+
+    info("we received the base address from kernel 0x%lx", param.isr_kernel_base);
+
+    // calculate the virtual address space offset
+    sgx_step_isr_kernel_map_offset = param.isr_kernel_base - param.isr_start;
+
+    info("the offset to the kernel mapped ISR region is 0x%lx", sgx_step_isr_kernel_map_offset);
+
+    // This is currently a workaround: We are currently use one section for both data and code.
+    // Therefore, we need executable and writable pages which are per definition a security risk.
+    // Linux detects this and removes one of the flags, therefore we directly modify the page tables.
+    for (uint64_t address = param.isr_start; address < param.isr_stop; address += 0x1000) {
+        void *page = (void*)address + sgx_step_isr_kernel_map_offset;
+        uint64_t* pte = remap_page_table_level(page, PTE);
+        *pte = MARK_EXECUTABLE(*pte);
+        *pte = MARK_WRITABLE(*pte);
+        flush_tlb(page);
+    }
+}
 
 void dump_gate(gate_desc_t *gate, int idx)
 {
@@ -48,10 +93,23 @@ void install_irq_handler(idt_t *idt, void* asm_handler, int vector, cs_t seg, ga
 {
     ASSERT(vector >= 0 && vector < idt->entries);
 
+    uint64_t handler = (uint64_t)asm_handler;
+
+    // check if the ISR section is mapped
+    if (sgx_step_isr_kernel_map_offset == 0) {
+        setup_isr_map();
+    }
+
+    // only if the handler is within the ISR section we use the kernel mapped handler
+    if (is_in_isr_section(asm_handler)) {
+        handler += sgx_step_isr_kernel_map_offset;
+        libsgxstep_info("using kernel mapped ISR handler: %p -> %p", asm_handler, (void*)handler);
+    }
+
     gate_desc_t *gate = gate_ptr(idt->base, vector);
-    gate->offset_low    = PTR_LOW(asm_handler);
-    gate->offset_middle = PTR_MIDDLE(asm_handler);
-    gate->offset_high   = PTR_HIGH(asm_handler);
+    gate->offset_low    = PTR_LOW(handler);
+    gate->offset_middle = PTR_MIDDLE(handler);
+    gate->offset_high   = PTR_HIGH(handler);
 
     gate->p = 1;
     gate->segment = seg;
@@ -64,6 +122,7 @@ void install_irq_handler(idt_t *idt, void* asm_handler, int vector, cs_t seg, ga
         dump_gate(gate, vector);
     #endif
 }
+
 
 void install_user_irq_handler(idt_t *idt, void* asm_handler, int vector)
 {
@@ -104,4 +163,5 @@ void __attribute__((constructor)) init_sgx_step( void )
     info("locking IRQ handler pages %p/%p", &__ss_irq_handler, &__ss_irq_fired);
     ASSERT( !mlock(&__ss_irq_handler, 0x1000) );
     ASSERT( !mlock((void*) &__ss_irq_fired, 0x1000) );
+    // TODO: maybe call setup_isr_map here? this would require to open sgx_step in the constructor.
 }

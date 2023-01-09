@@ -37,4 +37,13 @@
         }                                           \
     } while(0)
 
+#define RET_ASSERT_GOTO(cond, message, label)                   \
+    do {                                                        \
+        if (!(cond))                                            \
+        {                                                       \
+            err("assertion '" #cond "' failed: %s", message);   \
+            goto label;                                         \
+        }                                                       \
+    } while(0)
+
 #endif
