@@ -209,8 +209,7 @@ long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned
     RET_ASSERT_GOTO(isr_kernel_vbase, "could not vmap isr", cleanup_pin);
 
     log("mapped isr to kernel virtual address 0x%llx", (uint64_t)isr_kernel_vbase);
-    log("first qword of the isr p[0]=0x%llx", *(uint64_t*)isr_kernel_vbase);
-
+    
     data->isr_kernel_base = isr_kernel_vbase;
     
     return 0;
