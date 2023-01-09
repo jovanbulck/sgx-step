@@ -59,10 +59,6 @@ void post_irq(void)
             my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags(), nemesis_tsc_aex - nemesis_tsc_eresume);
 }
 
-void sgx_get_aep() {}
-void sgx_set_aep() {}
-void sgx_get_tcs() {}
-
 int main( int argc, char **argv )
 {
     if (argc == 2) {

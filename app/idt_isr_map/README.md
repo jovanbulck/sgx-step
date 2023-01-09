@@ -8,7 +8,7 @@ Start the listener:
 sudo ./app   
 ```
 
-Trigger the SW IRQ from another core and process:
+Trigger the SW IRQ from another process:
 ```
 taskset -c 1 ./app trigger
 ```

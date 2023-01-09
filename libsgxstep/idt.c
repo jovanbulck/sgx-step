@@ -4,7 +4,7 @@
 #include "sched.h"
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-  #include <sched.h>
+#include <sched.h>
 
 /* See irq_entry.S to see how these are used. */
 void sgx_step_irq_gate_func(void);
