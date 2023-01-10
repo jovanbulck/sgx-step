@@ -210,7 +210,7 @@ long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned
 
     log("mapped isr to kernel virtual address 0x%llx", (uint64_t)isr_kernel_vbase);
     
-    data->isr_kernel_base = isr_kernel_vbase;
+    data->isr_kernel_base = (uint64_t) isr_kernel_vbase;
     
     return 0;
 

@@ -29,21 +29,22 @@ static void setup_isr_map()
     param.isr_start = (uint64_t)&__start_isr_section;
     param.isr_stop = (uint64_t)&__stop_isr_section;
 
-    info("setting up isr mapping: from 0x%lx to 0x%lx", param.isr_start, param.isr_stop);
+    libsgxstep_info("setting up isr mapping: from 0x%lx to 0x%lx", param.isr_start, param.isr_stop);
 
     step_open();
     ASSERT( ioctl(fd_step, SGX_STEP_IOCTL_SETUP_ISR_MAP, &param) >= 0 );
 
-    info("we received the base address from kernel 0x%lx", param.isr_kernel_base);
+    libsgxstep_info("we received the base address from kernel 0x%lx", param.isr_kernel_base);
 
     // calculate the virtual address space offset
     sgx_step_isr_kernel_map_offset = param.isr_kernel_base - param.isr_start;
 
-    info("the offset to the kernel mapped ISR region is 0x%lx", sgx_step_isr_kernel_map_offset);
+    libsgxstep_info("the offset to the kernel mapped ISR region is 0x%lx", sgx_step_isr_kernel_map_offset);
 
     // This is currently a workaround: We are currently use one section for both data and code.
     // Therefore, we need executable and writable pages which are per definition a security risk.
     // Linux detects this and removes one of the flags, therefore we directly modify the page tables.
+    // TODO split into isr.code and isr.data sections
     for (uint64_t address = param.isr_start; address < param.isr_stop; address += 0x1000) {
         void *page = (void*)address + sgx_step_isr_kernel_map_offset;
         uint64_t* pte = remap_page_table_level(page, PTE);
@@ -75,6 +76,11 @@ void map_idt(idt_t *idt)
     void *idt_base = NULL;
     int entries;
 
+    /*
+     * NOTE: Linux uses the same physical memory for every IDT on all CPUs (set
+     * by `lidt` by Linux at boot time). Hence, any change made in the IDT will
+     * be reflected globally across all CPUs.
+     */
     asm volatile ("sidt %0\n\t"
                   :"=m"(idtr) :: );
     entries = (idtr.size+1)/sizeof(gate_desc_t);
@@ -101,7 +107,10 @@ void install_irq_handler(idt_t *idt, void* asm_handler, int vector, cs_t seg, ga
     }
 
     // only if the handler is within the ISR section we use the kernel mapped handler
-    if (is_in_isr_section(asm_handler)) {
+    // TODO caller should indicate if this should be asserted: not a
+    // problem for `exec_priv` call gates (as no C3 switch can occur in between)
+    if (is_in_isr_section(asm_handler))
+    {
         handler += sgx_step_isr_kernel_map_offset;
         libsgxstep_info("using kernel mapped ISR handler: %p -> %p", asm_handler, (void*)handler);
     }
@@ -155,13 +164,4 @@ void exec_priv(exec_priv_cb_t cb)
 
     sgx_step_irq_gate_cb = cb;
     asm("int %0\n\t" ::"i"(IRQ_VECTOR+4):);
-}
-
-void __attribute__((constructor)) init_sgx_step( void )
-{
-    /* Ensure IRQ handler asm code is not subject to demand-paging */
-    info("locking IRQ handler pages %p/%p", &__ss_irq_handler, &__ss_irq_fired);
-    ASSERT( !mlock(&__ss_irq_handler, 0x1000) );
-    ASSERT( !mlock((void*) &__ss_irq_fired, 0x1000) );
-    // TODO: maybe call setup_isr_map here? this would require to open sgx_step in the constructor.
 }

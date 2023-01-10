@@ -49,6 +49,8 @@ __ss_irq_handler:
 /* ********************************************************************** */
 /* don't put the custom user handler in the mapped ISR region (yet)! */
 /* the pointer could point to data outside the ISR region */
+/* TODO this is okay, as IRQ/Call gates always triggered from within the calling process CR3 */
+/* as long as teh irq num is unused and never triggered from outside the process */
     .text
     .align 0x1000
     .global sgx_step_irq_gate_func
