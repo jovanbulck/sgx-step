@@ -31,6 +31,9 @@
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 #include <linux/kprobes.h>
+#include <linux/mm.h>
+#include <linux/highmem.h>
+#include <linux/slab.h>
 
 #include <linux/clockchips.h>
 #include <linux/version.h>
@@ -39,24 +42,78 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.strackx@cs.kuleuven.be>");
 MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control");
 
-int target_cpu = -1;
+static struct page **isr_pages = NULL;
+static uint64_t isr_nr_pages = 0;
+static void *isr_kernel_vbase = NULL;
+
+static int in_use = 0;
+
+typedef struct {
+    uint16_t size;
+    uint64_t base;
+} __attribute__((packed)) dtr_t;
+
+static dtr_t original_dtr = {0};
+
+static void *original_idt_copy = NULL;
 
 int step_open(struct inode *inode, struct file *file)
 {
-    if (target_cpu != -1)
+    if (in_use)
     {   
         err("Device is already opened");
         return -EBUSY;
     }
-    target_cpu = smp_processor_id();
 
+    asm volatile ("sidt %0\n\t"
+                  :"=m"(original_dtr) :: );
+
+    log("read idt: 0x%llx with size %u", original_dtr.base, original_dtr.size+1);
+
+    original_idt_copy = kmalloc(original_dtr.size+1, GFP_KERNEL);
+    RET_ASSERT(original_idt_copy);
+
+    memcpy(original_idt_copy, (void*)original_dtr.base, original_dtr.size+1);
+    log("copied original idt");
+
+    in_use = 1;
     return 0;
 }
 
 int step_release(struct inode *inode, struct file *file)
 {
-    target_cpu = -1;
+    uint64_t cr0;
+    asm volatile("mov %%cr0, %0" : "=r"(cr0));
 
+    // disable write protection
+    asm volatile("mov %0, %%cr0" : : "r"(cr0 & ~(1llu << 16)));
+
+    // restore original idt to ensure no user pointers are left
+    memcpy((void*)original_dtr.base, original_idt_copy, original_dtr.size+1);
+    log("restored original idt at 0x%llx with size %u", original_dtr.base, original_dtr.size+1);
+
+    // restore original cr0
+    asm volatile("mov %0, %%cr0" : : "r"(cr0));
+
+    kfree(original_idt_copy);
+    original_idt_copy = NULL;
+
+    if (isr_kernel_vbase) {
+        // freeup the kernel vbase mapping for isrs
+        vunmap(isr_kernel_vbase);
+        
+        // unpin the isr user physical pages
+        unpin_user_pages(isr_pages, isr_nr_pages);
+        
+        // free the isr user physical page structure
+        kfree(isr_pages);
+
+        isr_kernel_vbase = NULL;
+        isr_pages = NULL;
+        isr_nr_pages = 0;
+    }
+
+    in_use = 0;
     return 0;
 }
 
@@ -131,6 +188,46 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
     return 0;
 }
 
+
+long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+    uint64_t nr_pinned_pages;
+
+    setup_isr_map_t *data = (setup_isr_map_t*) arg;
+    
+    isr_nr_pages = (data->isr_stop - data->isr_start + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    isr_pages = kmalloc(isr_nr_pages * sizeof(struct page *), GFP_KERNEL);
+    RET_ASSERT_GOTO(isr_pages, "cannot allocate memory", out);
+
+    nr_pinned_pages = pin_user_pages(data->isr_start & ~(PAGE_SIZE - 1), isr_nr_pages, FOLL_LONGTERM | FOLL_WRITE, isr_pages, NULL);
+    log("nr_pinned_pages = %llu should be %llu", nr_pinned_pages, isr_nr_pages);
+
+    RET_ASSERT_GOTO(nr_pinned_pages == isr_nr_pages, "could not pin all isr pages", cleanup_pages);
+
+    isr_kernel_vbase = vmap(isr_pages, isr_nr_pages, VM_READ | VM_EXEC | VM_SHARED, PAGE_SHARED_EXEC);
+    RET_ASSERT_GOTO(isr_kernel_vbase, "could not vmap isr", cleanup_pin);
+
+    log("mapped isr to kernel virtual address 0x%llx", (uint64_t)isr_kernel_vbase);
+    
+    data->isr_kernel_base = isr_kernel_vbase;
+    
+    return 0;
+
+cleanup_pin:
+    unpin_user_pages(isr_pages, isr_nr_pages);
+    
+cleanup_pages:
+    kfree(isr_pages);
+
+out:
+    isr_kernel_vbase = NULL;
+    isr_pages = NULL;
+    isr_nr_pages = 0;
+    return -EINVAL;
+}
+
+
 typedef long (*ioctl_t)(struct file *filep, unsigned int cmd, unsigned long arg);
 
 long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -146,6 +243,9 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
             break;
         case SGX_STEP_IOCTL_INVPG:
             handler = sgx_step_ioctl_invpg;
+            break;
+        case SGX_STEP_IOCTL_SETUP_ISR_MAP:
+            handler = sgx_step_ioctl_setup_isr_map;
             break;
         default:
             return -EINVAL;
