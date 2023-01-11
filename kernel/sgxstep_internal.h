@@ -37,7 +37,7 @@
         }                                           \
     } while(0)
 
-#define RET_ASSERT_GOTO(cond, message, label)                   \
+#define GOTO_ASSERT(cond, message, label)                       \
     do {                                                        \
         if (!(cond))                                            \
         {                                                       \

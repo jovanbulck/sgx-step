@@ -89,7 +89,9 @@ int apic_timer_deadline(void)
     }
 
     /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
+    /* In xAPIC mode the memory-mapped write to LVTT needs to be serialized. */
     #if APIC_CONFIG_MSR
+        asm volatile("mfence" : : : "memory");
         wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), 1);
     #endif
 }
