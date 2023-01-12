@@ -299,7 +299,8 @@ long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned
     GOTO_ASSERT(g_isr_kernel_vbase, "cannot vmap ISR pages", cleanup_pin);
 
     data->isr_kernel_base = (uint64_t) g_isr_kernel_vbase;
-    log("mapped pinned user ISR memory to kernel virtual address %#llx", data->isr_kernel_base);
+    log("mapped %lld pinned user ISR memory pages to kernel virtual address %#llx",
+            g_isr_nr_pages, data->isr_kernel_base);
     return 0;
 
 cleanup_pin:

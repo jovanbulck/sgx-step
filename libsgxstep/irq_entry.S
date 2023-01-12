@@ -1,3 +1,16 @@
+/*
+ * NOTE: code/data in the dedicated `isr_section` will be mapped by libsgxstep
+ * into the global kernel address range. This ensures that the handler is always
+ * available across CR3 switches (as the APIC timer may sometimes fire after
+ * the libsgxstep process has been context switched).
+ *
+ * Important considerations when programming APIC interrupt handlers:
+ *
+ *      1. All code and global data referenced in the handler should be placed
+ *         in the special `isr_section`.
+ *      2. All code should be written position-independent.
+ *
+ */
 /* ********************************************************************** */
     .section isr_section,"awx",@progbits
     .align 0x1000
@@ -46,14 +59,17 @@ __ss_irq_handler:
     mov __ss_irq_rax(%rip), %rax
     mov __ss_irq_rdx(%rip), %rdx
     iretq
+
 /* ********************************************************************** */
-/* don't put the custom user handler in the mapped ISR region (yet)! */
-/* the pointer could point to data outside the ISR region */
-/* TODO this is okay, as IRQ/Call gates always triggered from within the calling process CR3 */
-/* as long as teh irq num is unused and never triggered from outside the process */
+/*
+ * NOTE: The following handler is only ever supposed to be triggered from
+ * within the libsgxstep process (CR3) by means of a dedicated software
+ * interrupt `int` instruction. Hence, we don't have to map it into the global
+ * kernel virtual address range.
+ */
     .text
     .align 0x1000
-    .global sgx_step_irq_gate_func
-sgx_step_irq_gate_func:
-    call *sgx_step_irq_gate_cb(%rip)
+    .global __ss_irq_gate
+__ss_irq_gate:
+    call *__ss_irq_gate_cb(%rip)
     iretq
