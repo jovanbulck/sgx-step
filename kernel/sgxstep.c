@@ -26,11 +26,15 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <asm/irq.h>
+#include <asm/apic.h>
 
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
 #include <linux/kprobes.h>
+#include <linux/mm.h>
+#include <linux/highmem.h>
+#include <linux/slab.h>
 
 #include <linux/clockchips.h>
 #include <linux/version.h>
@@ -39,26 +43,168 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>, Raoul Strackx <raoul.strackx@cs.kuleuven.be>");
 MODULE_DESCRIPTION("SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control");
 
-int target_cpu = -1;
+static struct page **g_isr_pages = NULL;
+static uint64_t g_isr_nr_pages = 0;
+static void *g_isr_kernel_vbase = NULL;
+
+static int g_in_use = 0;
+
+typedef struct {
+    uint16_t size;
+    uint64_t base;
+} __attribute__((packed)) idtr_t;
+static idtr_t g_idtr = {0};
+static void *g_idt_copy = NULL;
+
+static uint32_t g_apic_lvtt_copy = 0x0, g_apic_tdcr_copy = 0x0;
+
+/* ********************** UTIL FUNCTIONS ******************************* */
+
+/*
+ * NOTE: Linux's default `write_cr0` does not allow to change protected bits,
+ * so we include our own here.
+ */
+inline void do_write_cr0(unsigned long val) {
+    asm volatile("mov %0, %%cr0" : : "r"(val));
+}
+
+void enable_write_protection(void)
+{
+    unsigned long cr0 = read_cr0();
+    set_bit(16, &cr0);
+    do_write_cr0(cr0);
+}
+
+void disable_write_protection(void)
+{
+    unsigned long cr0 = read_cr0();
+    clear_bit(16, &cr0);
+    do_write_cr0(cr0);
+}
+
+/* ********************** DEVICE OPEN ******************************* */
+
+/*
+ * Save original interrupt descriptor table register (IDTR) -- remains
+ * unmodified by libsgxstep; addresses the single global IDT memory structure
+ * setup by Linux at boot time and shared accross all CPUs.
+ *
+ * Copy original interrupt descriptor table (IDT) -- may be modified by
+ * libsgxstep; will be auto restored when closing /dev/sgx-step.
+ */
+int save_idt(void)
+{
+    asm volatile ("sidt %0\n\t"
+                  :"=m"(g_idtr) :: );
+    log("original IDT: %#llx with size %u", g_idtr.base, g_idtr.size+1);
+    RET_ASSERT(g_idtr.base);
+
+    g_idt_copy = kmalloc(g_idtr.size+1, GFP_KERNEL);
+    RET_ASSERT(g_idt_copy);
+    memcpy(g_idt_copy, (void*)g_idtr.base, g_idtr.size+1);
+
+    return 0;
+}
+
+/*
+ * Save APIC timer configuration registers that may be modified by libsgxstep;
+ * will be auto restored when closing /dev/sgx-step.
+ */
+int save_apic(void)
+{
+    g_apic_lvtt_copy = apic_read(APIC_LVTT);
+    g_apic_tdcr_copy = apic_read(APIC_TDCR);
+    log("original APIC_LVTT=%#x/TDCR=%#x)", g_apic_lvtt_copy, g_apic_tdcr_copy);
+
+    return 0;
+}
 
 int step_open(struct inode *inode, struct file *file)
 {
-    if (target_cpu != -1)
-    {   
+    if (g_in_use)
+    {
         err("Device is already opened");
         return -EBUSY;
     }
-    target_cpu = smp_processor_id();
 
+    RET_ASSERT( !save_idt() );
+    RET_ASSERT( !save_apic() );
+
+    g_in_use = 1;
     return 0;
 }
 
+/* ********************** DEVICE CLOSE ******************************* */
+
+/*
+ * Restore original IDT to ensure no user pointers are left. Free kernel vbase
+ * mappings and pinned user physical pages for any registered user ISRs.
+ *
+ * NOTE: the IDT virtual memory page is mapped write-protected by Linux, so we
+ * have to disable CR0.WP temporarily here.
+ */
+void restore_idt(void)
+{
+    disable_write_protection();
+    memcpy((void*)g_idtr.base, g_idt_copy, g_idtr.size+1);
+    enable_write_protection();
+    log("restored IDT: %#llx with size %u", g_idtr.base, g_idtr.size+1);
+
+    kfree(g_idt_copy);
+    g_idt_copy = NULL;
+
+    if (g_isr_kernel_vbase) {
+        vunmap(g_isr_kernel_vbase);
+        g_isr_kernel_vbase = NULL;
+        
+        unpin_user_pages(g_isr_pages, g_isr_nr_pages);
+        g_isr_nr_pages = 0;
+        
+        kfree(g_isr_pages);
+        g_isr_pages = NULL;
+    }
+}
+
+void restore_apic(void)
+{
+    int delta = 100;
+
+    apic_write(APIC_LVTT, g_apic_lvtt_copy);
+    apic_write(APIC_TDCR, g_apic_tdcr_copy);
+    log("restored APIC_LVTT=%#x/TDCR=%#x)", g_apic_lvtt_copy, g_apic_tdcr_copy);
+
+    /* In xAPIC mode the memory-mapped write to LVTT needs to be serialized. */
+    asm volatile("mfence" : : : "memory");
+
+    /* Re-arm the timer so Linux's original handler should take over again. */
+    if (g_apic_lvtt_copy & APIC_LVT_TIMER_TSCDEADLINE)
+    {
+        log("restoring APIC timer tsc-deadline operation");
+        wrmsrl(MSR_IA32_TSC_DEADLINE, rdtsc() + delta);
+    }
+    else
+    {
+        log("restoring APIC timer one-shot/periodic operation");
+        apic_write(APIC_TMICT, delta);
+    }
+}
+
+/*
+ * Called when /dev/sgx-step is closed, also when the application that
+ * originally opened it crashed. We take care to restore any IDT and APIC
+ * modifications made by user-space libsgxstep here to their original values,
+ * such that everything runs again normally and Linux does not panic.
+ */
 int step_release(struct inode *inode, struct file *file)
 {
-    target_cpu = -1;
+    restore_idt();
+    restore_apic();
 
+    g_in_use = 0;
     return 0;
 }
+
+/* ********************** IOCTL FUNCTIONS ******************************* */
 
 /* Convenience function when editing PTEs from user space (but normally not
  * needed, since SGX already flushes the TLB on enclave entry/exit) */
@@ -131,6 +277,45 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
     return 0;
 }
 
+long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+    uint64_t nr_pinned_pages;
+    setup_isr_map_t *data = (setup_isr_map_t*) arg;
+
+    /* allocate space to hold Linux struct page pointers */
+    g_isr_nr_pages = (data->isr_stop - data->isr_start + PAGE_SIZE - 1) / PAGE_SIZE;
+    g_isr_pages = kmalloc(g_isr_nr_pages * sizeof(struct page *), GFP_KERNEL);
+    GOTO_ASSERT(g_isr_pages, "cannot allocate memory", out);
+
+    /* pin user physical memory so it cannot be swapped out by the kernel */
+    nr_pinned_pages = pin_user_pages(data->isr_start & ~(PAGE_SIZE - 1),
+                        g_isr_nr_pages, FOLL_LONGTERM | FOLL_WRITE,
+                        g_isr_pages, NULL);
+    GOTO_ASSERT(nr_pinned_pages == g_isr_nr_pages, "cannot pin all ISR pages", cleanup_pages);
+
+    /* map pinned physical memory into the kernel virtual address range */
+    g_isr_kernel_vbase = vmap(g_isr_pages, g_isr_nr_pages,
+                            VM_READ | VM_EXEC | VM_SHARED, PAGE_SHARED_EXEC);
+    GOTO_ASSERT(g_isr_kernel_vbase, "cannot vmap ISR pages", cleanup_pin);
+
+    data->isr_kernel_base = (uint64_t) g_isr_kernel_vbase;
+    log("mapped %lld pinned user ISR memory pages to kernel virtual address %#llx",
+            g_isr_nr_pages, data->isr_kernel_base);
+    return 0;
+
+cleanup_pin:
+    unpin_user_pages(g_isr_pages, g_isr_nr_pages);
+    
+cleanup_pages:
+    kfree(g_isr_pages);
+
+out:
+    g_isr_kernel_vbase = NULL;
+    g_isr_pages = NULL;
+    g_isr_nr_pages = 0;
+    return -EINVAL;
+}
+
 typedef long (*ioctl_t)(struct file *filep, unsigned int cmd, unsigned long arg);
 
 long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
@@ -146,6 +331,9 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
             break;
         case SGX_STEP_IOCTL_INVPG:
             handler = sgx_step_ioctl_invpg;
+            break;
+        case SGX_STEP_IOCTL_SETUP_ISR_MAP:
+            handler = sgx_step_ioctl_setup_isr_map;
             break;
         default:
             return -EINVAL;
@@ -164,6 +352,8 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
     return 0;
 }
+
+/* ********************** FILE OPERATIONS ******************************* */
 
 static const struct file_operations step_fops = {
     .owner              = THIS_MODULE,
@@ -222,7 +412,6 @@ void cleanup_module(void)
     /* Unregister virtual device */
     if (step_dev.this_device)
         misc_deregister(&step_dev);
-
 
     unregister_kretprobe(&krp);
     log("kernel module unloaded");

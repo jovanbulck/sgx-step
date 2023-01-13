@@ -88,11 +88,11 @@ int wrmsr_on_cpu(uint32_t reg, int cpu, uint64_t data)
 
 uint64_t read_flags()
 {
-	uint64_t flags = 0x0;
+    uint64_t flags = 0x0;
 
-	asm("pushfq\n\t"
-	    "popq %0\n\t"
-	    :"=m"(flags)::);
+    asm("pushfq\n\t"
+        "popq %0\n\t"
+        :"=m"(flags)::);
 
     return flags;
 }

@@ -26,6 +26,7 @@
 #define SGX_STEP_IOCTL_MAGIC            'L'
 #define SGX_STEP_IOCTL_GET_PT_MAPPING   _IOWR(SGX_STEP_IOCTL_MAGIC, 0, address_mapping_t)
 #define SGX_STEP_IOCTL_INVPG            _IOWR(SGX_STEP_IOCTL_MAGIC, 1, invpg_t)
+#define SGX_STEP_IOCTL_SETUP_ISR_MAP    _IOWR(SGX_STEP_IOCTL_MAGIC, 2, setup_isr_map_t)
 
 typedef struct {
 	uint64_t virt;
@@ -40,5 +41,11 @@ typedef struct {
 typedef struct {
     uint64_t adrs;
 } invpg_t;
+
+typedef struct {
+    uint64_t isr_start;       // in
+    uint64_t isr_stop;        // in
+    uint64_t isr_kernel_base; // out
+} setup_isr_map_t;
 
 #endif

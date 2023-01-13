@@ -28,6 +28,7 @@
 #define SINGLE_STEP_ENABLE          1
 #define USER_IDT_ENABLE             1
 #define IRQ_VECTOR                  45
+#define IRQ_PRIV_VECTOR             49
 #define GDT_VECTOR                  13
 #if (M32 != 1)
 	#define APIC_CONFIG_MSR         1
