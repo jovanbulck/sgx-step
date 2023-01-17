@@ -18,6 +18,10 @@ ifeq ($(M32), 1)
 	CFLAGS += -m32 -DM32=1
 endif
 
+ifeq ($(GRAMINE), 1)
+	CFLAGS += -DSGX_SSAFRAMESIZE=16384
+endif
+
 SOURCES     = $(shell ls *.c)
 ASM         = $(shell ls *.S)
 OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)

@@ -1,12 +1,10 @@
 ### Building the patched Gramine
 
-0. First, make sure to build `libsgxstep.a` with some minor adjustments:
+0. First, make sure to build `libsgxstep.a` with the correct SSA framesize for Gramine:
 
 ```bash
-$ cd sdk/gramine
-$ ./patch_sgxstep.sh
 $ cd ../../libsgxstep
-$ make clean all
+$ GRAMINE=1 make clean all
 ```
 
 1. Apply the patches in the untrusted Gramine runtime `host_entry.S` to be able to link to `libsgxstep.a`.
@@ -83,7 +81,7 @@ $ export PYTHONPATH=/usr/local  # Fix https://github.com/gramineproject/gramine/
 $ gramine-sgx-gen-private-key
 ```
 
-The following changes are patched into the target application's manifest template with `0002-helloworld-with-Nemesis-in-Gramine.patch`:
+The following changes are patched into the target application's manifest template with `0002-helloworld-Nemesis.patch`:
 
 |`loader.insecure__disable_aslr = true`      | For setting function offsets found through objdump in the binary                                                  | 
 |`loader.insecure__use_cmdline_argv = true`  | For passing command line arguments to a binary                                                                    |
@@ -92,7 +90,7 @@ The following changes are patched into the target application's manifest templat
 |`sgx.thread_num = 4`                        | This is probably optional, but Gramine needs 3 threads according to the [docs](https://gramine.readthedocs.io/en/latest/manifest-syntax.html#number-of-threads-deprecated-syntax), so we set it to 4 (assuming the binary is single-threaded) |
 
 
-The example explicitly filters out all steps in the address range of the libOS (the assumption being that we are interested in the binary and not Gramine) and only logs stepping the `main()` function. The offsets of the LibOS and binary included in the Gramine patch will most likely not work. To retrieve them, execute `helloworld` in DEBUG mode. When determining the offset, it is recommended to turn off stepping (set `#define  SGX_STEP_ENABLE` to 0 in `host_ecalls.c`). Don't forget to run `ninja` after making changes to Gramine.
+The example explicitly filters out all steps in the address range of the libOS (the assumption being that we are interested in the binary and not Gramine) and only logs stepping the `main()` function. The offsets of the LibOS and binary included in the Gramine patch will most likely not work. To retrieve them, execute `helloworld` in DEBUG mode. When determining the offset, it is recommended to turn off stepping (set `#define  SGX_STEP_ENABLE` to 0 in `host_ecalls.c`). Don't forget to run `ninja` after making changes to Gramine (and also have the sgx-step kernel module loaded).
 
 ```bash
 $ cd CI-Examples/helloworld
