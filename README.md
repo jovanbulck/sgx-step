@@ -206,6 +206,13 @@ User-space applications can link to the `libsgxstep` library to make use of
 SGX-Step's single-stepping and page table manipulation features. Have a look at
 the example applications in the "app" directory.
 
+First, check the APIC and interrupt-descriptor table setup:
+
+```bash
+$ cd app/idt
+$ make run    # fires interrupts in an infinite loop to stress-test stability; exit with CTRL-C
+```
+
 For example, to build and run an elementary example application to test page
 table manipulation features and SDK patches:
 
@@ -245,6 +252,15 @@ frequency, and hence remains inherently platform-specific. Configure a suitable
 value in `/app/bench/main.c`. We established precise timer intervals for our
 evaluation platforms (see table above) by tweaking and observing the NOP
 microbenchmark enclave instruction pointer trace results.
+
+**Note (stability).** In order to avoid the Linux kernel getting stuck or
+panicking, SGX-Step should automatically restore the interrupt-descriptor table
+and local APIC timer after exiting the `libsgxstep` process. You can check if
+the APIC timer is still firing on all cores as follows:
+
+```bash
+$ watch -n0.1 "cat /proc/interrupts | grep 'Local timer interrupts'"
+```
 
 #### Calibrating the single-stepping interval
 

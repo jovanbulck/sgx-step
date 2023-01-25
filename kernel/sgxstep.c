@@ -47,6 +47,11 @@ static struct page **g_isr_pages = NULL;
 static uint64_t g_isr_nr_pages = 0;
 static void *g_isr_kernel_vbase = NULL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
+    #define pin_user_pages_fast         get_user_pages_fast
+    #define unpin_user_pages            put_user_pages
+#endif
+
 static int g_in_use = 0;
 
 typedef struct {
@@ -282,15 +287,14 @@ long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned
     uint64_t nr_pinned_pages;
     setup_isr_map_t *data = (setup_isr_map_t*) arg;
 
-    /* allocate space to hold Linux struct page pointers */
+    /* allocate space to hold Linux `struct page` pointers */
     g_isr_nr_pages = (data->isr_stop - data->isr_start + PAGE_SIZE - 1) / PAGE_SIZE;
     g_isr_pages = kmalloc(g_isr_nr_pages * sizeof(struct page *), GFP_KERNEL);
     GOTO_ASSERT(g_isr_pages, "cannot allocate memory", out);
 
     /* pin user physical memory so it cannot be swapped out by the kernel */
-    nr_pinned_pages = pin_user_pages(data->isr_start & ~(PAGE_SIZE - 1),
-                        g_isr_nr_pages, FOLL_LONGTERM | FOLL_WRITE,
-                        g_isr_pages, NULL);
+    nr_pinned_pages = pin_user_pages_fast(data->isr_start & ~(PAGE_SIZE - 1),
+                        g_isr_nr_pages, FOLL_LONGTERM | FOLL_WRITE, g_isr_pages);
     GOTO_ASSERT(nr_pinned_pages == g_isr_nr_pages, "cannot pin all ISR pages", cleanup_pages);
 
     /* map pinned physical memory into the kernel virtual address range */
@@ -350,7 +354,7 @@ long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
             return -EFAULT;
     }
 
-    return 0;
+    return ret;
 }
 
 /* ********************** FILE OPERATIONS ******************************* */
