@@ -330,6 +330,13 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
+| FaultMorse: An automated controlled-channel attack via longest recurring sequence | [ComSec23](https://www.sciencedirect.com/science/article/pii/S0167404822003959) | [link](https://github.com/Ezekiel-1998/FaultMorse) | Page fault |
+| On (the Lack of) Code Confidentiality in Trusted Execution Environments | [arXiv22](https://arxiv.org/pdf/2212.07899.pdf) | - | Single-stepping |
+| AEPIC Leak: Architecturally Leaking Uninitialized Data from the Microarchitecture  | [USEC22](https://www.usenix.org/system/files/sec22-borrello.pdf) | [link](https://github.com/IAIK/AEPIC) | Single-Stepping, PTE A/D |
+| MoLE: Mitigation of Side-channel Attacks against SGX via Dynamic Data Location Escape | [ACSAC22](https://dl.acm.org/doi/fullHtml/10.1145/3564625.3568002) | - | Single-Stepping, page fault, transient execution |
+| WIP: Interrupt Attack on TEE-Protected Robotic Vehicles | [NDSS22](https://www.ndss-symposium.org/wp-content/uploads/autosec2022_23001_paper.pdf) | - | Single-stepping, multi-stepping |
+| Towards Self-monitoring Enclaves: Side-Channel Detection Using Performance Counters | [NordSec22](https://link.springer.com/chapter/10.1007/978-3-031-22295-5_7) | - | Page fault, LVI. |
+| ENCLYZER: Automated Analysis of Transient Data Leaks on Intel SGX | [SEED22](https://ieeexplore.ieee.org/document/9935016) | [link](https://github.com/bloaryth/enclyser) | Page-table manipulation |
 | Side-Channeling the Kalyna Key Expansion | [CT-RSA22](https://cs.adelaide.edu.au/~yval/pdfs/ChuengsatiansupGYZ22.pdf) | - | Single-Stepping, PTE A/D |
 | Rapid Prototyping for Microarchitectural Attacks | [USENIX22](https://www.usenix.org/system/files/sec22summer_easdon.pdf) | [link](https://github.com/libtea/frameworks) | Single-stepping, page fault, PTE A/D, etc. |
 | Util::Lookup: Exploiting Key Decoding in Cryptographic Libraries | [CCS21](https://dl.acm.org/doi/abs/10.1145/3460120.3484783) | [link](https://github.com/UzL-ITS/util-lookup) | Single-Stepping, PTE A/D |
