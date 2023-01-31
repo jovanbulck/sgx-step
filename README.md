@@ -330,6 +330,7 @@ a pull request if your project uses SGX-Step but is not included below.
 
 | Title | Publication details | Source code | SGX-Step features used |
 |-------|---------------------|-------------|------------------------|
+| Cache-timing attack against HQC | [IACR23](https://eprint.iacr.org/2023/102.pdf) | - | Single-stepping, PTE A/D |
 | FaultMorse: An automated controlled-channel attack via longest recurring sequence | [ComSec23](https://www.sciencedirect.com/science/article/pii/S0167404822003959) | [link](https://github.com/Ezekiel-1998/FaultMorse) | Page fault |
 | On (the Lack of) Code Confidentiality in Trusted Execution Environments | [arXiv22](https://arxiv.org/pdf/2212.07899.pdf) | - | Single-stepping |
 | AEPIC Leak: Architecturally Leaking Uninitialized Data from the Microarchitecture  | [USEC22](https://www.usenix.org/system/files/sec22-borrello.pdf) | [link](https://github.com/IAIK/AEPIC) | Single-Stepping, PTE A/D |
