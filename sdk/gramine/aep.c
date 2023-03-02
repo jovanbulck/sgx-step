@@ -1,15 +1,15 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include "apic.h"
-#include "pt.h"
-#include "debug.h"
-#include "enclave.h"
-#include "sched.h"
-#include "config.h"
-#include "idt.h"
-#include "cpu.h"
-#include "gdt.h"
+#include "../../libsgxstep/apic.h"
+#include "../../libsgxstep/pt.h"
+#include "../../libsgxstep/debug.h"
+#include "../../libsgxstep/enclave.h"
+#include "../../libsgxstep/sched.h"
+#include "../../libsgxstep/config.h"
+#include "../../libsgxstep/idt.h"
+#include "../../libsgxstep/cpu.h"
+#include "../../libsgxstep/gdt.h"
 #include "aep.h"
 
 
@@ -30,12 +30,12 @@ const uint64_t main_end_offset = 0x116e;
  * binary with Gramine in DEBUG mode. Note that ASLR must be turned off in the manifest for
  * the addresses to remain constant.
  */
-const uint64_t libos = 0xfd2b000;
+const uint64_t libos = 0xf963000;
 /*
  * This is the address in the enclave where the binary starts. Gramine will also tell you this
  * offset in DEBUG mode.
  */
-const uint64_t bin_offset = 0xfc84000;
+const uint64_t bin_offset = 0xb9ee000;
 
 int irq_cnt = 0, do_irq = 1, reset_fault_handler = 0;
 idt_t idt = {0};
