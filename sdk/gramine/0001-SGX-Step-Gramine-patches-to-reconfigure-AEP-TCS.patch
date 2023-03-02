@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index 85dfcc6b..faae77cc 100644
+index 5cdb1c5c..3ecc93d3 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -272,6 +272,10 @@ if sgx
+@@ -282,6 +282,10 @@ if sgx
          sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
      endif
  
@@ -115,26 +115,26 @@ index f0aae5bd..670ec638 100644
      /* in case of AEX, RIP can point to any instruction in the AEP/ERESUME trampoline code, i.e.,
       * RIP can point to anywhere in [async_exit_pointer, async_exit_pointer_end) interval */
 diff --git a/pal/src/host/linux-sgx/meson.build b/pal/src/host/linux-sgx/meson.build
-index 3444d9b4..2d188bcd 100644
+index 3e77bdcc..29f16a32 100644
 --- a/pal/src/host/linux-sgx/meson.build
 +++ b/pal/src/host/linux-sgx/meson.build
-@@ -10,12 +10,15 @@ pal_sgx_inc = [
-     ),
- ]
+@@ -4,12 +4,15 @@ gsgx_h = configure_file(
+     configuration: conf_sgx,
+ )
  
-+sgxstepdir = '<ENTER ABSOLUTE PATH OF SGX-STEP HERE>'
++sgxstepdir = '<ENTER ABSOLUTE PATH OF SGX-STEP PARENT FOLDER HERE>'
 +
  sgx_inc = [
      includes_pal_common,
-     pal_sgx_inc,
      include_directories(
+         '.',
          '../../../include/arch/@0@/linux'.format(host_machine.cpu_family()),
          '../../../include/host/linux-common',
 +        join_paths(sgxstepdir, 'sgx-step/')
      ),
  ]
  
-@@ -157,6 +160,12 @@ libpal_sgx_host = executable('loader',
+@@ -152,6 +155,12 @@ libpal_sgx_host = executable('loader',
          # host part of PAL uses stack protector with standard parameters (not the ones defined for
          # PAL/LibOS)
          '-fstack-protector-strong',
@@ -147,7 +147,7 @@ index 3444d9b4..2d188bcd 100644
      ],
      link_args: [
          '-Wl,-zrelro',
-@@ -169,6 +178,8 @@ libpal_sgx_host = executable('loader',
+@@ -164,6 +173,8 @@ libpal_sgx_host = executable('loader',
          protobuf_dep,
          vtune_dep,
          dl_dep,

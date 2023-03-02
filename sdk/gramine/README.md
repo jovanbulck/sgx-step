@@ -10,13 +10,13 @@ $ GRAMINE=1 make clean all
 1. Apply the patches in the untrusted Gramine runtime `host_entry.S` to be able to link to `libsgxstep.a`.
 
 ```bash
-$ ./patch_entry.sh
+$ cd sdk/gramine/gramine
+$ ../patch_entry.sh
 ```
 
 2. Build the patched Gramine runtime and validate that the patches were properly applied in the modified Gramine loader.
 
 ```bash
-$ cd gramine
 $ meson setup build/ --buildtype=release -Dsgx=enabled
 $ meson configure build/ -Dsgx=enabled
 $ ninja -C build
@@ -60,7 +60,6 @@ patch in `host_ecalls.c` demonstrates some basic usages:
 
 ```bash
 $ ./patch_ecall.sh
-$ cd gramine
 $ ninja -C build
 $ objdump -d build/pal/src/host/linux-sgx/loader | grep sgx_step
    18631:	48 8d 05 2c 1c 00 00 	lea    0x1c2c(%rip),%rax        # 1a264 <sgx_step_aep_trampoline>
@@ -95,7 +94,7 @@ The example explicitly filters out all steps in the address range of the libOS (
 ```bash
 $ cd CI-Examples/helloworld
 $ make SGX=1 DEBUG=1
-$ gramine-sgx helloworld
+$ sudo gramine-sgx helloworld
 ```
 Which will print plenty of debug output. For the libOS, you should see:
 
@@ -108,7 +107,7 @@ And for the `helloworld` binary:
 [P1:T1:helloworld] debug: append_r_debug: adding file:helloworld at <address>
 ```
 
-The addresses have to be replaced in `host_ecalls.c` (again, don't forget to run `ninja`).
+The addresses have to be replaced in `aep.c` (again, don't forget to run recompile libsgxstep and run `ninja`).
 
 Now you can run the binary and watch it step through `main()`:
 
