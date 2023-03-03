@@ -58,10 +58,10 @@ int edbgrdwr(void *adrs, void* res, int len, int write);
 
 /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
    runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */
-#define SGX_SSAFRAMESIZE            4096
 //TODO determine this at runtime..
-// SSA framesize for Gramine seems to be as follows
-// #define SGX_SSAFRAMESIZE            16384
+#ifndef SGX_SSAFRAMESIZE
+    #define SGX_SSAFRAMESIZE            4096
+#endif
 
 struct gprsgx_region {
     uint64_t rax;

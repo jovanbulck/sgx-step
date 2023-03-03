@@ -23,6 +23,11 @@ ASM         = $(shell ls *.S)
 OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)
 OUTPUT      = libsgx-step.a
 
+ifeq ($(GRAMINE), 1)
+	CFLAGS += -DSGX_SSAFRAMESIZE=16384
+	SOURCES += ./../sdk/gramine/aep.c
+endif
+
 all: $(OUTPUT)
 
 $(OUTPUT): $(OBJECTS)
@@ -31,7 +36,7 @@ $(OUTPUT): $(OBJECTS)
 
 %.o : %.c
 	echo "$(INDENT)[CC] " $<
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDE) -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o : %.S
 	echo "$(INDENT)[AS] " $<

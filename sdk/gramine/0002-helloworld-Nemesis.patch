@@ -1,0 +1,80 @@
+diff --git a/CI-Examples/helloworld/helloworld.manifest.template b/CI-Examples/helloworld/helloworld.manifest.template
+index 64c908e1..205860da 100644
+--- a/CI-Examples/helloworld/helloworld.manifest.template
++++ b/CI-Examples/helloworld/helloworld.manifest.template
+@@ -6,6 +6,9 @@ loader.log_level = "{{ log_level }}"
+ 
+ loader.env.LD_LIBRARY_PATH = "/lib"
+ 
++loader.insecure__use_cmdline_argv = true
++loader.insecure__disable_aslr = true
++
+ fs.mounts = [
+   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+   { path = "/helloworld", uri = "file:helloworld" },
+@@ -13,6 +16,8 @@ fs.mounts = [
+ 
+ sgx.debug = true
+ sgx.nonpie_binary = true
++sgx.preheat_enclave = true
++sgx.thread_num = 4
+ 
+ sgx.trusted_files = [
+   "file:{{ gramine.libos }}",
+diff --git a/pal/src/host/linux-sgx/host_ecalls.c b/pal/src/host/linux-sgx/host_ecalls.c
+index 9387266b..e83acc63 100644
+--- a/pal/src/host/linux-sgx/host_ecalls.c
++++ b/pal/src/host/linux-sgx/host_ecalls.c
+@@ -5,6 +5,14 @@
+ #include "host_internal.h"
+ #include "pal_ecall_types.h"
+ #include "pal_rpc_queue.h"
++#include "sdk/gramine/aep.h"
++
++#define  SGX_STEP_ENABLE        1
++
++#define  THREAD_END              4
++
++static int thread_ctr = 0;
++static spinlock_t g_step_lock = INIT_SPINLOCK_UNLOCKED;
+ 
+ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
+                         size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
+@@ -32,13 +40,37 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
+     ms.ms_topo_info        = topo_info;
+     ms.ms_dns_host_conf    = dns_conf;
+     ms.rpc_queue           = g_rpc_queue;
++    
++#if SGX_STEP_ENABLE
++    /* NOTE: set sgx.preheat_enclave = true in manifest to prefault pages (occurs in pal_main.c) */
++    /* Configure and check attacker untrusted runtime environment. */
++    attacker_config_runtime();
++#endif
++   
+     return sgx_ecall(ECALL_ENCLAVE_START, &ms);
+ }
+ 
+ int ecall_thread_start(void) {
++
++#if SGX_STEP_ENABLE
++     thread_ctr++;
++     if(thread_ctr == 4) {
++        spinlock_lock(&g_step_lock);
++        configure_mapping();
++        spinlock_unlock(&g_step_lock);
++     }
++#endif
++
+     return sgx_ecall(ECALL_THREAD_START, NULL);
+ }
+ 
+ int ecall_thread_reset(void) {
++
++#if SGX_STEP_ENABLE
++    if(thread_ctr == THREAD_END){
++        restore_timer();
++    }
++#endif
++
+     return sgx_ecall(ECALL_THREAD_RESET, NULL);
+ }

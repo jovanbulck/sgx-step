@@ -72,7 +72,7 @@ static inline int apic_write(uint32_t reg, uint32_t v)
     if (!apic_base) apic_init();
 
     addr = (volatile uint32_t *)(apic_base + reg);
-    asm volatile ("movl %1, %0\n\t"
+    __asm__ volatile ("movl %1, %0\n\t"
         :"=m"(*addr):"r"(v):);
 
     return 0;
