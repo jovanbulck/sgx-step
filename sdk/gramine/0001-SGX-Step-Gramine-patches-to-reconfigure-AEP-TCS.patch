@@ -7,7 +7,7 @@ index 5cdb1c5c..3ecc93d3 100644
      endif
  
 +  # XXX taken from: https://stackoverflow.com/questions/34663124/link-static-library-to-shared-library-or-to-a-binary
-+  libsgxstepdir = '<ENTER ABSOLUTE PATH OF LIBSGXSTEP HERE>'
++  libsgxstepdir = join_paths(meson.current_source_dir(), '../../../libsgxstep/')
 +  libsgxstep_dep = cc.find_library('libsgx-step', dirs : libsgxstepdir)
 +
    vtune_dep = []
@@ -122,7 +122,7 @@ index 3e77bdcc..29f16a32 100644
      configuration: conf_sgx,
  )
  
-+sgxstepdir = '<ENTER ABSOLUTE PATH OF SGX-STEP PARENT FOLDER HERE>'
++sgxstepdir = '../../../../../../../../'
 +
  sgx_inc = [
      includes_pal_common,

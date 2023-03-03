@@ -1,3 +1,5 @@
+> :warning: SGX-Step integration for Gramine is experimental, awaiting an abstract SDK interface for SGX-Step (cf. issue #28).
+
 ### Building the patched Gramine
 
 0. First, make sure to build `libsgxstep.a` with the correct SSA framesize for Gramine:
@@ -48,11 +50,8 @@ Note that only the OOT was tested on Ubuntu 20.04.4 LTS with Kernel 5.9 loaded. 
 
 ```bash
 $ cat /proc/cmdline
-... nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 noexec=off nmi_watchdog=0 rcuupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on intel_idle.max_cstate=1 processor.max_cstate=1 dis_ucode_ldr vt.handoff=7
+... nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 isolcpus=1 pti=off nmi_watchdog=0 rcuupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on intel_idle.max_cstate=1 processor.max_cstate=1 dis_ucode_ldr vt.handoff=7
 ```
-
-Setting `kpti=0` on the test system didn't work reliably and caused system freezes after a few rounds of single stepping. Instead, the parameter `noexec=off` was set.
-
 
 3. Now, you can implement the required attack code in Gramine's untrusted
 runtime using `libsgxstep` functionality as usual. For example, the following
@@ -82,6 +81,8 @@ $ gramine-sgx-gen-private-key
 
 The following changes are patched into the target application's manifest template with `0002-helloworld-Nemesis.patch`:
 
+| Manifest setting                     | Motivation                                                         |
+|--------------------------------------|------------------------------------------------------------------  |
 |`loader.insecure__disable_aslr = true`      | For setting function offsets found through objdump in the binary                                                  | 
 |`loader.insecure__use_cmdline_argv = true`  | For passing command line arguments to a binary                                                                    |
 |`sgx.debug = true`                          | For getting debug output such as the offset of the libos and the binary                                           |
