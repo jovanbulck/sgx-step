@@ -132,7 +132,7 @@ $ cat /proc/cmdline
 ```
 
 ### Important Note for Updated Kernel Versions
-For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep,nosmap` flags are not allowed, and it is needed to turn them off using `clearcpuid`. one can use the kernel updated parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
+For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep,nosmap` flags are not allowed, and it is needed to turn them off using `clearcpuid`. One can use the kernel updated parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=smap,smep,umip pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
 ```
