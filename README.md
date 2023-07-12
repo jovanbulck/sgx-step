@@ -131,6 +131,12 @@ $ sudo update-grub && reboot
 $ cat /proc/cmdline
 ```
 
+### Important Note for Updated Kernel Versions
+For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate with vulnerabilities, Supervisor Mode Execution/Access Preventions can not be turned off with `nosmep,nosmap` flags and it is needed to turn off them using `clearcpuid`, one can use the kernel parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=smap,smep,umip pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
+```
+
 Finally, to improve overall execution time stability, you may opt to
 additionally disable C-States and SpeedStep technology in the BIOS
 configuration.
