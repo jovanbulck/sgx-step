@@ -20,13 +20,13 @@ Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
 photo frames to reveal overall horse gait properties.
 
-| SGX-Step release | Comments 		                                                              |
-|------------------|----------------------------------------------------------------------------------|
-| v1.4.0           | Privileged interrupt/call gates (Plundervolt).                                   |
-| v1.3.0           | Transient-execution support (Foreshadow).                                        |
-| v1.2.0           | User-space interrupt handling and deterministic zero-step filtering (Nemesis).   |
-| v1.1.0           | IA32 support. 		                                                      |
-| v1.0.0           | User-space page table manipulation and APIC timer single-stepping.               |
+| SGX-Step release | Comments                                                                       |
+| ---------------- | ------------------------------------------------------------------------------ |
+| v1.4.0           | Privileged interrupt/call gates (Plundervolt).                                 |
+| v1.3.0           | Transient-execution support (Foreshadow).                                      |
+| v1.2.0           | User-space interrupt handling and deterministic zero-step filtering (Nemesis). |
+| v1.1.0           | IA32 support.                                                                  |
+| v1.0.0           | User-space page table manipulation and APIC timer single-stepping.             |
 
 **Publications.** SGX-Step has been employed by several independent research
 groups and has enabled a new line of high-resolution SGX attacks. A full
@@ -71,7 +71,7 @@ interrupting and resuming an SGX enclave through our framework.
 4. The library returns to the user space AEP trampoline. We modified the
    untrusted runtime of the official SGX SDK to allow easy registration of a
    custom AEP stub. Furthermore, to enable precise evaluation of our approach on
-   attacker-controlled benchmark debug enclaves, SGX-Step can *optionally* be
+   attacker-controlled benchmark debug enclaves, SGX-Step can _optionally_ be
    instrumented to retrieve the stored instruction pointer from the interrupted
    enclave’s SSA frame. For this, our `/dev/sgx-step` driver offers an optional
    IOCTL call for the privileged `EDBGRD` instruction.
@@ -107,39 +107,37 @@ More recent Linux kernels and distributions are also supported.
 We summarize Linux [kernel parameters](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html)
 below.
 
-| Linux kernel parameter               | Motivation                                                         |
-|--------------------------------------|------------------------------------------------------------------  |
-| `nox2apic`                           | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).   |
-| `iomem=relaxed no_timer_check`       | Suppress unneeded warning messages in the kernel logs.             |
-| `nmi_watchdog=0`                     | Suppress the kernel NMI watchdog.                                  |
-| `isolcpus=1`                         | Affinitize the victim process to an isolated CPU core.             |
-| `nosmap nosmep`                      | Disable Supervisor Mode Access/Execution Prevention (to allow SGX-Step to execute ring-0 IRQ handlers on user pages). |
-| `clearcpuid=514`                     | Disable User-Mode Instruction Prevention (on newer CPUs).          |
-| `pti=off`                            | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers). |
-| `rcuupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.) |
-| `msr.allow_writes=on`                | Suppress kernel warning messages for model-specific register (MSR) writes by SGX-Step. |
-| `vdso=0`                             | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches). |
-| `dis_ucode_ldr`                      | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                  |
+| Linux kernel parameter               | Motivation                                                                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `nox2apic`                           | Configure local APIC device in memory-mapped I/O mode (to make use of SGX-Step's precise single-stepping features).                                                            |
+| `iomem=relaxed no_timer_check`       | Suppress unneeded warning messages in the kernel logs.                                                                                                                         |
+| `nmi_watchdog=0`                     | Suppress the kernel NMI watchdog.                                                                                                                                              |
+| `isolcpus=1`                         | Affinitize the victim process to an isolated CPU core.                                                                                                                         |
+| `clearcpuid=308,295,514`             | Disable Supervisor Mode Access Prevention **(smap, 295)**, Supervisor Mode Execution Prevention **(smep, 308)** and User-Mode Instruction Prevention **(umip, 514)** features. |
+| `pti=off`                            | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers).                                                                                           |
+| `rcuupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.)  |
+| `msr.allow_writes=on`                | Suppress kernel warning messages for model-specific register (MSR) writes by SGX-Step.                                                                                         |
+| `vdso=0`                             | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches).                                                           |
+| `dis_ucode_ldr`                      | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                          |
 
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
+  #if vim command doesn't work, you can also try nano instead.
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check nosmep nosmap clearcpuid=514 pti=off isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=308,295,514 pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
+
 $ sudo update-grub && reboot
   # to inspect the boot parameters of the currently running kernel, execute:
 $ cat /proc/cmdline
 ```
 
-### Important Note for Updated Kernel Versions
-For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep,nosmap` flags are not allowed, and it is needed to turn them off using `clearcpuid`. One can use the kernel updated parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
-```
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=smap,smep,umip pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
-```
-
-Finally, to improve overall execution time stability, you may opt to
+**Finally**, to improve overall` execution time stability`, you may opt to
 additionally disable C-States and SpeedStep technology in the BIOS
 configuration.
+
+**Note (updated kernel versions).**
+For the updated Linux kernel versions after `5.15`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep, nosmap` flags are not allowed, and it is needed to turn them off with `clearcpuid` using their respective feature flags. One can use the updated kernel parameters in the current repository if you are having a problem, such as your system freezing up every time you try to use sgx-step.
 
 ### 1. Build and load `/dev/sgx-step`
 
@@ -156,6 +154,7 @@ $ cd kernel/
 $ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04/22.04
 $ make clean load
 ```
+
 **Note (/dev/sgx_enclave).** SGX-Step supports both the legacy Intel
 `/dev/isgx` out-of-tree driver that should work on all platforms, as well as
 well as the upstream `/dev/sgx_enclave` driver for platforms with recent Linux
@@ -277,17 +276,17 @@ version of the processor when recent [transient-execution attack](https://transi
 in place to flush microarchitectural buffers on enclave entry/exit.
 Some different microcode versions are provided for reference in the table below.
 
-| Model name    | CPU                                               | Base frequency | ucode (date)      | APIC timer interval |
-|---------------|---------------------------------------------------|----------------|-------------------|---------------------|
-| Skylake       | [i7-6700](https://ark.intel.com/products/88196)   | 3.4 GHz        | ?                 | 19                  |
-| Skylake       | [i7-6500U](https://ark.intel.com/products/88194)  | 2.5 GHz        | ?                 | 25                  |
-| Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | ?                 | 28                  |
-| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | ?                 | 34                  |
-| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
-| Coffee Lake R       | [i7-9700](https://ark.intel.com/content/www/us/en/ark/products/191792/intel-core-i79700-processor-12m-cache-up-to-4-70-ghz.html)   | 3 GHz        | ?                 | 26                 |
-| Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
-| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  | 0x32 (2019-07-05) | 135 |
-| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  |  0xb0 (2022-03-09) | 255 |
+| Model name    | CPU                                                                                                                                  | Base frequency | ucode (date)      | APIC timer interval |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ----------------- | ------------------- |
+| Skylake       | [i7-6700](https://ark.intel.com/products/88196)                                                                                      | 3.4 GHz        | ?                 | 19                  |
+| Skylake       | [i7-6500U](https://ark.intel.com/products/88194)                                                                                     | 2.5 GHz        | ?                 | 25                  |
+| Skylake       | [i5-6200U](https://ark.intel.com/products/88193)                                                                                     | 2.3 GHz        | ?                 | 28                  |
+| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968)                                                                                    | 1.9 GHz        | ?                 | 34                  |
+| Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968)                                                                                    | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
+| Coffee Lake R | [i7-9700](https://ark.intel.com/content/www/us/en/ark/products/191792/intel-core-i79700-processor-12m-cache-up-to-4-70-ghz.html)     | 3 GHz          | 0xf4 (2022-07-31) | 26                  |
+| Coffee Lake R | [i9-9900K](https://ark.intel.com/products/186605)                                                                                    | 3.6 GHz        | ?                 | 21                  |
+| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz       | 0x32 (2019-07-05) | 135                 |
+| Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz       | 0xb0 (2022-03-09) | 255                 |
 
 **Note (calibration).**
 Currently, the easiest way to configure a reliable timer interval is to
@@ -315,8 +314,6 @@ variance of enclave entry time, which implies that you might have to
 configure the timer more conservatively with more zero-steps (which can be
 deterministically filtered out as explained above).
 
-
-
 ## Using SGX-Step in your own projects
 
 The easiest way to get started using the SGX-Step framwork in your own
@@ -328,6 +325,7 @@ $ cd my/git/project
 $ git submodule add https://github.com/jovanbulck/sgx-step.git
 $ cd sgx-step # Now build `/dev/sgx-step` and `libsgxstep` as described above
 ```
+
 Have a look at the Makefiles in the `app` directory to see how a client
 application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
 
@@ -335,39 +333,39 @@ application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
 The following is a list of known projects that use SGX-Step. Feel free to open
 a pull request if your project uses SGX-Step but is not included below.
 
-| Title | Publication details | Source code | SGX-Step features used |
-|-------|---------------------|-------------|------------------------|
-| Cache-timing attack against HQC | [IACR23](https://eprint.iacr.org/2023/102.pdf) | - | Single-stepping, PTE A/D |
-| FaultMorse: An automated controlled-channel attack via longest recurring sequence | [ComSec23](https://www.sciencedirect.com/science/article/pii/S0167404822003959) | [link](https://github.com/Ezekiel-1998/FaultMorse) | Page fault |
-| On (the Lack of) Code Confidentiality in Trusted Execution Environments | [arXiv22](https://arxiv.org/pdf/2212.07899.pdf) | - | Single-stepping |
-| AEPIC Leak: Architecturally Leaking Uninitialized Data from the Microarchitecture  | [USEC22](https://www.usenix.org/system/files/sec22-borrello.pdf) | [link](https://github.com/IAIK/AEPIC) | Single-Stepping, PTE A/D |
-| MoLE: Mitigation of Side-channel Attacks against SGX via Dynamic Data Location Escape | [ACSAC22](https://dl.acm.org/doi/fullHtml/10.1145/3564625.3568002) | - | Single-Stepping, page fault, transient execution |
-| WIP: Interrupt Attack on TEE-Protected Robotic Vehicles | [NDSS22](https://www.ndss-symposium.org/wp-content/uploads/autosec2022_23001_paper.pdf) | - | Single-stepping, multi-stepping |
-| Towards Self-monitoring Enclaves: Side-Channel Detection Using Performance Counters | [NordSec22](https://link.springer.com/chapter/10.1007/978-3-031-22295-5_7) | - | Page fault, LVI. |
-| ENCLYZER: Automated Analysis of Transient Data Leaks on Intel SGX | [SEED22](https://ieeexplore.ieee.org/document/9935016) | [link](https://github.com/bloaryth/enclyser) | Page-table manipulation |
-| Side-Channeling the Kalyna Key Expansion | [CT-RSA22](https://cs.adelaide.edu.au/~yval/pdfs/ChuengsatiansupGYZ22.pdf) | - | Single-Stepping, PTE A/D |
-| Rapid Prototyping for Microarchitectural Attacks | [USENIX22](https://www.usenix.org/system/files/sec22summer_easdon.pdf) | [link](https://github.com/libtea/frameworks) | Single-stepping, page fault, PTE A/D, etc. |
-| Util::Lookup: Exploiting Key Decoding in Cryptographic Libraries | [CCS21](https://dl.acm.org/doi/abs/10.1145/3460120.3484783) | [link](https://github.com/UzL-ITS/util-lookup) | Single-Stepping, PTE A/D |
-| SmashEx: Smashing SGX Enclaves Using Exceptions | [CCS21](https://dl.acm.org/doi/pdf/10.1145/3460120.3484821) | - | Single-Stepping |
-| Online Template Attacks: Revisited | [CHES21](https://tches.iacr.org/index.php/TCHES/article/view/8967/8545) | [link](https://zenodo.org/record/4680071) | Single-stepping, page fault, PTE A/D |
-| Aion Attacks: Manipulating Software Timers in Trusted Execution Environment | [DIMVA21](http://individual.utoronto.ca/shengjiexu/publication/whuang-dimva2021-aion_v2.pdf) | - | Single-stepping, interrupts(?) |
-| Platypus: Software-based Power Side-Channel Attacks on x86 | [S&P21](https://platypusattack.com/platypus.pdf) | [link](https://github.com/0xhilbert/Platypus) | Single-stepping, zero-stepping |
-| CrossTalk: Speculative Data Leaks Across Cores Are Real | [S&P21](https://download.vusec.net/papers/crosstalk_sp21.pdf) | - | Single-stepping, page fault |
-| Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend | [USEC21](https://www.usenix.org/system/files/sec21-puddu.pdf) | [link](https://github.com/dn0sar/frontal_poc) | Single-stepping interrupt latency, PTE A/D |
-| SpeechMiner: A Framework for Investigating andMeasuring Speculative Execution Vulnerabilities | [NDSS20](https://www.ndss-symposium.org/wp-content/uploads/2020/02/23105-paper.pdf) | [link](https://github.com/teecert/SpeechMiner) | Page-table manipulation |
-| From A to Z: Projective coordinates leakage in the wild | [CHES20](https://eprint.iacr.org/2020/432.pdf) | - | Page fault |
-| LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection | [S&P20](https://lviattack.eu/lvi.pdf) | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi) | Single-stepping, page-table manipulation |
-| CopyCat: Controlled Instruction-Level Attacks on Enclaves | [USEC20](https://arxiv.org/pdf/2002.08437.pdf) | - | Single-stepping, page fault, PTE A/D |
-| When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA | [CHES20](https://eprint.iacr.org/2020/055.pdf) | - | Single-stepping, page fault, PTE A/D |
-| Big Numbers - Big Troubles: Systematically Analyzing Nonce Leakage in (EC)DSA Implementations | [USEC20](https://www.usenix.org/system/files/sec20summer_weiser_prepub_0.pdf) | - | Page fault |
-| Plundervolt: Software-based Fault Injection Attacks against Intel SGX | [S&P20](https://plundervolt.com/doc/plundervolt.pdf) | [link](https://github.com/KitMurdock/plundervolt) | Privileged interrupt/call gates, MSR |
-| Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX | [CHES20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf) | - | Single-stepping |
-| Fallout: Leaking Data on Meltdown-resistant CPUs | [CCS19](https://mdsattacks.com/files/fallout.pdf) | - | PTE A/D |
-| A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes | [CCS19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf) | [link](https://github.com/jovanbulck/0xbadc0de) | Single-stepping, page fault, PTE A/D |
-| ZombieLoad: Cross-Privilege-Boundary Data Sampling | [CCS19](https://zombieloadattack.com/zombieload.pdf) | [link](https://github.com/IAIK/ZombieLoad/) | Single-stepping, zero-stepping, page-table manipulation |
-| SPOILER: Speculative Load Hazards Boost Rowhammer and Cache Attacks | [USEC19](https://arxiv.org/pdf/1903.00446.pdf) | - | Single-stepping interrupt latency |
-| Nemesis: Studying Microarchitectural Timing Leaks in Rudimentary CPU Interrupt Logic | [CCS18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf) | [link](https://github.com/jovanbulck/nemesis) | Single-stepping interrupt latency, page fault, PTE A/D |
-| Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution | [USEC18](https://foreshadowattack.eu/foreshadow.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/foreshadow) | Single-stepping, zero-stepping, page-table manipulation |
-| Single Trace Attack Against RSA Key Generation in Intel SGX SSL | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf) | - | Page fault |
-| Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf) | [link](https://distrinet.cs.kuleuven.be/software/off-limits/) | Single-stepping, IA32 segmentation, page fault |
-| SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf) | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench) | Single-stepping, page fault, PTE A/D|
+| Title                                                                                          | Publication details                                                                          | Source code                                                               | SGX-Step features used                                  |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Cache-timing attack against HQC                                                                | [IACR23](https://eprint.iacr.org/2023/102.pdf)                                               | -                                                                         | Single-stepping, PTE A/D                                |
+| FaultMorse: An automated controlled-channel attack via longest recurring sequence              | [ComSec23](https://www.sciencedirect.com/science/article/pii/S0167404822003959)              | [link](https://github.com/Ezekiel-1998/FaultMorse)                        | Page fault                                              |
+| On (the Lack of) Code Confidentiality in Trusted Execution Environments                        | [arXiv22](https://arxiv.org/pdf/2212.07899.pdf)                                              | -                                                                         | Single-stepping                                         |
+| AEPIC Leak: Architecturally Leaking Uninitialized Data from the Microarchitecture              | [USEC22](https://www.usenix.org/system/files/sec22-borrello.pdf)                             | [link](https://github.com/IAIK/AEPIC)                                     | Single-Stepping, PTE A/D                                |
+| MoLE: Mitigation of Side-channel Attacks against SGX via Dynamic Data Location Escape          | [ACSAC22](https://dl.acm.org/doi/fullHtml/10.1145/3564625.3568002)                           | -                                                                         | Single-Stepping, page fault, transient execution        |
+| WIP: Interrupt Attack on TEE-Protected Robotic Vehicles                                        | [NDSS22](https://www.ndss-symposium.org/wp-content/uploads/autosec2022_23001_paper.pdf)      | -                                                                         | Single-stepping, multi-stepping                         |
+| Towards Self-monitoring Enclaves: Side-Channel Detection Using Performance Counters            | [NordSec22](https://link.springer.com/chapter/10.1007/978-3-031-22295-5_7)                   | -                                                                         | Page fault, LVI.                                        |
+| ENCLYZER: Automated Analysis of Transient Data Leaks on Intel SGX                              | [SEED22](https://ieeexplore.ieee.org/document/9935016)                                       | [link](https://github.com/bloaryth/enclyser)                              | Page-table manipulation                                 |
+| Side-Channeling the Kalyna Key Expansion                                                       | [CT-RSA22](https://cs.adelaide.edu.au/~yval/pdfs/ChuengsatiansupGYZ22.pdf)                   | -                                                                         | Single-Stepping, PTE A/D                                |
+| Rapid Prototyping for Microarchitectural Attacks                                               | [USENIX22](https://www.usenix.org/system/files/sec22summer_easdon.pdf)                       | [link](https://github.com/libtea/frameworks)                              | Single-stepping, page fault, PTE A/D, etc.              |
+| Util::Lookup: Exploiting Key Decoding in Cryptographic Libraries                               | [CCS21](https://dl.acm.org/doi/abs/10.1145/3460120.3484783)                                  | [link](https://github.com/UzL-ITS/util-lookup)                            | Single-Stepping, PTE A/D                                |
+| SmashEx: Smashing SGX Enclaves Using Exceptions                                                | [CCS21](https://dl.acm.org/doi/pdf/10.1145/3460120.3484821)                                  | -                                                                         | Single-Stepping                                         |
+| Online Template Attacks: Revisited                                                             | [CHES21](https://tches.iacr.org/index.php/TCHES/article/view/8967/8545)                      | [link](https://zenodo.org/record/4680071)                                 | Single-stepping, page fault, PTE A/D                    |
+| Aion Attacks: Manipulating Software Timers in Trusted Execution Environment                    | [DIMVA21](http://individual.utoronto.ca/shengjiexu/publication/whuang-dimva2021-aion_v2.pdf) | -                                                                         | Single-stepping, interrupts(?)                          |
+| Platypus: Software-based Power Side-Channel Attacks on x86                                     | [S&P21](https://platypusattack.com/platypus.pdf)                                             | [link](https://github.com/0xhilbert/Platypus)                             | Single-stepping, zero-stepping                          |
+| CrossTalk: Speculative Data Leaks Across Cores Are Real                                        | [S&P21](https://download.vusec.net/papers/crosstalk_sp21.pdf)                                | -                                                                         | Single-stepping, page fault                             |
+| Frontal Attack: Leaking Control-Flow in SGX via the CPU Frontend                               | [USEC21](https://www.usenix.org/system/files/sec21-puddu.pdf)                                | [link](https://github.com/dn0sar/frontal_poc)                             | Single-stepping interrupt latency, PTE A/D              |
+| SpeechMiner: A Framework for Investigating andMeasuring Speculative Execution Vulnerabilities  | [NDSS20](https://www.ndss-symposium.org/wp-content/uploads/2020/02/23105-paper.pdf)          | [link](https://github.com/teecert/SpeechMiner)                            | Page-table manipulation                                 |
+| From A to Z: Projective coordinates leakage in the wild                                        | [CHES20](https://eprint.iacr.org/2020/432.pdf)                                               | -                                                                         | Page fault                                              |
+| LVI: Hijacking Transient Execution through Microarchitectural Load Value Injection             | [S&P20](https://lviattack.eu/lvi.pdf)                                                        | [link](https://github.com/jovanbulck/sgx-step-lvi/tree/master/app/lvi)    | Single-stepping, page-table manipulation                |
+| CopyCat: Controlled Instruction-Level Attacks on Enclaves                                      | [USEC20](https://arxiv.org/pdf/2002.08437.pdf)                                               | -                                                                         | Single-stepping, page fault, PTE A/D                    |
+| When one vulnerable primitive turns viral: Novel single-trace attacks on ECDSA and RSA         | [CHES20](https://eprint.iacr.org/2020/055.pdf)                                               | -                                                                         | Single-stepping, page fault, PTE A/D                    |
+| Big Numbers - Big Troubles: Systematically Analyzing Nonce Leakage in (EC)DSA Implementations  | [USEC20](https://www.usenix.org/system/files/sec20summer_weiser_prepub_0.pdf)                | -                                                                         | Page fault                                              |
+| Plundervolt: Software-based Fault Injection Attacks against Intel SGX                          | [S&P20](https://plundervolt.com/doc/plundervolt.pdf)                                         | [link](https://github.com/KitMurdock/plundervolt)                         | Privileged interrupt/call gates, MSR                    |
+| Bluethunder: A 2-level Directional Predictor Based Side-Channel Attack against SGX             | [CHES20](https://heartever.github.io/files/bluethunder_sgx_ches.pdf)                         | -                                                                         | Single-stepping                                         |
+| Fallout: Leaking Data on Meltdown-resistant CPUs                                               | [CCS19](https://mdsattacks.com/files/fallout.pdf)                                            | -                                                                         | PTE A/D                                                 |
+| A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes                | [CCS19](https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf)                           | [link](https://github.com/jovanbulck/0xbadc0de)                           | Single-stepping, page fault, PTE A/D                    |
+| ZombieLoad: Cross-Privilege-Boundary Data Sampling                                             | [CCS19](https://zombieloadattack.com/zombieload.pdf)                                         | [link](https://github.com/IAIK/ZombieLoad/)                               | Single-stepping, zero-stepping, page-table manipulation |
+| SPOILER: Speculative Load Hazards Boost Rowhammer and Cache Attacks                            | [USEC19](https://arxiv.org/pdf/1903.00446.pdf)                                               | -                                                                         | Single-stepping interrupt latency                       |
+| Nemesis: Studying Microarchitectural Timing Leaks in Rudimentary CPU Interrupt Logic           | [CCS18](https://people.cs.kuleuven.be/~jo.vanbulck/ccs18.pdf)                                | [link](https://github.com/jovanbulck/nemesis)                             | Single-stepping interrupt latency, page fault, PTE A/D  |
+| Foreshadow: Extracting the Keys to the Intel SGX Kingdom with Transient Out-of-Order Execution | [USEC18](https://foreshadowattack.eu/foreshadow.pdf)                                         | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/foreshadow) | Single-stepping, zero-stepping, page-table manipulation |
+| Single Trace Attack Against RSA Key Generation in Intel SGX SSL                                | [AsiaCCS18](https://rspreitzer.github.io/publications/proc/asiaccs-2018-paper-1.pdf)         | -                                                                         | Page fault                                              |
+| Off-Limits: Abusing Legacy x86 Memory Segmentation to Spy on Enclaved Execution                | [ESSoS18](https://people.cs.kuleuven.be/~jo.vanbulck/essos18.pdf)                            | [link](https://distrinet.cs.kuleuven.be/software/off-limits/)             | Single-stepping, IA32 segmentation, page fault          |
+| SGX-Step: A Practical Attack Framework for Precise Enclave Execution Control                   | [SysTEX17](https://people.cs.kuleuven.be/~jo.vanbulck/systex17.pdf)                          | [link](https://github.com/jovanbulck/sgx-step/tree/master/app/bench)      | Single-stepping, page fault, PTE A/D                    |
