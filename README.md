@@ -123,7 +123,7 @@ below.
 Pass the desired boot parameters to the kernel as follows:
 
 ```bash
-  #if vim command doesn't work, you can also try nano instead.
+  # if vim command doesn't work, you can also try nano instead.
 $ sudo vim /etc/default/grub
   # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=308,295,514 pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
 
@@ -132,12 +132,12 @@ $ sudo update-grub && reboot
 $ cat /proc/cmdline
 ```
 
-**Finally**, to improve overall` execution time stability`, you may opt to
+**Finally**, to improve overall `execution time stability`, you may opt to
 additionally disable C-States and SpeedStep technology in the BIOS
 configuration.
 
 **Note (updated kernel versions).**
-For the updated Linux kernel versions after `5.15`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep, nosmap` flags are not allowed, and it is needed to turn them off with `clearcpuid` using their respective feature flags. One can use the updated kernel parameters in the current repository if you are having a problem, such as your system freezing up every time you try to use sgx-step.
+For the updated Linux kernel versions after `5.15.0`, to mitigate vulnerabilities, Supervisor Mode Execution/Access Preventions being turned off with `nosmep, nosmap` flags are not allowed, and it is needed to turn them off with `clearcpuid` using their respective feature flags. One can use the updated kernel parameters in the current repository if you are having a problem, such as your system freezing up every time you try to use sgx-step.
 
 ### 1. Build and load `/dev/sgx-step`
 
