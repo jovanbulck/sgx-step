@@ -132,7 +132,7 @@ $ cat /proc/cmdline
 ```
 
 ### Important Note for Updated Kernel Versions
-For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate with vulnerabilities, Supervisor Mode Execution/Access Preventions can not be turned off with `nosmep,nosmap` flags and it is needed to turn off them using `clearcpuid`, one can use the kernel parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
+For the updated Linux kernel versions such as `5.19.0-46-generic`, to mitigate with vulnerabilities, Supervisor Mode Execution/Access Preventions can not be turned off with `nosmep,nosmap` flags and it is needed to turn them off using `clearcpuid`, one can use the kernel parameters as follows if you are having a problem such as your system freezes up every time you try to use sgx-step.
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=smap,smep,umip pti=off isolcpus=1 nmi_wathdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
 ```
@@ -284,6 +284,7 @@ Some different microcode versions are provided for reference in the table below.
 | Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | ?                 | 28                  |
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | ?                 | 34                  |
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
+| Coffee Lake R       | [i7-9700](https://ark.intel.com/products/191792)   | 3 GHz        | ?                 | 26                 |
 | Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
 | Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  | 0x32 (2019-07-05) | 135 |
 | Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  |  0xb0 (2022-03-09) | 255 |
