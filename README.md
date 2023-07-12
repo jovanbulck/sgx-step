@@ -284,7 +284,7 @@ Some different microcode versions are provided for reference in the table below.
 | Skylake       | [i5-6200U](https://ark.intel.com/products/88193)  | 2.3 GHz        | ?                 | 28                  |
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | ?                 | 34                  |
 | Kaby Lake R   | [i7-8650U](https://ark.intel.com/products/124968) | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
-| Coffee Lake R       | [i7-9700](https://ark.intel.com/products/191792)   | 3 GHz        | ?                 | 26                 |
+| Coffee Lake R       | [i7-9700](https://ark.intel.com/content/www/us/en/ark/products/191792/intel-core-i79700-processor-12m-cache-up-to-4-70-ghz.html)   | 3 GHz        | ?                 | 26                 |
 | Coffee Lake R	| [i9-9900K](https://ark.intel.com/products/186605) | 3.6 GHz        | ?                 | 21                  |
 | Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  | 0x32 (2019-07-05) | 135 |
 | Ice Lake      | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz  |  0xb0 (2022-03-09) | 255 |
