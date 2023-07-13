@@ -134,6 +134,14 @@ To check that the currently running kernel is configured correctly, execute:
 
 ```
 $ sudo ./check_sys.sh
+
+.. Checking recommended SGX-Step parameters [OK]
+
+.. Checking unknown kernel parameters [OK]
+
+.. Checking CPU features [OK]
+
+.. Checking kernel page-table isolation [OK]
 ```
 
 Finally, to improve overall execution time stability, you may opt to
