@@ -2,7 +2,7 @@
 #set -x
 
 start_check() {
-    echo -ne "\n.. Checking $1"
+    printf ".. Checking %-40s" "$1"
     errs=0
 }
 

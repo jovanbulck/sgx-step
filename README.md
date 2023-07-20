@@ -96,7 +96,7 @@ This repository is organized as follows:
 └── sdk        -- Bindings to use SGX-Step with different SGX SDKs and libOSs.
 ```
 
-## Building and running [![Build Status](https://travis-ci.org/jovanbulck/sgx-step.svg?branch=master)](https://travis-ci.org/jovanbulck/sgx-step)
+## Building and running
 
 ### 0. System requirements
 
@@ -132,16 +132,12 @@ $ sudo update-grub && reboot
 
 To check that the currently running kernel is configured correctly, execute:
 
-```
+```bash
 $ sudo ./check_sys.sh
-
-.. Checking recommended SGX-Step parameters [OK]
-
-.. Checking unknown kernel parameters [OK]
-
-.. Checking CPU features [OK]
-
-.. Checking kernel page-table isolation [OK]
+.. Checking recommended SGX-Step parameters          [OK]
+.. Checking unknown kernel parameters                [OK]
+.. Checking CPU features                             [OK]
+.. Checking kernel page-table isolation              [OK]
 ```
 
 Finally, to improve overall execution time stability, you may opt to
@@ -211,8 +207,9 @@ Makefile targets furthermore dynamically link against the patched
 `libsgx_urts.so` untrusted runtime built in the local `linux-sgx` directory
 (using the `LD_LIBRARY_PATH` environment variable).
 
-**Note (32-bit support).** Instructions for building 32-bit versions of
-the SGX SDK and SGX-Step can be found in [README-m32.md](README-m32.md).
+**Note (32-bit support).** Instructions (outdated and not maintained!) for
+building 32-bit versions of the SGX SDK and SGX-Step can be found in
+[README-m32.md](README-m32.md).
 
 ### 3. Build and run test applications
 
