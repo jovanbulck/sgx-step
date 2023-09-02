@@ -65,22 +65,23 @@ int get_core_id(int cpu_id)
     FILE *fd;
     ASSERT((fd = fopen("/proc/cpuinfo", "r")) >= 0);
 
-    int cur_cpu_id = -1, core_id = -1, core_id_prev = -1;
+    int cur_cpu_id = -1, core_id = -1;
     char buf[100];
     while (fgets(buf, sizeof(buf), fd))
     {
-        sscanf(buf, "core id : %d %*[^\n]", &core_id);
-        if (core_id != core_id_prev)
+        sscanf(buf, "processor : %d %*[^\n]", &cur_cpu_id);
+        if (sscanf(buf, "core id : %d %*[^\n]", &core_id) > 0)
         {
-            cur_cpu_id++;
-            if (cur_cpu_id == cpu_id) break;
+            if (cur_cpu_id == cpu_id)
+            {
+                debug("Found cpu_id=%d -> core_id=%d", cpu_id, core_id);
+                return core_id;
+            }
         }
-        core_id_prev = core_id;
     }
 
-    debug("Found cpu_id=%d -> core_id=%d", cpu_id, core_id);
-    ASSERT( cur_cpu_id == cpu_id );
-    return core_id;
+    ASSERT( 0 && "core id not found in /proc/cpuinfo");
+    return -1;
 }
 
 unsigned int pstate_max_perf_pct( void )

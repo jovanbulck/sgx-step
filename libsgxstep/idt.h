@@ -43,5 +43,7 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector);
 
 void __ss_irq_handler(void);
 extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;
+extern uint64_t __ss_irq_rip;
+extern uint64_t nemesis_tsc_aex;
 
 #endif

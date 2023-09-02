@@ -33,17 +33,22 @@
     #define APIC_BASE               0xfee00000
 #endif
 
-#define APIC_ICR                    0x300
+#define APIC_ICR_LOW                0x300
+#define APIC_ICR_HIGH               0x310
+
 #define APIC_LVTT                   0x320
 #define APIC_TDCR                   0x3e0
 #define APIC_TMICT                  0x380
 #define APIC_TMCCT                  0x390
 
 #define APIC_ID                     0x20
+#define APIC_ID_SHIFT               24
+#define APIC_ID_MASK                (0xff << APIC_ID_SHIFT)
+
 #define APIC_EOI                    0xb0
 
-#define APIC_TPR	                0x80
-#define APIC_PPR	                0xa0
+#define APIC_TPR	            0x80
+#define APIC_PPR	            0xa0
 
 #define APIC_TDR_DIV_1              0xb
 #define APIC_TDR_DIV_2              0x0
@@ -52,10 +57,13 @@
 
 #define APIC_IPI_CFG                0xc08f1
 
-#define APIC_ICR_VECTOR(n)      (n & 0xFF)
-#define APIC_ICR_DELIVERY_FIXED (0x0 << 8)
-#define APIC_ICR_LEVEL_ASSERT   (0x1 << 14)
-#define APIC_ICR_DEST_SELF      (0x1 << 18)
+#define APIC_ICR_VECTOR(n)          (n & 0xFF)
+#define APIC_ICR_DELIVERY_FIXED     (0x0 << 8)
+#define APIC_ICR_LEVEL_ASSERT       (0x1 << 14)
+#define APIC_ICR_DEST_SELF          (0x1 << 18)
+#define APIC_ICR_DEST_PHYSICAL      (0x0 << 11)
+#define APIC_ICR_DEST_LOGICAL       (0x1 << 11)
+#define APIC_ICR_DEST_MASK          0xff000000
 
 extern void* apic_base;
 extern uint32_t apic_lvtt;
@@ -85,10 +93,11 @@ static inline uint32_t apic_read(uint32_t reg)
     return *((volatile uint32_t *)(apic_base + reg));
 }
 
-//#define apic_send_ipi() apic_write(APIC_ICR, APIC_IPI_CFG)
+//#define apic_send_ipi() apic_write(APIC_ICR_LOW, APIC_IPI_CFG)
 #define apic_timer_irq(tsc) apic_write(APIC_TMICT, tsc);
-#define apic_send_ipi_self(n) apic_write(APIC_ICR, APIC_ICR_VECTOR(n) | APIC_ICR_DELIVERY_FIXED | APIC_ICR_LEVEL_ASSERT | APIC_ICR_DEST_SELF)
+#define apic_send_ipi_self(n) apic_write(APIC_ICR_LOW, APIC_ICR_VECTOR(n) | APIC_ICR_DELIVERY_FIXED | APIC_ICR_LEVEL_ASSERT | APIC_ICR_DEST_SELF)
 
+uint8_t apic_id(void);
 int apic_timer_oneshot(uint8_t vector);
 int apic_timer_deadline(uint8_t vector);
 void apic_timer_deadline_irq(int tsc_diff);

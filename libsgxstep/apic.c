@@ -57,9 +57,16 @@ void apic_init(void)
     apic_base = remap(apic_base_addr);
     libsgxstep_info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
 
-    libsgxstep_info("APIC_ID=%x; LVTT=%x; TDCR=%x", apic_read(APIC_ID),
+    libsgxstep_info("APIC_ID=%#x; LVTT=%#x; TDCR=%#x", apic_id(),
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
     ASSERT(apic_read(APIC_ID) != -1);
+}
+
+uint8_t apic_id(void)
+{
+    uint32_t id = apic_read(APIC_ID);
+    id = (id & APIC_ID_MASK) >> APIC_ID_SHIFT;
+    return (uint8_t) id;
 }
 
 int apic_timer_oneshot(uint8_t vector)

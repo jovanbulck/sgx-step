@@ -38,7 +38,7 @@
 
 #define VICTIM_CPU                  1
 #define NUM_CORES                   4
-#define SPY_CPU                     (VICTIM_CPU + NUM_CORES)
+#define SPY_CPU                     (NUM_CORES-1)
 
 /*
  * XXX Configure APIC timer interval for next interrupt.
