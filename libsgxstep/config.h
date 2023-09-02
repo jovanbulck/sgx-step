@@ -22,7 +22,7 @@
 #define SGX_STEP_CONFIG
 
 // TODO add coarser-grained logging levels
-#define LIBSGXSTEP_DEBUG            1
+#define LIBSGXSTEP_DEBUG            0
 
 #define PSTATE_PCT                  100
 #define SINGLE_STEP_ENABLE          1
