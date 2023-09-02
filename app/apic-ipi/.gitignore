@@ -1,0 +1,5 @@
+*.txt
+*.pdf
+log
+*.csv
+copy_icx.sh

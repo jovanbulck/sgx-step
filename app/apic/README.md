@@ -1,8 +1,10 @@
 # APIC Precision Microbenchmarks
 
-This directory contains the experiments to determine the accuracy of the local
-APIC timer, as described in Appendix A of the [AEX-Notify
-paper](https://jovanbulck.github.io/files/usenix23-aexnotify.pdf).
+This directory contains the experiments to determine the accuracy of timer
+interrupts sent through the local APIC, as described in Appendix A of the
+[AEX-Notify paper](https://jovanbulck.github.io/files/usenix23-aexnotify.pdf).
+See [../apic-ipi](../apic-ipi) for complementary microbenchmarks that assess
+the accuracy of APIC inter-processor interrupts.
 
 The local APIC timer can be configured in one-shot or periodic mode to send an
 interrupt when an MMIO counter register reaches zero, or in TSC-deadline mode
