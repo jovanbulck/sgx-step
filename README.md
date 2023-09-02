@@ -1,6 +1,6 @@
 # A Practical Attack Framework for Precise Enclave Execution Control [![CI](https://github.com/jovanbulck/sgx-step/actions/workflows/ci.yaml/badge.svg)](https://github.com/jovanbulck/sgx-step/actions/workflows/ci.yaml)
 
-<img src="doc/logo.svg" width=160 alt="logo" align="left" />
+<img src="doc/logo.png" width=160 alt="logo" align="left" />
 
 SGX-Step is an open-source framework to facilitate side-channel attack research
 on Intel x86 processors in general and Intel SGX platforms in particular.

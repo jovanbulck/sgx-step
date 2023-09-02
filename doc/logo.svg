@@ -11,11 +11,11 @@
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    id="svg2"
    version="1.1"
-   inkscape:version="0.91 r13725"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
    width="247.22789"
    height="214.92133"
    viewBox="0 0 247.22789 214.92133"
-   sodipodi:docname="horse-vector.svg">
+   sodipodi:docname="logo.svg">
   <metadata
      id="metadata8">
     <rdf:RDF>
@@ -37,10 +37,10 @@
      objecttolerance="10"
      gridtolerance="10"
      guidetolerance="10"
-     inkscape:pageopacity="0"
+     inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:window-width="1535"
-     inkscape:window-height="876"
+     inkscape:window-width="1848"
+     inkscape:window-height="1016"
      id="namedview4"
      showgrid="false"
      fit-margin-top="0"
@@ -48,10 +48,10 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="1.2395166"
-     inkscape:cx="46.61324"
-     inkscape:cy="120.24374"
-     inkscape:window-x="65"
-     inkscape:window-y="24"
+     inkscape:cx="78.480502"
+     inkscape:cy="124.27757"
+     inkscape:window-x="72"
+     inkscape:window-y="27"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg2" />
   <path
@@ -61,14 +61,13 @@
      inkscape:connector-curvature="0" />
   <text
      xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     style="font-style:normal;font-weight:normal;line-height:0%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
      x="18.291683"
      y="206.60101"
-     id="text4133"
-     sodipodi:linespacing="125%"><tspan
+     id="text4133"><tspan
        sodipodi:role="line"
        id="tspan4135"
        x="18.291683"
        y="206.60101"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold'">SGX-Step</tspan></text>
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:40px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold'">SGX-Step</tspan></text>
 </svg>
