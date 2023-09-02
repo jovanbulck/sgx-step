@@ -20,8 +20,9 @@ Gardner at a Gallop" photo series, which, like our enclave single-stepping
 goal, breaks down the galloping horse dynamics into a series of individual
 photo frames to reveal overall horse gait properties.
 
-| SGX-Step release | Comments                                                                       |
+| SGX-Step release | Changelog features                                                             |
 | ---------------- | ------------------------------------------------------------------------------ |
+| v1.5.0           | Stabilization fixes (KPTI, kernel ISR mapping); (experimental) Gramine port; IPI support. |
 | v1.4.0           | Privileged interrupt/call gates (Plundervolt).                                 |
 | v1.3.0           | Transient-execution support (Foreshadow).                                      |
 | v1.2.0           | User-space interrupt handling and deterministic zero-step filtering (Nemesis). |
