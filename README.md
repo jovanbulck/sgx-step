@@ -380,6 +380,11 @@ Have a look at the Makefiles in the `app` directory to see how a client
 application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
 
 <a name="bottom"></a>
+Some of the main use cases of the SGX-Step
+framework are summarized below:
+
+![SGX-Step attacks overview](doc/attacks-overview.png)
+
 The following is a list of known projects that use SGX-Step. Feel free to open
 a pull request if your project uses SGX-Step but is not included below.
 
