@@ -46,6 +46,15 @@ up-to-date list of known projects using SGX-Step is included at the
 }
 ```
 
+**Demo.** The [app/memcmp](app/memcmp) directory contains a small demo application that
+illustrates the power of SGX-Step attacks by single-stepping a sample enclave
+that contains subtle, non-constant-time `memcmp` password comparison logic.
+As opposed to traditional, notoriously noisy timing attacks, SGX-Step can
+deterministically brute-force the password character-per-character in _linear_
+time:
+
+![sgxstep-memcmp-demo](app/memcmp/sgxstep-memcmp-demo.gif)
+
 ## Overview
 
 Crucial to the design of SGX-Step, as opposed to previous enclave preemption
@@ -73,11 +82,11 @@ interrupting and resuming an SGX enclave through our framework.
    custom AEP stub. Furthermore, to enable precise evaluation of our approach on
    attacker-controlled benchmark debug enclaves, SGX-Step can _optionally_ be
    instrumented to retrieve the stored instruction pointer from the interrupted
-   enclave’s SSA frame. For this, our `/dev/sgx-step` driver offers an optional
-   IOCTL call for the privileged `EDBGRD` instruction.
+   enclave's SSA frame (using Linux's `/proc/self/mem` interface and the
+   `EDBGRD` instruction).
 5. Thereafter, we configure the local APIC timer for the next interrupt
-   by writing into the initial-count MMIO register, just before executing (6)
-   `ERESUME`.
+   by writing into the initial-count memory-mapped I/O register, just before
+   executing (6) `ERESUME`.
 
 ## Source code overview
 
@@ -95,6 +104,16 @@ This repository is organized as follows:
 │                 APIC timer manipulations.
 └── sdk        -- Bindings to use SGX-Step with different SGX SDKs and libOSs.
 ```
+
+## Framework features and applications
+
+SGX-Step is a universal execution control framework that enables the precise
+interleaving of victim enclave instructions with _arbitrary_ attacker code.
+Some of the main use cases of the SGX-Step framework are summarized in the
+figure below (see also the [bottom](#bottom) of this README for an up-to-date
+list of publications using SGX-Step).
+
+![SGX-Step attacks overview](doc/attacks-overview.png)
 
 ## Building and running
 
@@ -216,6 +235,8 @@ building 32-bit versions of the SGX SDK and SGX-Step can be found in
 User-space applications can link to the `libsgxstep` library to make use of
 SGX-Step's single-stepping and page table manipulation features. Have a look at
 the example applications in the "app" directory.
+
+![interrupt abstract box](doc/irq_box.png)
 
 First, check the APIC and interrupt-descriptor table setup:
 
@@ -380,11 +401,6 @@ Have a look at the Makefiles in the `app` directory to see how a client
 application can link to `libsgxstep` plus any local SGX SDK/PSW packages.
 
 <a name="bottom"></a>
-Some of the main use cases of the SGX-Step
-framework are summarized below:
-
-![SGX-Step attacks overview](doc/attacks-overview.png)
-
 The following is a list of known projects that use SGX-Step. Feel free to open
 a pull request if your project uses SGX-Step but is not included below.
 
