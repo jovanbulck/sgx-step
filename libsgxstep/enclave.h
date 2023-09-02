@@ -34,7 +34,7 @@ struct sgx_step_enclave_info
     char *drv;
 };
 
-extern uint32_t nemesis_tsc_eresume, nemesis_tsc_aex;
+extern uint64_t nemesis_tsc_eresume, nemesis_tsc_aex;
 extern int sgx_step_eresume_cnt;
 
 typedef void (*aep_cb_t)(void);

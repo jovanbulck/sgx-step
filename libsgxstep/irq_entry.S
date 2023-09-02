@@ -14,7 +14,7 @@
 /* ********************************************************************** */
     .section isr_section,"awx",@progbits
     .align 0x1000
-    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, apic_base, nemesis_tsc_aex
+    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, apic_base, nemesis_tsc_aex, __ss_irq_rip
 __ss_irq_fired:
     .int 0x0
 __ss_irq_count:
@@ -30,6 +30,8 @@ __ss_irq_rax:
     .quad 0x0
 __ss_irq_rdx:
     .quad 0x0
+__ss_irq_rip:
+    .quad 0x0
 
 /* ********************************************************************** */
     .section isr_section,"awx",@progbits
@@ -41,12 +43,15 @@ __ss_irq_handler:
     mov %rdx, __ss_irq_rdx(%rip)
     rdtsc
     mov %eax, nemesis_tsc_aex(%rip)
+    mov %edx, nemesis_tsc_aex+4(%rip)
 
     /* IRQ bookkeeping */
-    incl __ss_irq_fired(%rip)
-    incl __ss_irq_count(%rip)
+    mov 0(%rsp), %rax
+    mov %rax, __ss_irq_rip(%rip)
     movw %cs,  __ss_irq_cpl(%rip)
     andw $0x3, __ss_irq_cpl(%rip)
+    incl __ss_irq_count(%rip)
+    incl __ss_irq_fired(%rip)
 
     /* apic_write(APIC_EOI, 0x0); */
     lea apic_base(%rip), %rax
