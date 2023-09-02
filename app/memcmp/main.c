@@ -244,11 +244,6 @@ int main( int argc, char **argv )
     printf(COLOR_RESET_ALL "\n\n");
 #endif
 
-#if DO_STEP
-    /* 3. Restore normal execution environment. */
-    apic_timer_deadline();
-#endif
-
     info("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt, __ss_irq_count);
     return 0;
 }

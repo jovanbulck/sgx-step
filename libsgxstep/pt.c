@@ -51,10 +51,6 @@ void step_open( void )
 
 void __attribute__((destructor)) tear_down_sgx_step( void )
 {
-    /* ensure local APIC timer is restored on process exit */
-    if (apic_lvtt)
-        apic_timer_deadline();
-
     if (fd_step >= 0)
         close(fd_step);
     if (fd_mem >= 0)

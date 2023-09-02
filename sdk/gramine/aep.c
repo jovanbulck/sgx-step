@@ -175,6 +175,5 @@ void configure_mapping(void)
 void restore_timer(void)
 {
     /* 3. Restore normal execution environment. */
-    apic_timer_deadline();
     info_event("all done; counted %d(+%d ignored)/%d IRQs (AEP/IDT)", irq_cnt, ignored_fault_cnt, __ss_irq_count);
 }

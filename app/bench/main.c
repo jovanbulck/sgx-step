@@ -209,7 +209,6 @@ int main( int argc, char **argv )
     #endif
 
     /* 3. Restore normal execution environment. */
-    apic_timer_deadline();
     SGX_ASSERT( sgx_destroy_enclave( eid ) );
 
     info_event("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt, __ss_irq_count);

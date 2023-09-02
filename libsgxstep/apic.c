@@ -28,7 +28,6 @@
 
 extern void *apic_base;
 void *dummy_pt = NULL;
-uint32_t apic_lvtt = 0x0, apic_tdcr = 0x0;
 
 /*
  * Code below maps APIC timer MMIO registers in user space.
@@ -65,33 +64,27 @@ void apic_init(void)
 
 int apic_timer_oneshot(uint8_t vector)
 {
-    /* Save APIC tmr config for later restore */
-    apic_lvtt = apic_read(APIC_LVTT);
-    apic_tdcr = apic_read(APIC_TDCR);
-
+    /* NOTE: APIC will be auto-restored when closing /dev/sgx-step */
     apic_write(APIC_LVTT, vector | APIC_LVTT_ONESHOT);
     apic_write(APIC_TDCR, APIC_TDR_DIV_2);
+
     // NOTE: APIC seems not to handle divide by 1 properly (?)
     // see also: http://wiki.osdev.org/APIC_timer)
     libsgxstep_info("APIC timer one-shot mode with division 2 (lvtt=%x/tdcr=%x)",
         apic_read(APIC_LVTT), apic_read(APIC_TDCR));
 }
 
-int apic_timer_deadline(void)
+int apic_timer_deadline(uint8_t vector)
 {
-    if (apic_lvtt)
-    {
-        apic_write(APIC_LVTT, apic_lvtt);
-        apic_write(APIC_TDCR, apic_tdcr);
-        libsgxstep_info("Restored APIC_LVTT=%x/TDCR=%x)",
-            apic_read(APIC_LVTT), apic_read(APIC_TDCR));
-        apic_lvtt = apic_tdcr = 0x0;
-    }
+    /* NOTE: APIC will be auto-restored when closing /dev/sgx-step */
+    apic_write(APIC_LVTT, vector | APIC_LVTT_DEADLINE);
 
-    /* writing a non-zero value to the TSC_DEADLINE MSR will arm the timer */
     /* In xAPIC mode the memory-mapped write to LVTT needs to be serialized. */
-    #if APIC_CONFIG_MSR
-        asm volatile("mfence" : : : "memory");
-        wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), 1);
-    #endif
+    asm volatile("mfence" : : : "memory");
+}
+
+void apic_timer_deadline_irq(int tsc_diff)
+{
+    uint64_t now = rdtsc_begin();
+    wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), now + tsc_diff);
 }

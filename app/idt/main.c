@@ -131,7 +131,6 @@ void do_irq_test(int do_exec_priv)
                 post_irq("APIC timer");
             }
         }
-        apic_timer_deadline();
     #endif
 }
 
