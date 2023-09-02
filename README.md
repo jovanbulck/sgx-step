@@ -259,10 +259,12 @@ initiate single-stepping for selected functions only, for instance by revoking
 access rights on specific code or data pages of interest.
 
 **Note (timer interval).** The exact timer interval value depends on CPU
-frequency, and hence remains inherently platform-specific. Configure a suitable
-value in `/app/bench/main.c`. We established precise timer intervals for our
-evaluation platforms (see table above) by tweaking and observing the NOP
-microbenchmark enclave instruction pointer trace results.
+frequency, and hence remains inherently platform-specific (see also
+[app/apic](app/apic) for detailed microbenchmarks assessing the accuracy of
+various APIC timer modes). Configure a suitable value in `/app/bench/main.c`.
+We established precise timer intervals for our evaluation platforms (see table
+below) by tweaking and observing the NOP microbenchmark enclave instruction
+pointer trace results, as further outlined below.
 
 **Note (stability).** In order to avoid the Linux kernel getting stuck or
 panicking, SGX-Step should automatically restore the interrupt-descriptor table
@@ -273,7 +275,7 @@ the APIC timer is still firing on all cores as follows:
 $ watch -n0.1 "cat /proc/interrupts | grep 'Local timer interrupts'"
 ```
 
-#### Calibrating the single-stepping interval
+## Calibrating the single-stepping interval
 
 The table below lists currently supported Intel CPUs, together with their
 single-stepping APIC timer interval (`libsgxstep/config.h`).
@@ -303,10 +305,29 @@ of single-steps, zero-steps, and multi-steps for a NOP slide of 100
 instructions (once you have a more or less stable interval you can
 switch to longer slides). Too many zero-steps indicate that you have to
 increase the timer interval, whereas multi-steps demand lowering the
-timer interval. Btw, don't worry when there's some zero-steps left, as
+timer interval.
+
+**Note (filtering out zero-steps).**
+Important: do not worry when there are some zero-steps left, as
 long as you make progress, you can always deterministically filter out
 zero-steps by looking at the enclave's code PTE accessed bit (which is
 only set when the instruction actually retires and a single-step occured).
+Thus, after configuring a conservative timer interval that always precludes
+multi-steps, SGX-Step can achieve noiseless single-stepping at a _perfect_,
+instruction-level granularity.
+
+**Note (extending the interrupt "landing window").** 
+As clarified in the root-cause analysis below, the slower the page table walk
+to resolve the (code) address of the first enclave instruction following
+`ERESUME`, the longer the interrupt "landing window" and, hence, the more
+reliable SGX-Step's single-stepping rate will be.  For instance, we found that,
+on top of clearing the enclave's PMD accessed bit, the landing window can be
+even further extended by flushing one or more of the unprotected page-table
+entries from the CPU cache before `ERESUME`, effectively forcing the CPU to
+wait for slow memory during the page-table walk. Thus, when you cannot find a
+reliable timer-interval configuration, make sure to (i) clear the enclave's
+code PTE/PMD "accessed" bit and (ii) flush (`CLFLUSH`) one or more enclave
+page-table entries in the AEP handler.
 
 **Note (microcode).**
 Another word of caution relates to recent Foreshadow/ZombieLoad/RIDL/etc
@@ -319,6 +340,29 @@ The additional flushing operations may furthermore somewhat increase the
 variance of enclave entry time, which implies that you might have to
 configure the timer more conservatively with more zero-steps (which can be
 deterministically filtered out as explained above).
+
+### SGX-Step root-cause analysis
+
+A detailed root-cause analysis of how exactly SGX-Step
+succeeds in reliably interrupting the first (possibly very short!) enclave
+instruction following the notoriously complex `ERESUME` instruction is described in the
+[AEX-Notify](https://jovanbulck.github.io/files/usenix23-aexnotify.pdf) paper.
+We found that the key to SGX-Step's success lies in its use of the "accessed"
+(A) bit. Specifically, SGX-Step always clears the A-bit in the victim en
+clave's page-middle directory (PMD) before arming the APIC to fire a one-shot
+interrupt. The A-bit is only ever set by the processor when at least one
+instruction is executed by the enclave and can, hence, be used to
+deterministically distinguish between zero-steps versus single-steps.
+
+![assist window root-cause analysis](doc/root-cause.png)
+
+Crucially, as the processor's page-miss handler is optimized for the common
+fast path and uses a much slower "microcode assist" to handle the less frequent
+and more complex case where a PMD or PTE needs to be modified, this assist has
+the effect of prolonging the execution of the first enclave instruction
+following `ERSUME` by several hundreds of cycles. This "assist window" thus
+effectively opens a spacious landing space for the coarse-grained, normally
+distributed APIC timer interrupt to arrive with high accuracy.
 
 ## Using SGX-Step in your own projects
 
