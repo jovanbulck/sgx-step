@@ -135,7 +135,7 @@ below.
 | `isolcpus=1`                         | Affinitize the victim process to an isolated CPU core.                                                                                                                         |
 | `clearcpuid=308,295,514`             | Disable supervisor mode access prevention (SMAP, bits 295), supervisor mode execution prevention (SMEP, bits 308) and user-mode instruction prevention (UMIP, bits 514) features. |
 | `pti=off`                            | Disable Kernel Page-Table Isolation (to avoid kernel panics with user IRQ handlers).                                                                                           |
-| `rcuupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.)  |
+| `rcupdate.rcu_cpu_stall_suppress=1` | Disable the kernel's read-copy update (RCU) CPU stall detector (to avoid warnings when single-stepping for a long time without calling the kernel's timer interrupt handler.)  |
 | `msr.allow_writes=on`                | Suppress kernel warning messages for model-specific register (MSR) writes by SGX-Step.                                                                                         |
 | `vdso=0`                             | Only on recent Linux kernels: disable vdso_sgx_enter_enclave library (not compatible with AEP interception patches).                                                           |
 | `dis_ucode_ldr`                      | Optionally disable CPU microcode updates (recent transient-execution attack mitigations may necessitate re-calibrating the single-stepping interval).                          |
