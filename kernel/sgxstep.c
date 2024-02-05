@@ -117,8 +117,8 @@ int save_idt(void)
  */
 int save_apic(void)
 {
-    g_apic_lvtt_copy = apic_read(APIC_LVTT);
-    g_apic_tdcr_copy = apic_read(APIC_TDCR);
+    g_apic_lvtt_copy = apic->read(APIC_LVTT);
+    g_apic_tdcr_copy = apic->read(APIC_TDCR);
     log("original APIC_LVTT=%#x/TDCR=%#x)", g_apic_lvtt_copy, g_apic_tdcr_copy);
 
     return 0;
@@ -174,8 +174,8 @@ void restore_apic(void)
 {
     int delta = 100;
 
-    apic_write(APIC_LVTT, g_apic_lvtt_copy);
-    apic_write(APIC_TDCR, g_apic_tdcr_copy);
+    apic->write(APIC_LVTT, g_apic_lvtt_copy);
+    apic->write(APIC_TDCR, g_apic_tdcr_copy);
     log("restored APIC_LVTT=%#x/TDCR=%#x)", g_apic_lvtt_copy, g_apic_tdcr_copy);
 
     /* In xAPIC mode the memory-mapped write to LVTT needs to be serialized. */
@@ -190,7 +190,7 @@ void restore_apic(void)
     else
     {
         log("restoring APIC timer one-shot/periodic operation");
-        apic_write(APIC_TMICT, delta);
+        apic->write(APIC_TMICT, delta);
     }
 }
 
@@ -271,7 +271,7 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
 	if ( !pmd_present( *pmd ) )
 		return 0;
 	
-	pte = pte_offset_map( pmd, virt );
+	pte = pte_offset_kernel( pmd, virt );
 	map->pte = *((uint64_t *) pte);
 	
 	if ( !pte_present( *pte ) )
