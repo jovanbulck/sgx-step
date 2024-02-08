@@ -35,20 +35,16 @@ OS_ID=$(lsb_release -si | tr '[:upper:]' '[:lower:]')
 OS_REL=$(lsb_release -sr)
 OS_STR=$OS_ID$OS_REL
 
-if [ $OS_STR = "ubuntu22.04" ]; then
-       echo "Warning: Ubuntu 22.04 LTS currently not yet officially supported by linux-sgx Intel SDK; overriding to Ubuntu 20.04 .."
-       OS_STR="ubuntu20.04"
-       sudo ln -fs /usr/bin/python2 /usr/bin/python
-       python --version
-fi
-
 # ----------------------------------------------------------------------
 echo "[ building SDK ]"
 cd linux-sgx
 make preparation
-sudo cp "external/toolset/$OS_STR/"* /usr/local/bin
 
-ci_silent make -j`nproc` sdk_install_pkg
+if [ -d "external/toolset/$OS_STR" ]; then
+    sudo cp "external/toolset/$OS_STR/"* /usr/local/bin
+fi
+
+ci_silent make sdk_install_pkg
 
 echo "[ installing SDK system-wide ]"
 cd linux/installer/bin/
@@ -60,7 +56,7 @@ cd ../../../
 
 # ----------------------------------------------------------------------
 echo "[ building PSW ]"
-ci_silent make -j`nproc` psw_install_pkg
+ci_silent make psw_install_pkg
 
 echo "[ installing PSW/SDK system-wide ]"
 cd linux/installer/bin/
