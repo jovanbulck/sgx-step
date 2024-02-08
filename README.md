@@ -176,7 +176,7 @@ To build and load the `/dev/sgx-step` driver, execute:
 
 ```bash
 $ cd kernel/
-$ ./install_SGX_driver.sh              # tested on Ubuntu 18.04/20.04/22.04
+$ ./install_SGX_driver.sh              # tested on Ubuntu 20.04/22.04
 $ make clean load
 ```
 
@@ -206,12 +206,12 @@ apply our patches.
 
 ```bash
 $ cd sdk/intel-sdk/
-$ ./install_SGX_SDK.sh                 # tested on Ubuntu 18.04/20.04/22.04
+$ ./install_SGX_SDK.sh                 # tested on Ubuntu 20.04/22.04
 $ source /opt/intel/sgxsdk/environment # add to ~/.bashrc to preserve across terminal sessions
 $ sudo service aesmd status            # stop/start aesmd service if needed
 ```
 
-The above install scripts are tested on Ubuntu 18.04 LTS.
+The above install scripts are tested on Ubuntu 22.04 LTS.
 For other GNU/Linux distributions, please follow the instructions in the
 [linux-sgx](https://github.com/01org/linux-sgx) project to build and install
 the Intel SGX SDK and PSW packages. You will also need to build and load an
