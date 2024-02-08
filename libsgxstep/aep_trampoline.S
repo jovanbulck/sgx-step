@@ -82,3 +82,4 @@ sgx_step_aep_trampoline:
 .global sgx_step_aep_eresume
 sgx_step_aep_eresume:
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */
+    ud2

@@ -1,8 +1,8 @@
-commit 1a75eb4d0954b1f3eab76a211647de8a80031170
+commit f32cc9feb7ce7e94337a3f78b0d0085161f75c8b
 Author: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date:   Wed Apr 13 13:55:33 2022 +0200
+Date:   Thu Feb 8 20:49:32 2024 +0000
 
-    SGX-Step SDK patches to reconfigure AEP/TCS.
+    SGX-Step SDK patches to reconfigure AEP/TCS
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
 index 691efbc9..07240fa7 100644
@@ -21,7 +21,7 @@ index 691efbc9..07240fa7 100644
  
  /* Convenient macro to be passed to sgx_create_enclave(). */
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
-index fc3828e1..6b6e8a26 100644
+index 4f09e2da..2f6b749e 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -32,6 +32,29 @@
@@ -75,21 +75,21 @@ index fc3828e1..6b6e8a26 100644
  
  .Leenter_inst:
      ENCLU
-@@ -158,15 +189,27 @@ EENTER_PROLOG
+@@ -158,18 +189,29 @@ EENTER_PROLOG
  .Loret:
      EENTER_EPILOG
  
 -.Lasync_exit_pointer:
 +__default_async_exit_pointer:
      ENCLU
+     ud2
      _CET_ENDBR
  
  .size __morestack, .-__morestack
  
- 
--DECLARE_GLOBAL_FUNC get_aep
+-
+ DECLARE_GLOBAL_FUNC get_aep
 -    lea_pic     .Lasync_exit_pointer, %xax
-+ DECLARE_GLOBAL_FUNC get_aep
 +    lea_pic     g_aep_pointer, %xax
 +    mov         (%xax), %xax
 +    ret
@@ -98,16 +98,18 @@ index fc3828e1..6b6e8a26 100644
 +    lea_pic     g_aep_pointer, %xax
 +    mov         naked_arg0, %xbx
 +    mov         %xbx, (%xax)
-+    ret
-+
+     ret
+ 
 +DECLARE_GLOBAL_FUNC get_tcs
 +    lea_pic     g_tcs, %xax
 +    mov         (%xax), %xax
-     ret
- 
++    ret
++ 
  DECLARE_GLOBAL_FUNC get_eenterp
+     lea_pic .Leenter_inst, %xax
+     ret
 diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
-index 17c82de4..b8dbffe4 100644
+index 22b37bf0..c9ac872e 100644
 --- a/psw/urts/linux/urts.cpp
 +++ b/psw/urts/linux/urts.cpp
 @@ -40,6 +40,26 @@
@@ -138,7 +140,7 @@ index 17c82de4..b8dbffe4 100644
  {
      //update last feature index if it fails here
 diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
-index 44897f21..c504e3b9 100644
+index 02b98ed6..a70d55ee 100644
 --- a/psw/urts/linux/urts.lds
 +++ b/psw/urts/linux/urts.lds
 @@ -1,5 +1,8 @@
