@@ -106,5 +106,7 @@ void dump_gprsgx_region(gprsgx_region_t *gprsgx_region);
 uint64_t edbgrd_ssa_gprsgx(int gprsgx_field_offset);
 #define edbgrd_erip() edbgrd_ssa_gprsgx(SGX_GPRSGX_RIP_OFFSET)
 
+void set_debug_optin(void);
+
 #endif
 #endif
