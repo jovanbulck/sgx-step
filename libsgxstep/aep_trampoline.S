@@ -56,26 +56,26 @@ sgx_step_aep_trampoline:
     and $~0xf, %rsp
 
     /* optional C function callback */
-    lea sgx_step_aep_cb(%rip), %xax
+    lea sgx_step_aep_cb@GOTPCREL(%rip), %xax
     mov (%xax), %xax
     test %xax, %xax
     je .Leresume
     call *%xax
 
 .Leresume:
-    incl sgx_step_eresume_cnt(%rip)
+    incl sgx_step_eresume_cnt@GOTPCREL(%rip)
 
     /* restore stack and TCS address */
     mov %rbp, %rsp
     pop %xbx
 
-    lea sgx_step_aep_trampoline(%rip), %xcx   /* AEP address */
+    lea sgx_step_aep_trampoline@GOTPCREL(%rip), %xcx   /* AEP address */
 
-    prefetch nemesis_tsc_eresume(%rip)
+    prefetch nemesis_tsc_eresume@GOTPCREL(%rip)
     mfence
 
     rdtsc
-    mov %eax, nemesis_tsc_eresume(%rip)
+    mov %eax, nemesis_tsc_eresume@GOTPCREL(%rip)
 
     mov $3, %xax                        /* ERESUME leaf */
 
