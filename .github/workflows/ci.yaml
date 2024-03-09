@@ -19,10 +19,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
 
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
+
       - name: Build and load /dev/sgx-step
         run: |
           cd $GITHUB_WORKSPACE/kernel/
-          ./install_SGX_driver.sh
+          #./install_SGX_driver.sh
           make clean load
 
       - name: Patch and install SGX SDK
