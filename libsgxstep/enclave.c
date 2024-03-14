@@ -195,6 +195,13 @@ void* get_enclave_ssa_gprsgx_adrs(void)
     return get_enclave_base() + ossa + (cssa * SGX_SSAFRAMESIZE) - SGX_GPRSGX_SIZE;
 }
 
+void set_debug_optin(void) 
+{
+    void *tcs_addr = sgx_get_tcs();
+    uint64_t flags = 0x1;
+    edbgwr(tcs_addr + 8, &flags, sizeof(flags));
+}
+
 void print_enclave_info(void)
 {
     uint64_t read = 0xff;
