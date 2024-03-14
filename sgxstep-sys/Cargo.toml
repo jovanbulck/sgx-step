@@ -1,0 +1,20 @@
+[package]
+name = "sgxstep-sys"
+version = "0.1.0"
+edition = "2021"
+links = "libsgxstep"
+authors = ["Daan Vanoverloop", "Jo Van Bulck"]
+license = "GPL-3.0"
+repository = "https://github.com/jovanbulck/sgx-step/"
+
+[features]
+default = ["build"]
+build = ["cc", "glob"]
+
+[dependencies]
+
+[build-dependencies]
+cc = { version = "1.0", optional = true }
+glob = { version = "0.3", optional = true }
+bindgen = "0.69"
+
