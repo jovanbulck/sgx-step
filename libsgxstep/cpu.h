@@ -26,6 +26,12 @@
 #define IA32_APIC_BASE_MSR      0x1b
 #define IA32_TSC_DEADLINE_MSR   0x6e0
 
+#define ENABLE_TF \
+	__asm__ volatile ("pushf\norl $0x100, (%rsp)\npopf\n")
+
+#define DISABLE_TF \
+	__asm__ volatile ("pushf\nandl $0xfffffeff, (%rsp)\npopf\n")
+
 uint64_t rdtsc_begin( void );
 uint64_t rdtsc_end( void );
 uint64_t read_flags(void);

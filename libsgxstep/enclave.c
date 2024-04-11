@@ -110,6 +110,7 @@ void register_enclave_info(void)
 
     victim.tcs = (uint64_t) sgx_get_tcs();
     victim.aep = (uint64_t) sgx_get_aep();
+    info("tcs at %lx; aep at %lx", victim.tcs, victim.aep);
     ASSERT( victim.tcs >= victim.base && victim.tcs < victim.limit);
     ioctl_init = 1;
 }
