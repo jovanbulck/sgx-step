@@ -51,10 +51,12 @@ int edbgrdwr(void *adrs, void* res, int len, int write);
 #define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)
 
 /* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
+#define SGX_TCS_FLAGS_OFFSET        8
 #define SGX_TCS_OSSA_OFFSET         16
 #define SGX_TCS_CSSA_OFFSET         24
 #define SGX_GPRSGX_SIZE             184
 #define SGX_GPRSGX_RIP_OFFSET       136
+#define SGX_FLAGS_DBGOPTIN          0x1
 
 /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
    runtime (driver), we assume a standard/hard-coded SSA framesize of 1 page */

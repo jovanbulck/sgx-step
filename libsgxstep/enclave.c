@@ -198,8 +198,10 @@ void* get_enclave_ssa_gprsgx_adrs(void)
 void set_debug_optin(void) 
 {
     void *tcs_addr = sgx_get_tcs();
-    uint64_t flags = 0x1;
-    edbgwr(tcs_addr + 8, &flags, sizeof(flags));
+    uint64_t flags;
+    edbgrd(tcs_addr + SGX_TCS_FLAGS_OFFSET, &flags, sizeof(flags));
+    flags |= SGX_FLAGS_DBGOPTIN;
+    edbgwr(tcs_addr + SGX_TCS_FLAGS_OFFSET, &flags, sizeof(flags));
 }
 
 void print_enclave_info(void)
