@@ -15,7 +15,7 @@
 #include <sys/mman.h>
 
 #define MAX_LEN            15
-#define DO_TIMER_STEP      1
+#define DO_TIMER_STEP      0
 #define DEBUG              0
 #define DBG_ENCL           1
 #if DO_TIMER_STEP
@@ -74,7 +74,7 @@ void aep_cb_func(void)
      * referencing the enclave code page about to be executed, so as to be able
      * to filter out "zero-step" results that won't set the accessed bit.
      */
-    if (ACCESSED(*pte_encl)) step_cnt++;
+    if (do_irq && ACCESSED(*pte_encl)) step_cnt++;
     *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
 
@@ -92,8 +92,6 @@ void aep_cb_func(void)
         *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
 #if DO_TIMER_STEP
         apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
-#else
-        ENABLE_TF;
 #endif
     }
 }
@@ -117,6 +115,7 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
             #endif
             ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
             do_irq = 1;
+            sgx_step_do_trap = 1;
         }
         else
         {
@@ -130,6 +129,10 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
         #if DEBUG
             //info("Caught single-step trap (RIP=%p)\n", si->si_addr);
         #endif
+
+        /* ensure RFLAGS.TF is clear to disable debug single-stepping */
+        ucontext_t *uc = (ucontext_t *) ctx;
+        uc->uc_mcontext.gregs[REG_EFL] &= ~0x100;
         break;
     #endif
 
@@ -234,6 +237,7 @@ int main( int argc, char **argv )
         for (int j = 0; j < pwd_len; j++) pwd[j] = '*';
         pwd[pwd_len] = '\0';
         do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+        sgx_step_do_trap = 0;
         ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
         SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
@@ -261,6 +265,7 @@ int main( int argc, char **argv )
         {
             pwd[i] = j;
             do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+            sgx_step_do_trap = 0;
             ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
             SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 

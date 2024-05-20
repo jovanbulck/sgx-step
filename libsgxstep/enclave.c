@@ -38,6 +38,7 @@ extern void sgx_step_aep_trampoline(void);
 aep_cb_t sgx_step_aep_cb = NULL;
 uint64_t nemesis_tsc_eresume = 0x0;
 int sgx_step_eresume_cnt = 0;
+int sgx_step_do_trap = 0;
 
 extern int fd_step;
 struct sgx_step_enclave_info victim = {0};

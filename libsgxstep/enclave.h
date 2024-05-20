@@ -36,6 +36,7 @@ struct sgx_step_enclave_info
 
 extern uint64_t nemesis_tsc_eresume, nemesis_tsc_aex;
 extern int sgx_step_eresume_cnt;
+extern int sgx_step_do_trap;
 
 typedef void (*aep_cb_t)(void);
 void register_aep_cb(aep_cb_t cb);
