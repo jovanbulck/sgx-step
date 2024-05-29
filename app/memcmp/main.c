@@ -99,6 +99,8 @@ void aep_cb_func(void)
 /* Called upon SIGSEGV caused by untrusted page tables. */
 void fault_handler(int signo, siginfo_t * si, void  *ctx)
 {
+    ucontext_t *uc = (ucontext_t *) ctx;
+
     switch ( signo )
     {
       case SIGSEGV:
@@ -131,7 +133,6 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
         #endif
 
         /* ensure RFLAGS.TF is clear to disable debug single-stepping */
-        ucontext_t *uc = (ucontext_t *) ctx;
         uc->uc_mcontext.gregs[REG_EFL] &= ~0x100;
         break;
     #endif
