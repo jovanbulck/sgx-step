@@ -1,5 +1,5 @@
 #include "elf_parser.h"
-#include "debug.h"
+
 #include <fcntl.h>
 #include <gelf.h>
 #include <libelf.h>
@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "debug.h"
 
 struct symbol symbols[MAX_SYMBOLS] = {0};
 int symbol_count = 0;
@@ -42,51 +44,42 @@ void free_symbols() {
 void register_symbols(const char *filename) {
     ASSERT(elf_version(EV_CURRENT) != EV_NONE);
 
-    int fd = open(filename, O_RDONLY, 0);
+    int fd = -1;
+    Elf *elf = NULL;
+    GElf_Ehdr ehdr;
+    Elf_Scn *scn = NULL;
+    GElf_Shdr shdr;
+    size_t shstrndx;
+
+    fd = open(filename, O_RDONLY, 0);
     if (fd < 0) {
         debug("Couldn't open file descriptor %s\n", filename);
         return;
     }
 
-    Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+    elf = elf_begin(fd, ELF_C_READ, NULL);
     if (!elf) {
         debug("Couldn't open ELF file %s\n", filename);
-        close(fd);
-        return;
+        goto err_close_fd;
     }
 
-    // Get the ELF header
-    GElf_Ehdr ehdr;
     if (gelf_getehdr(elf, &ehdr) == NULL) {
         debug("Couldn't get the ELF header %s\n", filename);
-        elf_end(elf);
-        close(fd);
-        return;
+        goto err_elf_end;
     }
-
-    // Locate the section header string table
-    Elf_Scn *scn = NULL;
-    GElf_Shdr shdr;
-    size_t shstrndx;
 
     if (elf_getshdrstrndx(elf, &shstrndx) != 0) {
         debug("Couldn't locate the section name string table %s\n", filename);
-        elf_end(elf);
-        close(fd);
-        return;
+        goto err_elf_end;
     }
 
-    // Iterate through sections to find the symbol table
     while ((scn = elf_nextscn(elf, scn)) != NULL) {
         if (gelf_getshdr(scn, &shdr) != &shdr) {
             debug("Couldn't find the symbol table %s", filename);
-            elf_end(elf);
-            close(fd);
-            return;
+            goto err_elf_end;
         }
 
         if (shdr.sh_type == SHT_SYMTAB || shdr.sh_type == SHT_DYNSYM) {
-            // Get string table for symbols
             Elf_Data *data = NULL;
             size_t n_symbols = shdr.sh_size / shdr.sh_entsize;
 
@@ -109,6 +102,13 @@ void register_symbols(const char *filename) {
         }
     }
 
+    // Clean up and return on success
     elf_end(elf);
+    close(fd);
+    return;
+
+err_elf_end:
+    elf_end(elf);
+err_close_fd:
     close(fd);
 }

@@ -21,19 +21,6 @@
 __attribute__((aligned(4096))) int array[4096] = {0xaa};
 #define a array[100]
 
-void* get_a_addr( void )
-{
-    return &a;
-}
-
 void page_aligned_func(void);
 
-void* get_code_addr( void )
-{
-    return page_aligned_func;
-}
-
-int enclave_dummy_call(void)
-{
-    return a;
-}
+int enclave_dummy_call(void) { return a; }

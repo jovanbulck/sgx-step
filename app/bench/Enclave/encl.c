@@ -29,46 +29,20 @@ extern void zigzag_bench(uint64_t nb);
 extern void asm_microbenchmark(void);
 extern int my_strlen(const char *str);
 
-void do_nop_slide(void)
-{
-    asm_microbenchmark();
-}
+void do_nop_slide(void) { asm_microbenchmark(); }
 
 int a, b;
 
-void do_zigzagger(int n)
-{
+void do_zigzagger(int n) {
     a = 1;
     b = 0;
     zigzag_bench(n);
 }
 
-int do_strlen(int n)
-{
+int do_strlen(int n) {
     int i, j;
 
-    for (i=0; i < n; i++)
-        j = my_strlen(&secret_str);
+    for (i = 0; i < n; i++) j = my_strlen(&secret_str);
 
     return j;
-}
-
-void *get_str_adrs( void )
-{
-    return &secret_str;
-}
-
-void *get_nop_adrs( void )
-{
-    return asm_microbenchmark;
-}
-
-void *get_zz_adrs(void)
-{
-    return zigzag_bench;
-}
-
-void *get_strlen_adrs(void)
-{
-    return my_strlen;
 }

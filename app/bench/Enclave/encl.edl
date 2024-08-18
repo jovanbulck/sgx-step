@@ -3,12 +3,8 @@ enclave {
 	trusted {
    	    public void  do_zigzagger( int n );
    	    public int   do_strlen( int n );
-        public void  *get_str_adrs( void );
    	    public void  do_nop_slide( void );
 
-        public void  *get_nop_adrs( void );
-        public void  *get_zz_adrs( void );
-        public void  *get_strlen_adrs( void );
 	};
 	
 	untrusted {
