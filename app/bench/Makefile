@@ -30,7 +30,7 @@ CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables 
 INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR)
 LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
                        -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib$(LIB_SUFX)/ \
-                       -L$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+                       -L$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux -lelf
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)

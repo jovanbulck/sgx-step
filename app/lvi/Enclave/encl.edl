@@ -1,9 +1,6 @@
 enclave {
 	
 	trusted {
-        public void *ecall_get_page_a(void);
-        public void *ecall_get_page_b(void);
-
         public void ecall_lvi_store_user([user_check] uint64_t *user_pt, [user_check] char *oracle);
         public void ecall_lvi_remap_l1d([user_check] char *oracle);
 

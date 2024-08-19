@@ -36,13 +36,3 @@ int memcmp_pwd(char *pwd)
     mwrite(&trigger_page);
     return rv;
 }
-
-void  *get_memcmp_adrs( void )
-{
-    return &my_memcmp;
-}
-
-void  *get_trigger_adrs( void )
-{
-    return &trigger_page;
-}
