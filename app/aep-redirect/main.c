@@ -101,7 +101,7 @@ void attacker_config_page_table(void) {
     print_pte_adrs(code_pt);
 
     /* Specify #PF handler with signinfo arguments */
-    memset(&act, sizeof(sigaction), 0);
+    memset(&act, 0, sizeof(sigaction));
     act.sa_sigaction = fault_handler;
     act.sa_flags = SA_RESTART | SA_SIGINFO;
 
