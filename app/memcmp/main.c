@@ -12,6 +12,7 @@
 #include "libsgxstep/config.h"
 #include "libsgxstep/idt.h"
 #include "libsgxstep/config.h"
+#include "libsgxstep/sh.h"
 #include "jsh-colors.h"
 #include <sys/mman.h>
 
@@ -97,71 +98,40 @@ void aep_cb_func(void)
     }
 }
 
+#if !DO_TIMER_STEP
+    void sigtrap_fault_handler(siginfo_t *si, ucontext_t *uc) {
+#if DEBUG
+    // info("Caught single-step trap (RIP=%p)\n", si->si_addr);
+#endif
+
+    /* ensure RFLAGS.TF is clear to disable debug single-stepping */
+    uc->uc_mcontext.gregs[REG_EFL] &= ~0x100;
+}
+#endif
+
 /* Called upon SIGSEGV caused by untrusted page tables. */
-void fault_handler(int signo, siginfo_t * si, void  *ctx)
-{
-    ucontext_t *uc = (ucontext_t *) ctx;
+void sigsegv_fault_handler(siginfo_t *si, ucontext_t *uc) {
+    ASSERT(fault_cnt++ < 10);
 
-    switch ( signo )
-    {
-      case SIGSEGV:
-        ASSERT(fault_cnt++ < 10);
+#if DEBUG
+    info("Caught page fault (base address=%p)", si->si_addr);
+#endif
 
-        #if DEBUG
-            info("Caught page fault (base address=%p)", si->si_addr);
-        #endif
-    
-        if (si->si_addr == trigger_adrs)
-        {
-            #if DEBUG
-                info("Restoring trigger access rights..");
-            #endif
-            ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
-            do_irq = 1;
-            sgx_step_do_trap = 1;
-        }
-        else
-        {
-            info("Unknown #PF address!");
-        }
-    
-        break;
-
-    #if !DO_TIMER_STEP
-      case SIGTRAP:
-        #if DEBUG
-            //info("Caught single-step trap (RIP=%p)\n", si->si_addr);
-        #endif
-
-        /* ensure RFLAGS.TF is clear to disable debug single-stepping */
-        uc->uc_mcontext.gregs[REG_EFL] &= ~0x100;
-        break;
-    #endif
-
-      default:
-        info("Caught unknown signal '%d'", signo);
-        abort();
+    if (si->si_addr == trigger_adrs) {
+#if DEBUG
+        info("Restoring trigger access rights..");
+#endif
+        ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
+        do_irq = 1;
+        sgx_step_do_trap = 1;
+    } else {
+        info("Unknown #PF address!");
     }
-
     // NOTE: return eventually continues at aep_cb_func and initiates
     // single-stepping mode.
 }
 
 /* ================== ATTACKER INIT/SETUP ================= */
-
-void register_signal_handler(int signo)
-{
-    struct sigaction act, old_act;
-
-    /* Specify #PF handler with signinfo arguments */
-    memset(&act, 0, sizeof(sigaction));
-    act.sa_sigaction = fault_handler;
-    act.sa_flags = SA_RESTART | SA_SIGINFO;
-
-    /* Block all signals while the signal is being handled */
-    sigfillset(&act.sa_mask);
-    ASSERT(!sigaction( signo, &act, &old_act ));
-}
 
 /* Configure and check attacker untrusted runtime environment. */
 void attacker_config_runtime(void)
@@ -172,7 +142,7 @@ void attacker_config_runtime(void)
 
     register_enclave_info();
     print_enclave_info();
-    register_signal_handler( SIGSEGV );
+    register_signal_handler(sigsegv_fault_handler, SIGSEGV);
 }
 
 /* Provoke page fault on enclave entry to initiate single-stepping mode. */
@@ -229,7 +199,7 @@ int main( int argc, char **argv )
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
     apic_timer_oneshot(IRQ_VECTOR);
 #else
-    register_signal_handler( SIGTRAP );
+    register_signal_handler(sigtrap_fault_handler, SIGTRAP);
     set_debug_optin();
 #endif
 
