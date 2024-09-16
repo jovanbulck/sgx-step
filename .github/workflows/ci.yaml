@@ -11,7 +11,6 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-20.04
           - ubuntu-22.04
     runs-on: ${{ matrix.os }}
 
@@ -51,4 +50,4 @@ jobs:
         run: |
           source /opt/intel/sgxsdk/environment
           for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
-          for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
+          for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; if [[ -f Makefile ]]; then make; ldd ./app ; fi ; done
