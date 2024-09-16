@@ -28,7 +28,7 @@
 #define DO_APIC_SW_IRQ              1
 #define DO_APIC_TMR_IRQ             1
 #define DO_EXEC_PRIV                1
-#define NUM                         100
+#define NUM                         10
 #define INFINITE_LOOP               1
 #define NEMESIS_HIGH                1
 

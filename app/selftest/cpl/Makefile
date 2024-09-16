@@ -1,4 +1,4 @@
-LIBSGXSTEP_DIR       = ../..
+LIBSGXSTEP_DIR       = ../../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
 -include $(LIBSGXSTEP)/Makefile.config
 
@@ -25,18 +25,20 @@ LDFLAGS             += -lsgx-step -lsgx_urts \
                        -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
 
 SOURCES              = $(shell ls *.c)
-OBJECTS              = $(SOURCES:.c=.o)
+OBJECTS              = $(SOURCES:.c=.o) asm.o
 OUTPUT               = app
 
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
-
 
 MAKEFLAGS           += --silent
 
 all: $(OUTPUT)
 	
 run: clean all
+	#TODO disable SMEP/SMAP at runtime through /dev/sgx-step
+	!(cat /proc/cpuinfo | grep -q smep) || (echo "smep not disabled!" && false)
+	!(cat /proc/cpuinfo | grep -q smap) || (echo "smap not disabled!" && false)
 	sudo $(URTS_LD_LIBRARY_PATH) ./app
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)

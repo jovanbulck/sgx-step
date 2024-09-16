@@ -242,7 +242,7 @@ the example applications in the "app" directory.
 First, check the APIC and interrupt-descriptor table setup:
 
 ```bash
-$ cd app/idt
+$ cd app/selftest/idt
 $ make run    # fires interrupts in an infinite loop to stress-test stability; exit with CTRL-C
 ```
 
@@ -282,7 +282,7 @@ access rights on specific code or data pages of interest.
 
 **Note (timer interval).** The exact timer interval value depends on CPU
 frequency, and hence remains inherently platform-specific (see also
-[app/apic](app/apic) for detailed microbenchmarks assessing the accuracy of
+[app/selftest/apic](app/selftest/apic) for detailed microbenchmarks assessing the accuracy of
 various APIC timer modes). Configure a suitable value in `/app/bench/main.c`.
 We established precise timer intervals for our evaluation platforms (see table
 below) by tweaking and observing the NOP microbenchmark enclave instruction

@@ -1,4 +1,4 @@
-LIBSGXSTEP_DIR       = ../..
+LIBSGXSTEP_DIR       = ../../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
 -include $(LIBSGXSTEP)/Makefile.config
 

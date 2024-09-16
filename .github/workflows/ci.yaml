@@ -50,4 +50,5 @@ jobs:
       - name: Build SGX-Step sample applications
         run: |
           source /opt/intel/sgxsdk/environment
+          for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
           for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
