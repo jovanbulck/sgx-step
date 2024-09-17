@@ -29,11 +29,21 @@
 #define USER_IDT_ENABLE             1
 #define IRQ_VECTOR                  45
 #define IRQ_PRIV_VECTOR             49
+#define RDMSR_GATE_VECTOR           50
+#define WRMSR_GATE_VECTOR           51
 #define GDT_VECTOR                  13
-#if (M32 != 1)
-	#define APIC_CONFIG_MSR         1
+
+/*
+ * Some recent CPUs with LEGACY_XAPIC_DISABLED only support x2apic mode with
+ * SGX. In x2apic mode all APIC configuration needs to go through ring-0
+ * RD/WRMSR instructions, which is also the only access mode supported for
+ * IA32_TSC_DEADLINE.
+ */
+#define X2APIC                      1
+#if (!X2APIC && !M32)
+    #define APIC_CONFIG_MSR         1
 #else
-	#define APIC_CONFIG_MSR         0
+    #define APIC_CONFIG_MSR         0
 #endif
 
 #define VICTIM_CPU                  1

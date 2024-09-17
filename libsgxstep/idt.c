@@ -8,7 +8,7 @@
 
 /* See irq_entry.S to see how these are used. */
 void __ss_irq_gate(void);
-exec_priv_cb_t __ss_irq_gate_cb = NULL;
+extern exec_priv_cb_t __ss_irq_gate_cb;
 
 uint64_t sgx_step_isr_kernel_map_offset = 0;
 
@@ -146,52 +146,31 @@ void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector)
     install_irq_handler(idt, asm_handler, vector, KERNEL_CS, GATE_INTERRUPT);
 }
 
-void __attribute__((noinline)) trigger_sw_irq(void)
-{
-    /*
-     * NOTE: separate C function to make sure caller-save registers are
-     * properly stored and restored by the compiler.
-     */
-    asm("int %0\n\t" ::"i"(IRQ_PRIV_VECTOR):);
-}
-
-/*
- * Executes the provided callback function with ring-0 privileges by installing
- * a custom interrupt gate.
- *
- * NOTE: Calling `exec_priv` may lead to unpredictable system freezes when
- * passing larger or complex functions. Keep in mind the following for the
- * callback function:
- *
- *      1. Executes with interrupts disabled, best to keep it short.
- *      2. Don't use any system calls (e.g., libc).
- *      3. Avoid page-fault exceptions: no illegal accesses and preferably
- *      `mlock` all code/data pages.
- *
- * While `exec_priv` may be greatly useful to quickly test out some privileged
- * functionality in ring-0 C code without recompiling the kernel, if long-term
- * stability is desired it may be best to pass a carefully crafted asm callback
- * function.
- */
-void exec_priv(exec_priv_cb_t cb)
+void install_priv_gate(void *asm_handler, int vector)
 {
     idt_t idt;
+    libsgxstep_info("locking user-space IRQ gate handler page at %p", __ss_irq_gate);
+    ASSERT( !mlock(__ss_irq_gate, 0x1000) );
+
+    libsgxstep_info("installing ring-0 IRQ gate");
+    ASSERT( !claim_cpu(VICTIM_CPU) );
+    map_idt(&idt);
+    /*
+     * In principle, we could use a trap gate to make the exec_priv code
+     * interruptible, but it seems the Linux kernel does not expect and
+     * freezes when interrupting ring-0 code. So we use an interrupt gate
+     * here to make the exec_priv code uninterruptible.
+     */
+    install_kernel_irq_handler(&idt, asm_handler, vector);
+    free_map(idt.base);
+}
+
+void exec_priv(exec_priv_cb_t cb)
+{
     if (!__ss_irq_gate_cb)
     {
-        libsgxstep_info("locking user-space IRQ gate handler page at %p", __ss_irq_gate);
-        ASSERT( !mlock(__ss_irq_gate, 0x1000) );
-
-        libsgxstep_info("installing and calling ring-0 IRQ gate");
-        ASSERT( !claim_cpu(VICTIM_CPU) );
-        map_idt(&idt);
-        /*
-         * In principle, we could use a trap gate to make the exec_priv code
-         * interruptible, but it seems the Linux kernel does not expect and
-         * freezes when interrupting ring-0 code. So we use an interrupt gate
-         * here to make the exec_priv code uninterruptible.
-         */
-        install_irq_handler(&idt, __ss_irq_gate, IRQ_PRIV_VECTOR, KERNEL_CS, GATE_INTERRUPT);
-        free_map(idt.base);
+        install_priv_gate(__ss_irq_gate, IRQ_PRIV_VECTOR);
+        ASSERT( !mlock(&__ss_irq_gate_cb, 0x1000) );
     }
 
     __ss_irq_gate_cb = cb;
