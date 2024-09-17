@@ -32,7 +32,26 @@ typedef struct {
 typedef void (*irq_cb_t)(uint8_t *rsp);
 typedef void (*exec_priv_cb_t)(void);
 
+/*
+ * Executes the provided callback function with ring-0 privileges by installing
+ * a custom interrupt gate.
+ *
+ * NOTE: Calling `exec_priv` may lead to unpredictable system freezes when
+ * passing larger or complex functions. Keep in mind the following for the
+ * callback function:
+ *
+ *      1. Executes with interrupts disabled, best to keep it short.
+ *      2. Don't use any system calls (e.g., libc).
+ *      3. Avoid page-fault exceptions: no illegal accesses and preferably
+ *      `mlock` all code/data pages.
+ *
+ * While `exec_priv` may be greatly useful to quickly test out some privileged
+ * functionality in ring-0 C code without recompiling the kernel, if long-term
+ * stability is desired it may be best to pass a carefully crafted asm callback
+ * function.
+ */
 void exec_priv(exec_priv_cb_t cb);
+void trigger_sw_irq();
 
 void map_idt(idt_t *idt);
 void dump_idt(idt_t *idt);
@@ -40,6 +59,7 @@ void dump_gate(gate_desc_t *gate, int idx);
 
 void install_user_irq_handler(idt_t *idt, void* asm_handler, int vector);
 void install_kernel_irq_handler(idt_t *idt, void *asm_handler, int vector);
+void install_priv_gate(void *asm_handler, int vector);
 
 void __ss_irq_handler(void);
 extern int volatile __ss_irq_fired, __ss_irq_count, __ss_irq_cpl;

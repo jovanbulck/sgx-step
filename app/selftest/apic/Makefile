@@ -71,7 +71,7 @@ run: clean all
 	cat out.txt
 
 parse: run
-	SGX_STEP_PLATFORM=$(SGX_STEP_PLATFORM) ./parse_$(PARSE).py $(NUM)
+	./parse.py
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 

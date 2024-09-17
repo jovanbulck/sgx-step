@@ -36,12 +36,8 @@ unsigned long long test_tsc_results[TEST_ITERATIONS];
 unsigned long long test_inc_results[TEST_ITERATIONS];
 unsigned long long test_deadline_results[TEST_ITERATIONS];
 
+extern uint64_t __ss_irq_rax;
 void incs(void);
-void __apic_irq_handler_timer(void);
-void __apic_priv_irq_gate(void);
-extern unsigned long long __apic_irq_tsc;
-extern unsigned long long __apic_deadline_tsc;
-extern unsigned long long __apic_irq_rax;
 
 /* ================== ATTACKER INIT/SETUP ================= */
 
@@ -68,15 +64,11 @@ int main( int argc, char **argv )
     idt_t idt = {0};
     attacker_config_runtime();
     map_idt(&idt);
-    install_kernel_irq_handler(&idt, __apic_irq_handler_timer, IRQ_VECTOR);
+    install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
 
     #if TSC_DEADLINE
         const char *filename = "deadline_results.txt";
         apic_timer_deadline(IRQ_VECTOR);
-    
-        #if USE_IRQ_GATE
-            install_kernel_irq_handler(&idt, __apic_priv_irq_gate, IRQ_PRIV_VECTOR);
-        #endif
     #else
         const char *filename = "oneshot_results.txt";
         apic_timer_oneshot(IRQ_VECTOR);
@@ -85,32 +77,31 @@ int main( int argc, char **argv )
     for (int i = 0; i < TEST_ITERATIONS; ++i)
     {
         __ss_irq_fired = 0;
-        unsigned long long begin_time = __rdtsc();
+        g_apic_deadline_tsc_begin = rdtsc_begin();
 
         #if TSC_DEADLINE && USE_IRQ_GATE
-            __apic_deadline_tsc = begin_time + APIC_TSC_INTERVAL;
-            asm("int %0\n\t" ::"i"(IRQ_PRIV_VECTOR):);
+            apic_timer_deadline_irq(APIC_TSC_INTERVAL);
         #elif TSC_DEADLINE
-            __apic_deadline_tsc = begin_time + APIC_TSC_INTERVAL + WRMSR_ON_CPU_LATENCY;
-            wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(), __apic_deadline_tsc);
+            wrmsr_on_cpu(IA32_TSC_DEADLINE_MSR, get_cpu(),
+                         g_apic_deadline_tsc_begin + APIC_TSC_INTERVAL + WRMSR_ON_CPU_LATENCY);
             //unsigned long long wrmsr_time = __rdtsc();
         #else
             apic_timer_irq(APIC_ONESHOT_TICKS);
         #endif
 
         incs();
-        ASSERT(__ss_irq_fired);
+        ASSERT(__ss_irq_fired == 1);
 
-	test_tsc_results[i] = __apic_irq_tsc - begin_time;
-	test_inc_results[i] = __apic_irq_rax;
-        test_deadline_results[i] = __apic_irq_tsc - __apic_deadline_tsc;
+	test_tsc_results[i] = nemesis_tsc_aex - g_apic_deadline_tsc_begin ;
+	test_inc_results[i] = __ss_irq_rax;
+        test_deadline_results[i] = nemesis_tsc_aex - (g_apic_deadline_tsc_begin + APIC_TSC_INTERVAL);
     }
 
     // record results
     FILE *fp = fopen(filename, "w");
     fprintf(fp, "#tsc_diff,inc_count,tsc_deadline_drift\n");
     for (int i = 1; i < TEST_ITERATIONS; ++i) {
-        fprintf(fp, "%llu,%llu,%llu\n", test_tsc_results[i], test_inc_results[i], test_deadline_results[i]);
+        fprintf(fp, "%llu,%llu,%lld\n", test_tsc_results[i], test_inc_results[i], test_deadline_results[i]);
     }
     fclose(fp);
 

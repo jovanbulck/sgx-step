@@ -15,8 +15,8 @@
 #define SELF_IPI        0
 
 #define MY_VICTIM_CPU   1
-//#define MY_SPY_CPU      3       // no hyperthreading
-#define MY_SPY_CPU      37       // hyperthreading
+#define MY_SPY_CPU      3       // no hyperthreading
+//#define MY_SPY_CPU      37       // hyperthreading
 
 #if SELF_IPI
     #define DUMP_FILE       "ipi-self.csv"
@@ -63,7 +63,12 @@ void spy_func(int eid)
             apic_write_icr_ret(APIC_ICR_VECTOR(IRQ_VECTOR) |
                                APIC_ICR_DELIVERY_FIXED | APIC_ICR_LEVEL_ASSERT |
                                APIC_ICR_DEST_PHYSICAL,
-                               (apic_id_victim << APIC_ID_SHIFT) & APIC_ICR_DEST_MASK);
+                               #if !X2APIC
+                                 (apic_id_victim << APIC_ID_SHIFT) & APIC_ICR_DEST_MASK
+                               #else
+                                 apic_id_victim
+                               #endif
+                              );
 
             spy_ready = 0;
             while( !__ss_irq_fired );

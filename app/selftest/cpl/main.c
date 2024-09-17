@@ -30,20 +30,19 @@
 
 int gate_cpl = -1;
 uint64_t gate_msr = -1;
+uint64_t my_msr = -1;
 void call_gate_func(void);
 void irq_gate_func(void);
+uint64_t do_rdmsr(void);
 
 int my_cpl = -1;
-uint64_t my_tsc1 = -1;
-uint64_t my_tsc2 = -1;
 
 /* ------------------------------------------------------------ */
 /* This code will execute with ring0 privileges :) */
 void my_ring0_func(void)
 {
-    my_tsc1 = rdmsr(IA32_TIME_STAMP_COUNTER);
     my_cpl = get_cpl();
-    my_tsc2 = rdmsr(IA32_TIME_STAMP_COUNTER);
+    my_msr = do_rdmsr();
 }
 /* ------------------------------------------------------------ */
 
@@ -85,8 +84,8 @@ int main( int argc, char **argv )
 
     info_event("Calling ring0 function on user page with `exec_priv()`");
     exec_priv(my_ring0_func);
-    info("back from my_ring0_func w CPL=%d and IA32_TIME_STAMP_COUNTER=%p/%p/%d",
-            my_cpl, my_tsc1, my_tsc2, (int) my_tsc2-my_tsc1);
+    info("back from my_ring0_func w CPL prev/cur=%d/%d; RDMSR=%p",
+        my_cpl, get_cpl(), my_msr);
 #endif
 
     return 0;

@@ -6,11 +6,11 @@ This directory contains bare-metal applications designed to test various functio
 
 | Directory  | Description                                                                                               |
 |------------|-----------------------------------------------------------------------------------------------------------|
-| `apic`     | Microbenchmarks for timer interrupts via various Advanced Programmable Interrupt Controller (APIC) modes. |
-| `apic-ipi` | Microbenchmarks for APIC inter-processor interrupts.                                                      |
-| `cpl`      | Changing the Current Privilege Level (CPL) through calland interrupt GDT/IDT gates.                       |
+| `cpl`      | Changing the Current Privilege Level (CPL) through call and interrupt GDT/IDT gates.                      |
 | `idt`      | Custom handlers for software and timer interrupts via the Interrupt Descriptor Table (IDT).               |
 | `idt_isr_map` | Stresstest to demonstrate custom IDT handlers can be called across processes.                          |
+| `apic`     | Microbenchmarks for timer interrupts via various Advanced Programmable Interrupt Controller (APIC) modes. |
+| `apic-ipi` | Microbenchmarks for APIC inter-processor interrupts.                                                      |
 
 ## Usage
 
@@ -28,4 +28,5 @@ To run the selftest applications:
 
 Reference output is available in the respective README files within each subdirectory.
 
-**Note:** Any crashes during execution may indicate that your machine is not set up correctly for using SGX-Step. 
+**Note:** For troubleshooting, recommended is to execute the selftests in the order specified in the table above. Any crashes or assertion errors during execution may indicate that your machine is not set up correctly for using SGX-Step.
+

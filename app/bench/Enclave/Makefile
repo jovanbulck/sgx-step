@@ -31,7 +31,7 @@ OUTPUT_T          = $(ENCLAVE).so
 OUTPUT_T_UNSIG    = $(ENCLAVE).unsigned.so
 OUTPUT_U          = lib$(ENCLAVE)_proxy.a
 LIB_DIRS          = -L$(SGX_SDK)/lib$(LIB_SUFX)/
-LD_FLAGS         += -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
+LD_FLAGS         += -z noexecstack -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles \
                     -Wl,--whole-archive -Wl,--start-group $(ENCLAVE_LIBS) -Wl,--end-group \
                     -Wl,--no-whole-archive -Wl,--start-group $(ENCLAVE_LIB_PARTS) -Wl,--end-group \
                     -Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \

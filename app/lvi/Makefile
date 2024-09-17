@@ -1,6 +1,7 @@
 LIBSGXSTEP_DIR       = ../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
 URTS_LIB_PATH        = $(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+-include $(LIBSGXSTEP)/Makefile.config
 
 ifeq ($(SGX_SDK),)
     SGX_SDK          = /opt/intel/sgxsdk
