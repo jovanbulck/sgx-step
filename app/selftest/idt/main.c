@@ -29,7 +29,7 @@
 #define DO_APIC_TMR_IRQ             1
 #define DO_EXEC_PRIV                1
 #define NUM                         10
-#define INFINITE_LOOP               1
+#define INFINITE_LOOP               0
 #define NEMESIS_HIGH                1
 
 /* ------------------------------------------------------------ */
@@ -37,6 +37,7 @@
 int my_cpl = -1;
 uint64_t my_flags = 0;
 extern uint64_t nemesis_tsc_aex, nemesis_tsc_eresume;
+int apic_oneshot = 1;
 
 void pre_irq(void)
 {
@@ -55,7 +56,15 @@ void do_irq_sw(void)
 void do_irq_tmr(void)
 {
     pre_irq();
-    apic_timer_irq(10);
+
+    if (apic_oneshot)
+    {
+        apic_timer_irq(10);
+    }
+    else
+    {
+        apic_timer_deadline_irq(100);
+    }
 
     /*
      * Ring-0 `exec_priv` handler executes with interrupts disabled FLAGS.IF=0
@@ -84,6 +93,30 @@ void post_irq(char *s)
             my_cpl, __ss_irq_cpl, my_flags, __ss_irq_count, nemesis_tsc_aex - nemesis_tsc_eresume);
 }
 
+void do_irq_apic_tmr_test(char *tmr_desc, int do_exec_priv)
+{
+    printf("\n");
+    info_event("Triggering ring-3 %s interrupts..", tmr_desc);
+    for (int i=0; i < NUM; i++)
+    {
+        do_irq_tmr();
+        post_irq(tmr_desc);
+    }
+
+    if (do_exec_priv)
+    {
+        printf("\n");
+        info_event("Triggering ring-0 %s interrupts..", tmr_desc);
+        for (int i=0; i < NUM; i++)
+        {
+            my_cpl = -1;
+            exec_priv(do_irq_tmr);
+            while (!__ss_irq_fired);
+            post_irq(tmr_desc);
+        }
+    }
+}
+
 void do_irq_test(int do_exec_priv)
 {
     #if DO_APIC_SW_IRQ
@@ -109,28 +142,13 @@ void do_irq_test(int do_exec_priv)
     #endif
 
     #if DO_APIC_TMR_IRQ
-        printf("\n");
-        info_event("Triggering ring-3 APIC timer interrupts..");
         apic_timer_oneshot(IRQ_VECTOR);
+        apic_oneshot = 1;
+        do_irq_apic_tmr_test("APIC timer oneshot", do_exec_priv);
 
-        for (int i=0; i < NUM; i++)
-        {
-            do_irq_tmr();
-            post_irq("APIC timer");
-        }
-
-        if (do_exec_priv)
-        {
-            printf("\n");
-            info_event("Triggering ring-0 APIC timer interrupts..");
-            for (int i=0; i < NUM; i++)
-            {
-                my_cpl = -1;
-                exec_priv(do_irq_tmr);
-                while (!__ss_irq_fired);
-                post_irq("APIC timer");
-            }
-        }
+        apic_timer_deadline(IRQ_VECTOR);
+        apic_oneshot = 0;
+        do_irq_apic_tmr_test("APIC timer tsc_deadline", do_exec_priv);
     #endif
 }
 
