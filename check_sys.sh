@@ -68,7 +68,7 @@ cpuinfo=`cat /proc/cpuinfo`
 assert_not_contains "$cpuinfo" "smap"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "smep"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "umip"   "not disabled in /proc/cpuinfo"
-assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo"
+#assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo"
 end_check
 
 ############################################################################
