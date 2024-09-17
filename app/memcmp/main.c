@@ -12,11 +12,12 @@
 #include "libsgxstep/config.h"
 #include "libsgxstep/idt.h"
 #include "libsgxstep/config.h"
+#include "libsgxstep/cache.h"
 #include "jsh-colors.h"
 #include <sys/mman.h>
 
 #define MAX_LEN            15
-#define DO_TIMER_STEP      0
+#define DO_TIMER_STEP      1
 #define DEBUG              0
 #define DBG_ENCL           1
 #if DO_TIMER_STEP
@@ -74,9 +75,16 @@ void aep_cb_func(void)
      * NOTE: We explicitly clear the "accessed" bit of the _unprotected_ PTE
      * referencing the enclave code page about to be executed, so as to be able
      * to filter out "zero-step" results that won't set the accessed bit.
+     *
+     * Clearing the PTE "accessed" bit forces the CPU to take a ucode-assisted
+     * page-table walk for the first instruction following ERESUME, which
+     * causes that instruction to be much longer. We additionally flush this
+     * PTE from the cache to further delay the page-table walk and increase the
+     * landing space for the timer interrupt.
      */
     if (do_irq && ACCESSED(*pte_encl)) step_cnt++;
     *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
+    flush(pte_encl);
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
 
     /*
@@ -118,7 +126,10 @@ void fault_handler(int signo, siginfo_t * si, void  *ctx)
             #endif
             ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
             do_irq = 1;
-            sgx_step_do_trap = 1;
+
+            #if !DO_TIMER_STEP
+                sgx_step_do_trap = 1;
+            #endif
         }
         else
         {
@@ -228,6 +239,11 @@ int main( int argc, char **argv )
     map_idt(&idt);
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
     apic_timer_oneshot(IRQ_VECTOR);
+
+    __ss_irq_fired = 0;
+    apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    while (!__ss_irq_fired);
+    info("APIC timer IRQ handler seems to be working");
 #else
     register_signal_handler( SIGTRAP );
     set_debug_optin();

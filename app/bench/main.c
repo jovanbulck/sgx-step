@@ -31,6 +31,7 @@
 #include "libsgxstep/idt.h"
 #include "libsgxstep/pt.h"
 #include "libsgxstep/sched.h"
+#include "libsgxstep/cache.h"
 
 #ifndef NUM_RUNS
 #define NUM_RUNS 100
@@ -85,14 +86,16 @@ void aep_cb_func(void) {
     /*
      * Configure APIC timer interval for next interrupt.
      *
-     * On our evaluation platforms, we explicitly clear the enclave's
-     * _unprotected_ PMD "accessed" bit below, so as to slightly slow down
-     * ERESUME such that the interrupt reliably arrives in the first subsequent
-     * enclave instruction.
-     *
+     * NOTE: Clearing the PMD "accessed" bit forces the CPU to take a
+     * ucode-assisted page-table walk for the first instruction following
+     * ERESUME, which causes that instruction to be much longer. We
+     * additionally flush this PMD from the cache to further delay the
+     * page-table walk and increase the landing space for the timer interrupt.
      */
     if (do_irq) {
         *pmd_encl = MARK_NOT_ACCESSED(*pmd_encl);
+        flush(pmd_encl);
+        flush(pte_encl);
         apic_timer_irq(SGX_STEP_TIMER_INTERVAL);
     }
 }
@@ -188,6 +191,11 @@ int main(int argc, char **argv) {
     map_idt(&idt);
     install_kernel_irq_handler(&idt, __ss_irq_handler, IRQ_VECTOR);
     apic_timer_oneshot(IRQ_VECTOR);
+
+    __ss_irq_fired = 0;
+    apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
+    while (!__ss_irq_fired);
+    info("APIC timer IRQ handler seems to be working");
 
     /* 2. Single-step enclaved execution. */
     info_event("calling enclave: attack=%d; num_runs=%d; timer=%d",
