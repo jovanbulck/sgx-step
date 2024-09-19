@@ -7,3 +7,6 @@
 [submodule "sdk/gramine"]
 	path = sdk/gramine/gramine
 	url = https://github.com/gramineproject/gramine.git
+[submodule "sdk/bare-sgx"]
+	path = sdk/bare-sgx
+	url = https://github.com/jovanbulck/bare-sgx.git
