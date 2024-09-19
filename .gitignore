@@ -16,3 +16,17 @@
 *.mk
 *.mod
 *.swn
+
+# Ignore cache directories
+*.cache/
+**/.cache/
+
+# Ignore compile command files
+compile_commands.json
+
+# Ignore backup files
+*.bak
+
+# Ignore tags file (for ctags or similar)
+tags
+
