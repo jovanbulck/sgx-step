@@ -25,6 +25,7 @@
 #include "Enclave/encl_u.h"
 #include "libsgxstep/apic.h"
 #include "libsgxstep/config.h"
+#include "libsgxstep/counter.h"
 #include "libsgxstep/debug.h"
 #include "libsgxstep/elf_parser.h"
 #include "libsgxstep/enclave.h"
@@ -45,7 +46,6 @@
 
 sgx_enclave_id_t eid = 0;
 int strlen_nb_access = 0;
-int irq_cnt = 0, do_irq = 1, fault_cnt = 0;
 uint64_t *pte_encl = NULL;
 uint64_t *pte_str_encl = NULL;
 uint64_t *pmd_encl = NULL;
@@ -56,7 +56,7 @@ uint64_t *pmd_encl = NULL;
 void aep_cb_func(void) {
     uint64_t erip = edbgrd_erip() - (uint64_t)get_enclave_base();
     info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
-    irq_cnt++;
+    counter.irq_cnt++;
 
 /* XXX insert custom attack-specific side-channel observation code here */
 #if (ATTACK_SCENARIO == STRLEN)
@@ -68,11 +68,11 @@ void aep_cb_func(void) {
     *pte_str_encl = MARK_NOT_ACCESSED(*pte_str_encl);
 #endif
 
-    if (do_irq && (irq_cnt > NUM_RUNS * 500)) {
+    if (counter.do_irq && (counter.irq_cnt > NUM_RUNS * 500)) {
         info(
             "excessive interrupt rate detected (try adjusting timer interval "
             "to avoid getting stuck in zero-stepping); aborting...");
-        do_irq = 0;
+        counter.do_irq = 0;
     }
 
     /*
@@ -91,7 +91,7 @@ void aep_cb_func(void) {
      * enclave instruction.
      *
      */
-    if (do_irq) {
+    if (counter.do_irq) {
         *pmd_encl = MARK_NOT_ACCESSED(*pmd_encl);
         apic_timer_irq(SGX_STEP_TIMER_INTERVAL);
     }
@@ -101,7 +101,7 @@ void aep_cb_func(void) {
 void fault_handler(int signal) {
     info("Caught fault %d! Restoring enclave page permissions..", signal);
     *pte_encl = MARK_NOT_EXECUTE_DISABLE(*pte_encl);
-    ASSERT(fault_cnt++ < 10);
+    ASSERT(counter.fault_cnt++ < 10);
 
     // NOTE: return eventually continues at aep_cb_func and initiates
     // single-stepping mode.
@@ -167,6 +167,8 @@ int main(int argc, char **argv) {
     sgx_launch_token_t token = {0};
     int apic_fd, encl_strlen = 0, updated = 0, vec = 0;
     idt_t idt = {0};
+    counter.do_irq = 1;
+
 
     info_event("Creating enclave...");
     SGX_ASSERT(sgx_create_enclave("./Enclave/encl.so", /*debug=*/1, &token,
@@ -206,7 +208,7 @@ int main(int argc, char **argv) {
     /* 3. Restore normal execution environment. */
     SGX_ASSERT(sgx_destroy_enclave(eid));
 
-    info_event("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt,
+    info_event("all done; counted %d/%d IRQs (AEP/IDT)", counter.irq_cnt,
                __ss_irq_count);
     return 0;
 }

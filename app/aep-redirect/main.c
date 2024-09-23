@@ -23,6 +23,7 @@
 #include <sys/mman.h>
 
 #include "Enclave/encl_u.h"
+#include "libsgxstep/counter.h"
 #include "libsgxstep/debug.h"
 #include "libsgxstep/elf_parser.h"
 #include "libsgxstep/enclave.h"
@@ -31,7 +32,6 @@
 #define DBG_ENCL 1
 
 void *data_pt = NULL, *data_page = NULL, *code_pt = NULL;
-int fault_fired = 0, aep_fired = 0;
 sgx_enclave_id_t eid = 0;
 
 void aep_cb_func(void) {
@@ -43,11 +43,11 @@ void aep_cb_func(void) {
     edbgrd(get_enclave_ssa_gprsgx_adrs(), &gprsgx, sizeof(gprsgx_region_t));
     dump_gprsgx_region(&gprsgx);
 
-    aep_fired++;
+    counter.aep_cnt++;
 }
 
 void fault_handler(int signo, siginfo_t *si, void *ctx) {
-    ASSERT(fault_fired < 5);
+    ASSERT(counter.fault_cnt < 5);
 
     switch (signo) {
         case SIGSEGV:
@@ -71,7 +71,7 @@ void fault_handler(int signo, siginfo_t *si, void *ctx) {
         info("Unknown #PF address!");
     }
 
-    fault_fired++;
+    counter.fault_cnt++;
 }
 
 void attacker_config_page_table(void) {
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
     SGX_ASSERT(page_aligned_func(eid));
 
     info("all is well; exiting..");
-    ASSERT(fault_fired && aep_fired);
+    ASSERT(counter.fault_cnt && counter.aep_cnt);
     SGX_ASSERT(sgx_destroy_enclave(eid));
     return 0;
 }

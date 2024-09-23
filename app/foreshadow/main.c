@@ -54,7 +54,7 @@ uint64_t pte_alias_unmapped = 0x0;
 
 gprsgx_region_t shadow_gprsgx = {0x00};
 
-int fault_fired = 0, cur_byte = 0;
+int cur_byte = 0;
 sgx_enclave_id_t eid = 0;
 
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
@@ -62,7 +62,7 @@ sgx_enclave_id_t eid = 0;
 /* Called upon SIGSEGV caused by untrusted page tables. */
 void fault_handler(int signal)
 {
-    fault_fired++;
+    counter.fault_cnt++;
 
     /* remap enclave page, so abort page semantics apply and execution can continue. */
     *pte_alias = MARK_PRESENT(pte_alias_unmapped);
@@ -78,7 +78,7 @@ void fault_handler(int signal)
         }
         else
         {
-            if (fault_fired == 1)
+            if (counter.fault_cnt == 1)
                 printf("[#PF handler] ERESUME prefetch to refresh GPRSGX region; byte: ");
             printf("%d ", cur_byte);
         }
@@ -210,7 +210,7 @@ int main( int argc, char **argv )
         sgx_step_eresume_cnt = 0;
         SGX_ASSERT( enclave_run( eid ) );
 
-        ASSERT(fault_fired);
+        ASSERT(counter.fault_cnt);
         dump_gprsgx_region(&shadow_gprsgx);
         foreshadow_dump_perf();
         info("total of %d faulting ERESUME calls needed", sgx_step_eresume_cnt); 
