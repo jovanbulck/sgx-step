@@ -92,3 +92,10 @@ sgx_step_aep_trampoline:
 sgx_step_aep_eresume:
     .byte 0x0f, 0x01, 0xd7              /* ENCLU */
     ud2
+
+    .global xs_enclu_stub
+xs_enclu_stub:
+    mov xs_aep_pt(%rip), %rcx
+    enclu
+    jmp *xs_enclu_cont_inst(%rip)
+

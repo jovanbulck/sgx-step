@@ -44,7 +44,8 @@ MAKEFLAGS           += --silent
 all: $(OUTPUT)
 	
 run: clean all
-	sudo $(URTS_LD_LIBRARY_PATH) ./$(OUTPUT)
+	./patch.sh ./$(OUTPUT)
+	sudo LD_LIBRARY_PATH=./patched-libs ./$(OUTPUT)
 
 debug: clean all
 	sudo `which sgx-gdb` ./$(OUTPUT)

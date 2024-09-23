@@ -27,11 +27,7 @@
 #include "pt.h"
 #include <fcntl.h>
 #include <string.h>
-
-/* Custom AEP get/set functions from patched SGX SDK urts. */
-void* sgx_get_aep(void);
-void sgx_set_aep(void* aep);
-void* sgx_get_tcs(void);
+#include "aep.h"
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);
@@ -47,7 +43,7 @@ int fd_self_mem = -1;
 
 void register_aep_cb(aep_cb_t cb)
 {
-    sgx_set_aep(sgx_step_aep_trampoline);
+    xs_set_aep(sgx_step_aep_trampoline);
     sgx_step_aep_cb = cb;
 }
 
@@ -109,8 +105,8 @@ void register_enclave_info(void)
     }
     ASSERT( victim.drv && "no enclave found in /proc/self/maps");
 
-    victim.tcs = (uint64_t) sgx_get_tcs();
-    victim.aep = (uint64_t) sgx_get_aep();
+    victim.tcs = (uint64_t) xs_get_tcs();
+    victim.aep = (uint64_t) xs_get_aep();
     info("tcs at %lx; aep at %lx", victim.tcs, victim.aep);
     ASSERT( victim.tcs >= victim.base && victim.tcs < victim.limit);
     ioctl_init = 1;
@@ -190,7 +186,7 @@ void* get_enclave_ssa_gprsgx_adrs(void)
 {
     uint64_t ossa = 0x0;
     uint32_t cssa = 0x0;
-    void *tcs_addr = sgx_get_tcs();
+    void *tcs_addr = xs_get_tcs();
     edbgrd(tcs_addr + SGX_TCS_OSSA_OFFSET, &ossa, sizeof(ossa));
     edbgrd(tcs_addr + SGX_TCS_CSSA_OFFSET, &cssa, sizeof(cssa));
 
@@ -199,7 +195,7 @@ void* get_enclave_ssa_gprsgx_adrs(void)
 
 void set_debug_optin(void) 
 {
-    void *tcs_addr = sgx_get_tcs();
+    void *tcs_addr = xs_get_tcs();
     uint64_t flags;
     edbgrd(tcs_addr + SGX_TCS_FLAGS_OFFSET, &flags, sizeof(flags));
     flags |= SGX_FLAGS_DBGOPTIN;
@@ -215,12 +211,12 @@ void print_enclave_info(void)
     printf( "    Base:   %p\n", get_enclave_base() );
     printf( "    Limit:  %p\n", get_enclave_limit());
     printf( "    Size:   %d\n", get_enclave_size() );
-    printf( "    TCS:    %p\n", sgx_get_tcs() );
+    printf( "    TCS:    %p\n", xs_get_tcs() );
     printf( "    SSA:    %p\n", get_enclave_ssa_gprsgx_adrs() );
-    printf( "    AEP:    %p\n", sgx_get_aep() );
+    printf( "    AEP:    %p\n", xs_get_aep() );
 
     /* First 8 bytes of TCS must be zero */
-    int rv = edbgrd( sgx_get_tcs(), &read, 8);
+    int rv = edbgrd( xs_get_tcs(), &read, 8);
     printf( "    EDBGRD: %s\n", rv < 0 ? "production" : "debug");
 }
 
