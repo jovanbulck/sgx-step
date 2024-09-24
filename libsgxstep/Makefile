@@ -4,6 +4,7 @@ CC          = gcc
 AS          = gcc
 AR          = ar
 ARFLAGS     = -rcs
+CFLAGS      = -fPIC
 
 ifneq "$(WITH_PSTATE)" "0"
 CPPFLAGS     += -DHAS_PSTATE
@@ -21,7 +22,7 @@ endif
 SOURCES     = $(shell ls *.c)
 ASM         = $(shell ls *.S)
 OBJECTS     = $(SOURCES:.c=.o) $(ASM:.S=.o)
-OUTPUT      = libsgx-step.a
+OUTPUT      = libsgx-step.a libsgx-step.so
 
 ifeq ($(GRAMINE), 1)
 	CFLAGS += -DSGX_SSAFRAMESIZE=16384
@@ -30,18 +31,22 @@ endif
 
 all: $(OUTPUT)
 
-$(OUTPUT): $(OBJECTS)
-	echo "$(INDENT)[AR] " $(OUTPUT)
-	$(AR) $(ARFLAGS) $(OUTPUT) $(OBJECTS)
+%.a: $(OBJECTS)
+	@echo "$(INDENT)[AR] " $@
+	$(AR) $(ARFLAGS) $@ $(OBJECTS)
+
+%.so: $(OBJECTS)
+	@echo "$(INDENT)[LD] " $@
+	$(CC) -shared $(LDFLAGS) $(OBJECTS) -o $@
 
 %.o : %.c
-	echo "$(INDENT)[CC] " $<
+	@echo "$(INDENT)[CC] " $<
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 %.o : %.S
-	echo "$(INDENT)[AS] " $<
+	@echo "$(INDENT)[AS] " $<
 	$(AS) $(ASFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
-	echo "$(INDENT)[RM]" $(OBJECTS) $(OUTPUT)
+	@echo "$(INDENT)[RM]" $(OBJECTS) $(OUTPUT)
 	rm -f $(OBJECTS) $(OUTPUT)

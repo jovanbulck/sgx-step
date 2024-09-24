@@ -16,7 +16,7 @@
 
     .section isr_section,"awx",@progbits
     .align 0x1000
-    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, apic_base, nemesis_tsc_aex, __ss_irq_rip, __ss_irq_rax
+    .global __ss_irq_fired, __ss_irq_count, __ss_irq_cpl, nemesis_tsc_aex, __ss_irq_rip
 __ss_irq_fired:
     .int 0x0
 __ss_irq_count:
@@ -24,6 +24,7 @@ __ss_irq_count:
 __ss_irq_cpl:
     .int 0xff
 #if !X2APIC
+    .global apic_base
 apic_base:
     .quad 0x0
 #endif
@@ -45,24 +46,29 @@ __ss_irq_rip:
     .global __ss_irq_handler
 __ss_irq_handler:
     /* Nemesis IRQ latency timestamp */
-    mov %rax, __ss_irq_rax(%rip)
-    mov %rdx, __ss_irq_rdx(%rip)
+    push %rax
+    push %rcx
+    push %rdx
     rdtsc
-    mov %eax, nemesis_tsc_aex(%rip)
-    mov %edx, nemesis_tsc_aex+4(%rip)
-    mov %rcx, __ss_irq_rcx(%rip)
+    mov nemesis_tsc_aex@GOTPCREL(%rip), %rcx
+    mov %eax, (%rcx)
+    mov %edx, 4(%rcx)
 
     /* IRQ bookkeeping */
-    mov 0(%rsp), %rax
-    mov %rax, __ss_irq_rip(%rip)
-    movw %cs,  __ss_irq_cpl(%rip)
-    andw $0x3, __ss_irq_cpl(%rip)
-    incl __ss_irq_count(%rip)
-    incl __ss_irq_fired(%rip)
+    mov 12(%rsp), %rax
+    mov __ss_irq_rip@GOTPCREL(%rip), %rcx
+    mov %rax, (%rcx)
+    mov __ss_irq_cpl@GOTPCREL(%rip), %rcx
+    movw %cs,  (%rcx)
+    andw $0x3, (%rcx)
+    mov __ss_irq_count@GOTPCREL(%rip), %rcx
+    incl (%rcx)
+    mov __ss_irq_fired@GOTPCREL(%rip), %rcx
+    incl (%rcx)
 
     /* apic_write(APIC_EOI, 0x0); */
 #if !X2APIC
-    lea apic_base(%rip), %rax
+    mov apic_base@GOTPCREL(%rip), %rax
     mov (%rax),%rax
     test %rax, %rax
     jz 1f
@@ -75,9 +81,9 @@ __ss_irq_handler:
     mov $0x80b, %ecx
     wrmsr
 #endif
-    mov __ss_irq_rax(%rip), %rax
-    mov __ss_irq_rdx(%rip), %rdx
-    mov __ss_irq_rcx(%rip), %rcx
+    pop %rdx
+    pop %rcx
+    pop %rax
     iretq
 
 /* ********************************************************************** */
@@ -97,7 +103,8 @@ __ss_irq_gate_cb:
     .align 0x1000
     .global __ss_irq_gate
 __ss_irq_gate:
-    call *__ss_irq_gate_cb(%rip)
+    mov __ss_irq_gate_cb@GOTPCREL(%rip), %rax
+    call *(%rax)
     iretq
 
     /*

@@ -84,5 +84,6 @@ void __attribute__((constructor)) xs_register_fault_handler(void)
 
     /* Block all signals while the signal is being handled */
     sigfillset(&act.sa_mask);
+    info("installing sigtrap handler to intercept ENCLU..");
     ASSERT(!sigaction(SIGTRAP, &act, &old_act));
 }
