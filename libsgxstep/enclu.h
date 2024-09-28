@@ -1,5 +1,5 @@
-#ifndef SGX_STEP_AEP_INC
-#define SGX_STEP_AEP_INC
+#ifndef SGX_STEP_ENCLU_H_INC
+#define SGX_STEP_ENCLU_H_INC
 
 void* xs_get_aep(void);
 void xs_set_aep(void* aep);

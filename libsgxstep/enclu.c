@@ -1,5 +1,5 @@
 #include "debug.h"
-#include "aep.h"
+#include "enclu.h"
 #define __USE_GNU
 #include <signal.h>
 #include <string.h>
@@ -74,6 +74,8 @@ void xs_sigtrap_handler(int signo, siginfo_t * si, void  *ctx)
     }
 }
 
+void xs_trap_vdso(void);
+
 void __attribute__((constructor)) xs_register_fault_handler(void)
 {
     struct sigaction act, old_act;
@@ -86,4 +88,6 @@ void __attribute__((constructor)) xs_register_fault_handler(void)
     sigfillset(&act.sa_mask);
     info("installing sigtrap handler to intercept ENCLU..");
     ASSERT(!sigaction(SIGTRAP, &act, &old_act));
+
+    xs_trap_vdso();
 }

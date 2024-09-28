@@ -27,7 +27,7 @@
 #include "pt.h"
 #include <fcntl.h>
 #include <string.h>
-#include "aep.h"
+#include "enclu.h"
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);
