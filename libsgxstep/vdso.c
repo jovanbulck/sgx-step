@@ -7,6 +7,20 @@
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 
+#define ENCLU_BYTES "\x0F\x01\xD7"
+#define ENCLU_LEN   3
+
+/* XXX this may not be bulletproof without full disasm.. */
+void* find_enclu(uint8_t* start, size_t size)
+{
+    for (size_t i = 0; i <= size - ENCLU_LEN; i++) {
+        if (memcmp(start + i, ENCLU_BYTES, ENCLU_LEN) == 0) {
+            return start + i;
+        }
+    }
+    return NULL;
+}
+
 void xs_trap_vdso(void)
 {
     Elf_Scn *scn = NULL;
@@ -54,4 +68,17 @@ void xs_trap_vdso(void)
 			info("found `__vdso_sgx_enter_enclave` at %p", vdso_enter_pt);
 		}
     }
+
+    /* XXX hardcode VDSO to 2 pages for now; needs to be parsed from header.. */
+    ASSERT( !mprotect(vdso_base, 0x2000, PROT_READ | PROT_EXEC | PROT_WRITE) );
+
+    char *enclu_pt = find_enclu(vdso_base, 0x2000);
+    ASSERT( enclu_pt != NULL);
+    info("found enclu at %p", enclu_pt);
+
+    *enclu_pt = 0xcc;
+    *(enclu_pt+1) = 0x90;
+    *(enclu_pt+2) = 0x90;
+
+    ASSERT( !mprotect(vdso_base, 0x2000, PROT_READ | PROT_EXEC) );
 }
