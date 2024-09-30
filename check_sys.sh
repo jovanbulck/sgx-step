@@ -1,6 +1,10 @@
 #!/bin/bash
 #set -x
 
+BOLD_GREEN='\033[1;32m'
+BOLD_RED='\033[1;31m'
+RESET='\033[0m'
+
 start_check() {
     printf ".. Checking %-40s" "$1"
     errs=0
@@ -8,7 +12,7 @@ start_check() {
 
 print_err() {
     if [[ $errs -eq "0" ]]; then
-        echo " [FAIL]"
+        echo -e " ${BOLD_RED}[FAIL]${RESET}"
     fi
     echo -e "\t L__ $1"
     ((errs=errs+1))
@@ -16,7 +20,7 @@ print_err() {
 
 end_check() {
     if [[ $errs -eq "0" ]]; then
-        echo " [OK]"
+        echo -e " ${BOLD_GREEN}[OK]${RESET}"
     fi
 }
 
@@ -38,15 +42,30 @@ assert_not_contains() {
     fi
 }
 
+assert_not_contains_from_version() {
+    if [[ "$(printf '%s\n' "$1" "$(uname -r)" | sort -rV | head -n1)" == "$1" ]]; then
+        if [[ $2 =~ $3 ]]; then
+          print_err "\`$3\` $4"
+        fi
+    fi
+}
+
 ############################################################################
 start_check "recommended SGX-Step parameters"
 sgxstep_cmdline=`cat README.md | extract_quoted "quiet splash "`
 kernel_cmdline=`cat /proc/cmdline`
+config_x2apic=$(grep -E '#define\s+X2APIC\s+[01]' libsgxstep/config.h | awk '{print $3}')
 
 for c in $sgxstep_cmdline
 do
     assert_contains "$kernel_cmdline" $c "not in /proc/cmdline"
 done
+
+if [ "$config_x2apic" -eq 0 ]; then
+    assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
+else
+    assert_not_contains "$kernel_cmdline" "nox2apic" "in /proc/cmdline, but config.h defines X2APIC=1"
+fi
 end_check
 
 ############################################################################
@@ -55,8 +74,10 @@ unknown_cmdline=`dmesg | extract_quoted 'Unknown kernel command line parameters 
 
 for c in $unknown_cmdline
 do
-    # XXX pti=off seems to be wrongly reported as unknown by Linux(?)
-    if [[ ! $c =~ "pti" ]]; then
+    # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7
+    if [[ $c =~ "pti" ]]; then
+        assert_not_contains_from_version "6.4.0" "$sgxstep_cmdline" $c "reported unknown to kernel"
+    else
         assert_not_contains "$sgxstep_cmdline" $c "reported unknown to kernel"
     fi
 done
@@ -68,7 +89,10 @@ cpuinfo=`cat /proc/cpuinfo`
 assert_not_contains "$cpuinfo" "smap"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "smep"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "umip"   "not disabled in /proc/cpuinfo"
-#assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo"
+
+if [ "$config_x2apic" -eq 0 ]; then
+    assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
+fi
 end_check
 
 ############################################################################

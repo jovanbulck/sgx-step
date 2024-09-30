@@ -145,7 +145,7 @@ Pass the desired boot parameters to the kernel as follows:
 ```bash
   # if you don't have vim, use nano instead
 $ sudo vim /etc/default/grub
-  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nox2apic iomem=relaxed no_timer_check clearcpuid=308,295,514 pti=off isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
+  # Add the following line: GRUB_CMDLINE_LINUX_DEFAULT="quiet splash iomem=relaxed no_timer_check clearcpuid=308,295,514 pti=off isolcpus=1 nmi_watchdog=0 rcupdate.rcu_cpu_stall_suppress=1 msr.allow_writes=on vdso=0"
 
 $ sudo update-grub && reboot
 ```
