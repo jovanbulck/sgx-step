@@ -43,7 +43,7 @@ assert_not_contains() {
 }
 
 assert_not_contains_from_version() {
-    if [[ "$(printf '%s\n' "$1" "$(uname -r)" | sort -rV | head -n1)" == "$1" ]]; then
+    if [[ "$(printf '%s\n' "$1" "$(uname -r)" | sort -V | head -n1)" == "$1" ]]; then
         if [[ $2 =~ $3 ]]; then
           print_err "\`$3\` $4"
         fi
@@ -78,7 +78,7 @@ for c in $unknown_cmdline
 do
     # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7
     if [[ $c =~ "pti" ]]; then
-        assert_not_contains_from_version "6.4.0" "$sgxstep_cmdline" $c "reported unknown to kernel"
+        assert_not_contains_from_version "6.7.0" "$sgxstep_cmdline" $c "reported unknown to kernel"
     else
         assert_not_contains "$sgxstep_cmdline" $c "reported unknown to kernel"
     fi
