@@ -74,6 +74,7 @@ void apic_init(void);
     
 /* read/write functions for XAPIC in MMIO access mode */
 #if !X2APIC
+extern void* apic_base;
     /*
      * From Linux kernel source: /arch/x86/include/asm/apic.h
      * NOTE: Intel SDM: "any access that touches bytes 4 through 15 of an APIC
