@@ -70,8 +70,10 @@ end_check
 
 ############################################################################
 start_check "unknown kernel parameters"
-unknown_cmdline=`dmesg | extract_quoted 'Unknown kernel command line parameters "'`
+dmesg_output=$(dmesg 2>&1)
+unknown_cmdline=`echo "$dmesg_output" | extract_quoted 'Unknown kernel command line parameters "'`
 
+assert_not_contains "$dmesg_output" "Operation not permitted" ": run this script as root"
 for c in $unknown_cmdline
 do
     # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7
