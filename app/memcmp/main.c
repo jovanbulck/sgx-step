@@ -21,7 +21,7 @@
 #define DEBUG              0
 #define DBG_ENCL           1
 #if DO_TIMER_STEP
-    #define ANIMATION_DELAY    50000000
+    #define ANIMATION_DELAY    5000
 #else
     #define ANIMATION_DELAY    5000
 #endif
@@ -55,11 +55,12 @@ void aep_cb_func(void)
     #endif
     irq_cnt++;
 
-    if (do_irq && (irq_cnt > NUM_RUNS*1000))
+    if (do_irq && (irq_cnt > NUM_RUNS*10000))
     {
         info("excessive interrupt rate detected (try adjusting timer interval " \
              "to avoid getting stuck in zero-stepping); aborting...");
-	    do_irq = 0;
+        do_irq = 0;
+        exit(1);
     }
 
     if (ACCESSED(*pte_encl) && ACCESSED(*pte_trigger))
@@ -84,8 +85,8 @@ void aep_cb_func(void)
      */
     if (do_irq && ACCESSED(*pte_encl)) step_cnt++;
     *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
-    flush(pte_encl);
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
+    flush(pte_encl);
 
     /*
      * Configure APIC timer interval for next interrupt.
@@ -99,6 +100,7 @@ void aep_cb_func(void)
     if (do_irq)
     {
         *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
+        flush(pmd_encl);
 #if DO_TIMER_STEP
         apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
 #endif
@@ -255,7 +257,7 @@ int main( int argc, char **argv )
     {
         for (int j = 0; j < pwd_len; j++) pwd[j] = '*';
         pwd[pwd_len] = '\0';
-        do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+        do_irq = 0; trigger_cnt = 0, irq_cnt = 0, step_cnt = 0, fault_cnt = 0;
         sgx_step_do_trap = 0;
         ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
         SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
@@ -283,7 +285,7 @@ int main( int argc, char **argv )
         for (int j='A'-1; j<'Z'; j++)
         {
             pwd[i] = j;
-            do_irq = 0; trigger_cnt = 0, step_cnt = 0, fault_cnt = 0;
+            do_irq = 0; trigger_cnt = 0, irq_cnt = 0, step_cnt = 0, fault_cnt = 0;
             sgx_step_do_trap = 0;
             ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
             SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
