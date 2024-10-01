@@ -94,6 +94,8 @@ assert_not_contains "$cpuinfo" "umip"   "not disabled in /proc/cpuinfo"
 
 if [ "$config_x2apic" -eq 0 ]; then
     assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
+else
+    assert_contains "$cpuinfo" "x2apic" "not enabled in /proc/cpuinfo, but config.h defines X2APIC=1"
 fi
 end_check
 
@@ -103,5 +105,11 @@ if [[ $cpuinfo =~ "cpu_meltdown" ]]; then
     kpti_status=`dmesg | grep "page tables isolation"`
     assert_contains  "$kpti_status" "disabled" "not found for KPTI"
 fi
+end_check
+
+############################################################################
+start_check "SGX-Step driver"
+lkms=`lsmod`
+assert_contains "$lkms" "sgx_step" "kernel module not loaded; try \`cd kernel; make load\`"
 end_check
 
