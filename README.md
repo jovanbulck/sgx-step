@@ -255,16 +255,12 @@ $ make run
 ```
 
 To test timer single-stepping functionality, try for example building and
-running the `strlen` attack from the paper for a benchmark enclave that
-processes the secret string 100 repeated times:
+running a benchmark enclave to single-step a slide of 100 successive `nop`
+instructions:
 
 ```bash
 $ cd app/bench
-$ NUM=100 STRLEN=1 make parse   # alternatively vary NUM and use BENCH=1 or ZIGZAG=1
-$ # (above command defaults to the Dell Inspiron 13 7359 evaluation laptop machine;
-$ # use DESKTOP=1 to build for a Dell Optiplex 7040 machine)
-$ # use SGX_SDK=/home/jo/sgxsdk/ for a local SDK installation
-$ # use M32=1 To produce a 32-bit executable
+$ NUM=100 make parse   # alternatively vary NUM and use STRLEN=1 or ZIGZAG=1
 ```
 
 The above command builds `libsgxstep`, the benchmark victim enclave, and the

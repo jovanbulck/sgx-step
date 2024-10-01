@@ -133,8 +133,8 @@ void attacker_config_runtime(void) {
 void attacker_config_page_table(void) {
     void *code_adrs;
 #if (ATTACK_SCENARIO == STRLEN)
-    void *str_adrs;
-    str_adrs = get_symbol_offset("secret_str");
+    void *str_adrs = get_enclave_base();
+    str_adrs += get_symbol_offset("secret_str");
     info("enclave string adrs at %p", str_adrs);
     ASSERT(pte_str_encl = remap_page_table_level(str_adrs, PTE));
     ASSERT(PRESENT(*pte_str_encl));
