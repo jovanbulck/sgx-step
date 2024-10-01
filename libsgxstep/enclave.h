@@ -28,6 +28,8 @@ struct sgx_step_enclave_info
 {
     uint64_t base;
     uint64_t limit;
+    uint64_t exec_base;
+    uint64_t exec_limit;
     uint64_t size;
     uint64_t aep;
     uint64_t tcs;
@@ -47,9 +49,14 @@ void *get_enclave_base(void);
 void *get_enclave_limit(void);
 char *get_enclave_drv(void);
 int get_enclave_size(void);
+int get_enclave_exec_range(uint64_t *start, uint64_t *end);
 int edbgrdwr(void *adrs, void* res, int len, int write);
 #define edbgrd(adrs, res, len)  edbgrdwr(adrs, res, len, 0)
 #define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)
+
+void mark_enclave_exec_not_accessed(void);
+uint64_t is_enclave_exec_accessed(void);
+void dump_enclave_exec_pages(void);
 
 /* NOTE: incorrect GPRSGX size in Intel manual vol. 3D June 2016 p.38-7 */
 #define SGX_TCS_FLAGS_OFFSET        8

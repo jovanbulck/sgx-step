@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include "../kernel/sgxstep_ioctl.h"
 #include "pt.h"
+#include "cache.h"
 #include <fcntl.h>
 #include <string.h>
 
@@ -56,6 +57,7 @@ void register_enclave_info(void)
     FILE *fd_self_maps;
     uint64_t start, end, prev_end = 0;
     char *pathname = NULL;
+    char exec;
     int is_enclave = 0, prev_is_enclave = 0, is_isgx, is_kern;
     memset(&victim, 0x0, sizeof(victim));
 
@@ -78,20 +80,30 @@ void register_enclave_info(void)
         debug("------");
     #endif
     ASSERT((fd_self_maps = fopen("/proc/self/maps", "r")) >= 0);
-    while (fscanf(fd_self_maps, "%lx-%lx %*s %*x %*x:%*x %*[0-9 ]%m[^\n]",
-                  &start, &end, &pathname) > 0)
+    while (fscanf(fd_self_maps, "%lx-%lx %*c%*c%c%*c %*x %*x:%*x %*[0-9 ]%m[^\n]",
+                  &start, &end, &exec, &pathname) > 0)
     {
-        debug("%p - %p %s", (void*) start, (void*) end, pathname);
+        debug("%p - %p %c %s", (void*) start, (void*) end, exec, pathname);
         is_isgx = (pathname != NULL) && strstr(pathname, "/dev/isgx") != NULL;
         is_kern = (pathname != NULL) && strstr(pathname, "/dev/sgx_enclave") != NULL;
         is_enclave = is_isgx || is_kern;
 
-        if (is_enclave && !victim.drv)
+        if (is_enclave)
         {
-            debug("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
+            if (!victim.drv)
+            {
+                debug("Found %s enclave at %p in /proc/self/maps", pathname, (void*) start);
 
-            victim.base = (uint64_t) start;
-            victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
+                victim.base = (uint64_t) start;
+                victim.drv = is_isgx ? "/dev/isgx" : "/dev/sgx_enclave";
+            }
+            if (exec == 'x')
+            {
+                debug("Found enclave executable range [%p,%p]", (void*) start, (void*) end);
+                WARN_ON(victim.exec_limit != 0, "enclave contains >1 executable range");
+                victim.exec_base = start;
+                victim.exec_limit = end;
+            }
         }
         else if (prev_is_enclave && !is_enclave)
         {
@@ -144,6 +156,82 @@ int get_enclave_size(void)
     return (int) (victim.limit - victim.base);
 }
 
+int get_enclave_exec_range(uint64_t *start, uint64_t *end)
+{
+    if (!ioctl_init) register_enclave_info();
+    ASSERT( victim.exec_base && victim.exec_limit);
+
+    if (start) *start = victim.exec_base;
+    if (end) *end = victim.exec_limit;
+    return (victim.exec_limit - victim.exec_base) / PAGE_SIZE_4KiB;
+}
+
+/* allocated once and freed on process exit */
+uint64_t **enclave_exec_ptes = NULL;
+size_t enclave_exec_ptes_len = 0;
+
+#define ENCLAVE_EXEC_NB2ADDR(nb) ((void*) (victim.exec_base + nb*PAGE_SIZE_4KiB))
+
+static void alloc_enclave_exec_ptes(void)
+{
+    int i, sz;
+    uint64_t start, end;
+    uint64_t *pte;
+
+    ASSERT( !enclave_exec_ptes);
+    sz = get_enclave_exec_range(&start, &end);
+    enclave_exec_ptes_len = sz;
+    enclave_exec_ptes = malloc(sz * sizeof(uint64_t*));
+    ASSERT( enclave_exec_ptes);
+
+    for (i = 0; i < enclave_exec_ptes_len; i++)
+    {
+        pte = remap_page_table_level(ENCLAVE_EXEC_NB2ADDR(i), PTE);
+        ASSERT(pte);
+        enclave_exec_ptes[i] = pte;
+    }
+}
+
+void mark_enclave_exec_not_accessed(void)
+{
+    if (!enclave_exec_ptes)
+        alloc_enclave_exec_ptes();
+
+    for (int i = 0; i < enclave_exec_ptes_len; i++)
+    {
+        /*
+         * NOTE: clearing the PTE "accessed" bit forces the CPU to take a
+         * ucode-assisted page-table walk for the first instruction following
+         * ERESUME, which causes that instruction to be much longer. We
+         * additionally flush the PTEs from the cache to further delay the
+         * page-table walk and increase the landing space for the timer interrupt.
+         */
+        *enclave_exec_ptes[i] = MARK_NOT_ACCESSED(*enclave_exec_ptes[i]);
+        flush(enclave_exec_ptes[i]);
+    }
+}
+
+uint64_t is_enclave_exec_accessed(void)
+{
+    ASSERT (enclave_exec_ptes && "first call mark_enclave_exec_not_accessed");
+
+    for (int i = 0; i < enclave_exec_ptes_len; i++)
+    {
+        if (ACCESSED(*enclave_exec_ptes[i]))
+            return (uint64_t) ENCLAVE_EXEC_NB2ADDR(i);
+    }
+    return 0;
+}
+
+void dump_enclave_exec_pages(void)
+{
+    ASSERT (enclave_exec_ptes);
+
+    for (int i = 0; i < enclave_exec_ptes_len; i++)
+    {
+        info("%09lx: A=%ld", ENCLAVE_EXEC_NB2ADDR(i) - get_enclave_base(), ACCESSED(*enclave_exec_ptes[i]));
+    }
+}
 /*
  * NOTE: we simply read from the standard Linux interface /proc/self/mem, which
  * will call the associated SGX driver (i.e., /dev/isgx or /dev/sgx_enclave) to
@@ -215,6 +303,7 @@ void print_enclave_info(void)
     printf( "    Base:   %p\n", get_enclave_base() );
     printf( "    Limit:  %p\n", get_enclave_limit());
     printf( "    Size:   %d\n", get_enclave_size() );
+    printf( "    Exec:   %d pages\n", get_enclave_exec_range(NULL,NULL));
     printf( "    TCS:    %p\n", sgx_get_tcs() );
     printf( "    SSA:    %p\n", get_enclave_ssa_gprsgx_adrs() );
     printf( "    AEP:    %p\n", sgx_get_aep() );

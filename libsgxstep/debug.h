@@ -46,6 +46,14 @@ extern int sgx_step_rv;
         }                                                               \
     } while(0)
 
+#define WARN_ON(cond, msg)                                              \
+    do {                                                                \
+        if ((cond))                                                     \
+        {                                                               \
+            info("WARNING: %s", msg);                                   \
+        }                                                               \
+    } while(0)
+
 #define info(msg, ...)                                                  \
     do {                                                                \
         printf("[" __FILE__ "] " msg "\n", ##__VA_ARGS__);              \

