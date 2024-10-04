@@ -312,3 +312,5 @@ void print_mapping( address_mapping_t *map )
 		printf( "                           |- phys address:      0x%" PRIx64 "\n", PT_PHYS( map->pte ) + virt_index( map, PAGE )  );
 	}
 }
+
+struct _address address = {NULL};

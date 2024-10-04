@@ -176,4 +176,14 @@ void print_pte_adrs( void *adrs);
 void print_pte( uint64_t *pte );
 void print_mapping( address_mapping_t *map );
 
+struct _address {
+  uint64_t *pte_encl;
+  uint64_t *pte_trigger;
+  uint64_t *pmd_encl;
+  void *code_adrs;
+  void *trigger_adrs;
+};
+
+extern struct _address address;
+
 #endif
