@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
     attacker_config_page_table();
     register_aep_cb(aep_cb_func);
     print_enclave_info();
+    dump_enclave_exec_pages();
 
     info_event("reading/writing debug enclave memory..");
     edbgrd(data_pt, &old, 1);
