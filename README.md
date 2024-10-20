@@ -302,19 +302,20 @@ version of the processor when recent [transient-execution attack](https://transi
 in place to flush microarchitectural buffers on enclave entry/exit.
 Some different microcode versions are provided for reference in the table below.
 
-| Model name     | CPU                                                                                                                                  | Base frequency | ucode (date)      | APIC timer interval |
-| -------------  | ------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ----------------- | ------------------- |
-| Skylake        | [i7-6700](https://ark.intel.com/products/88196)                                                                                      | 3.4 GHz        | ?                 | 19                  |
-| Skylake        | [i7-6500U](https://ark.intel.com/products/88194)                                                                                     | 2.5 GHz        | ?                 | 25                  |
-| Skylake        | [i5-6200U](https://ark.intel.com/products/88193)                                                                                     | 2.3 GHz        | ?                 | 28                  |
-| Kaby Lake R    | [i7-8650U](https://ark.intel.com/products/124968)                                                                                    | 1.9 GHz        | ?                 | 34                  |
-| Kaby Lake R    | [i7-8650U](https://ark.intel.com/products/124968)                                                                                    | 1.9 GHz        | 0xca (2019-10-03) | 54                  |
-| Coffee Lake R  | [i7-9700](https://ark.intel.com/content/www/us/en/ark/products/191792/intel-core-i79700-processor-12m-cache-up-to-4-70-ghz.html)     | 3 GHz          | 0xf4 (2022-07-31) | 26                  |
-| Coffee Lake R  | [i9-9900K](https://ark.intel.com/products/186605)                                                                                    | 3.6 GHz        | ?                 | 21                  |
-| Coffee Lake HR | [i7-9750H](https://ark.intel.com/content/www/us/en/ark/products/191045/intel-core-i7-9750h-processor-12m-cache-up-to-4-50-ghz.html)  | 2.6 GHz        | 0xf4 (2023-02-23) | 37                  |
-| Ice Lake       | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz       | 0x32 (2019-07-05) | 135                 |
-| Ice Lake       | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html) | 1.00 GHz       | 0xb0 (2022-03-09) | 255                 |
-| Emerald Rapids | [Xeon Gold 5515+](https://ark.intel.com/content/www/us/en/ark/products/237562/intel-xeon-gold-5515-processor-22-5m-cache-3-20-ghz.html) | 3.2 GHz | 0x21000230 (2024-02-05) | 32 |
+| Model name     | CPU                                                                                                                                     | Base frequency | ucode (date)            | APIC timer interval |
+| -------------  | --------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------- | ------------------- |
+| Skylake        | [i7-6700](https://ark.intel.com/products/88196)                                                                                         | 3.4 GHz        | ?                       | 19                  |
+| Skylake        | [i7-6500U](https://ark.intel.com/products/88194)                                                                                        | 2.5 GHz        | ?                       | 25                  |
+| Skylake        | [i5-6200U](https://ark.intel.com/products/88193)                                                                                        | 2.3 GHz        | ?                       | 28                  |
+| Kaby Lake R    | [i7-8650U](https://ark.intel.com/products/124968)                                                                                       | 1.9 GHz        | ?                       | 34                  |
+| Kaby Lake R    | [i7-8650U](https://ark.intel.com/products/124968)                                                                                       | 1.9 GHz        | 0xca (2019-10-03)       | 54                  |
+| Coffee Lake R  | [i7-9700](https://ark.intel.com/content/www/us/en/ark/products/191792/intel-core-i79700-processor-12m-cache-up-to-4-70-ghz.html)        | 3 GHz          | 0xf4 (2022-07-31)       | 26                  |
+| Coffee Lake R  | [i9-9900K](https://ark.intel.com/products/186605)                                                                                       | 3.6 GHz        | ?                       | 21                  |
+| Coffee Lake HR | [i7-9750H](https://ark.intel.com/content/www/us/en/ark/products/191045/intel-core-i7-9750h-processor-12m-cache-up-to-4-50-ghz.html)     | 2.6 GHz        | 0xf4 (2023-02-23)       | 37                  |
+| Ice Lake       | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html)    | 1.00 GHz       | 0x32 (2019-07-05)       | 135                 |
+| Ice Lake       | [i5-1035G1](https://ark.intel.com/content/www/us/en/ark/products/196603/intel-core-i5-1035g1-processor-6m-cache-up-to-3-60-ghz.html)    | 1.00 GHz       | 0xb0 (2022-03-09)       | 255                 |
+| Comet Lake     | [i9-10900K](https://www.intel.com/content/www/us/en/products/sku/199332/intel-core-i910900k-processor-20m-cache-up-to-5-30-ghz.html)    | 3.70 GHz       | 0xfc (2024-02-01)       | 24                  |
+| Emerald Rapids | [Xeon Gold 5515+](https://ark.intel.com/content/www/us/en/ark/products/237562/intel-xeon-gold-5515-processor-22-5m-cache-3-20-ghz.html) | 3.2 GHz        | 0x21000230 (2024-02-05) | 32                  |
 
 **Note (calibration).**
 Currently, the easiest way to configure a reliable timer interval is to
