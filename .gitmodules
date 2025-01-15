@@ -10,3 +10,6 @@
 [submodule "sdk/bare-sgx"]
 	path = sdk/bare-sgx
 	url = https://github.com/jovanbulck/bare-sgx.git
+[submodule "sdk/oe/openenclave"]
+	path = sdk/oe/openenclave
+	url = https://github.com/openenclave/openenclave.git

@@ -1,0 +1,83 @@
+From 2cacff71c210c469a424110510a0c3a5f3561ef2 Mon Sep 17 00:00:00 2001
+From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+Date: Wed, 15 Jan 2025 13:40:17 +0000
+Subject: [PATCH] Minimal SGX-Step bindings
+
+Signed-off-by: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+---
+ host/sgx/asmdefs.h         |  2 +-
+ host/sgx/calls.c           | 20 ++++++++++++++++++++
+ include/openenclave/host.h |  6 ++++++
+ 3 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/host/sgx/asmdefs.h b/host/sgx/asmdefs.h
+index 4b78e1989..9332f9c2b 100644
+--- a/host/sgx/asmdefs.h
++++ b/host/sgx/asmdefs.h
+@@ -35,7 +35,7 @@ oe_result_t oe_enter(
+     uint64_t* arg4,
+     oe_enclave_t* enclave);
+ 
+-extern const uint64_t OE_AEP_ADDRESS;
++extern uint64_t OE_AEP_ADDRESS;
+ #endif
+ 
+ #if !defined(__ASSEMBLER__) && (_WIN32)
+diff --git a/host/sgx/calls.c b/host/sgx/calls.c
+index eed0c4dcf..66bfb3cc5 100644
+--- a/host/sgx/calls.c
++++ b/host/sgx/calls.c
+@@ -578,6 +578,25 @@ static void _release_tcs(oe_enclave_t* enclave, void* tcs)
+     oe_mutex_unlock(&enclave->lock);
+ }
+ 
++/* minimal SGX-Step bindings */
++
++void* __oe_last_tcs;
++
++void* sgx_get_aep(void)
++{
++    return (void*) OE_AEP_ADDRESS;
++}
++
++void sgx_set_aep(void* aep)
++{
++    OE_AEP_ADDRESS = (uint64_t) aep;
++}
++
++void *sgx_get_tcs(void)
++{
++    return __oe_last_tcs;
++}
++
+ /*
+ **==============================================================================
+ **
+@@ -608,6 +627,7 @@ oe_result_t oe_ecall(
+     /* Assign a oe_sgx_td_t for this operation */
+     if (!(tcs = _assign_tcs(enclave)))
+         OE_RAISE(OE_OUT_OF_THREADS);
++    __oe_last_tcs = tcs;
+ 
+     oe_log(
+         OE_LOG_LEVEL_VERBOSE,
+diff --git a/include/openenclave/host.h b/include/openenclave/host.h
+index d0f279ec5..864b4b7f5 100644
+--- a/include/openenclave/host.h
++++ b/include/openenclave/host.h
+@@ -231,6 +231,12 @@ oe_result_t oe_create_enclave(
+     uint32_t ecall_count,
+     oe_enclave_t** enclave);
+ 
++
++/* minimal SGX-Step bindings */
++void* sgx_get_aep(void);
++void sgx_set_aep(void* aep);
++void *sgx_get_tcs(void);
++
+ /**
+  * Terminate an enclave and reclaims its resources.
+  *
+-- 
+2.43.0
+

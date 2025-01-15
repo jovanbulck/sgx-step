@@ -1,0 +1,7 @@
+*_t.*
+*_u.*
+*.pem
+*_args.h
+*.signed
+enclave/enclave
+host/helloworld_host
