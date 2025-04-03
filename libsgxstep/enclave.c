@@ -41,10 +41,9 @@ uint64_t nemesis_tsc_eresume = 0x0;
 int sgx_step_eresume_cnt = 0;
 int sgx_step_do_trap = 0;
 
-extern int fd_step;
+extern int fd_step, fd_self_mem;
 struct sgx_step_enclave_info victim = {0};
 int ioctl_init = 0;
-int fd_self_mem = -1;
 
 void register_aep_cb(aep_cb_t cb)
 {

@@ -37,13 +37,10 @@ jobs:
       - name: Build SGX-Step selftest applications
         run: |
           for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do \
-            echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; make clean all ; ldd ./app ; \
           done
           for d in $GITHUB_WORKSPACE/app/baresgx/ ; do \
-            echo -e "\n**** $d ****\n" ; cd "$d" ; \
-            if [[ -f Makefile ]]; then \
-                make; ldd ./app ; \
-            fi ; \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; make clean all ; ldd ./app ; \
           done
 
   intel-sdk:

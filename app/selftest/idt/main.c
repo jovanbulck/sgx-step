@@ -36,7 +36,8 @@
 /* This code may execute with ring0 privileges */
 int my_cpl = -1;
 uint64_t my_flags = 0;
-extern uint64_t nemesis_tsc_aex, nemesis_tsc_eresume;
+extern uint64_t nemesis_tsc_aex;
+uint64_t tsc_pre_irq;
 int apic_oneshot = 1;
 
 void pre_irq(void)
@@ -44,7 +45,7 @@ void pre_irq(void)
     my_cpl = get_cpl();
     my_flags = read_flags();
     __ss_irq_fired = 0;
-    nemesis_tsc_eresume = rdtsc_begin();
+    tsc_pre_irq = rdtsc_begin();
 }
 
 void do_irq_sw(void)
@@ -90,7 +91,7 @@ void post_irq(char *s)
 {
     ASSERT(__ss_irq_fired);
     info("returned from %s IRQ: my_cpl=%d; irq_cpl=%d; my_flags=%p; count=%02d; nemesis=%d", s,
-            my_cpl, __ss_irq_cpl, my_flags, __ss_irq_count, nemesis_tsc_aex - nemesis_tsc_eresume);
+            my_cpl, __ss_irq_cpl, my_flags, __ss_irq_count, nemesis_tsc_aex - tsc_pre_irq);
 }
 
 void do_irq_apic_tmr_test(char *tmr_desc, int do_exec_priv)

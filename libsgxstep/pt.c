@@ -28,8 +28,7 @@
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
-int fd_step = -1, fd_mem = -1;
-extern int fd_self_mem;
+int fd_step = -1, fd_mem = -1, fd_self_mem = -1;
 
 void mem_open( void )
 {
