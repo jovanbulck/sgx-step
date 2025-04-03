@@ -29,7 +29,7 @@ jobs:
           #./install_SGX_driver.sh
           make clean load
 
-      - name: Patch and install SGX SDK
+      - name: Patch and install Intel SGX SDK
         run: |
           cd $GITHUB_WORKSPACE/sdk/intel-sdk/
           sudo apt-get update
@@ -37,7 +37,7 @@ jobs:
           source /opt/intel/sgxsdk/environment
           sudo service aesmd status
 
-      - name: Run SampleCode in SGX-SDK simulator
+      - name: Run Intel SGX SDK SampleCode in simulator
         run: |
           source /opt/intel/sgxsdk/environment
           cd $GITHUB_WORKSPACE/sdk/intel-sdk/linux-sgx/SampleCode/LocalAttestation
@@ -46,8 +46,23 @@ jobs:
           ldd ./app
           ./app
 
+      - name: Patch and install OE SDK
+        run: |
+          cd $GITHUB_WORKSPACE/sdk/oe/
+          bash -x ./install_oe_sdk.sh
+          source /opt/openenclave/share/openenclave/openenclaverc
+
+      - name: Run OE SampleCode in simulator
+        run: |
+          source /opt/openenclave/share/openenclave/openenclaverc
+          cd $GITHUB_WORKSPACE/sdk/oe/samples/helloworld
+          make
+          ldd ./host/helloworld_host
+          ./host/helloworld_host ./enclave/enclave.signed --simulate
+
       - name: Build SGX-Step sample applications
         run: |
           source /opt/intel/sgxsdk/environment
+          source /opt/openenclave/share/openenclave/openenclaverc
           for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
           for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; if [[ -f Makefile ]]; then make; ldd ./app ; fi ; done
