@@ -27,7 +27,7 @@ uintptr_t get_symbol_offset(const char *name) {
     return 0;
 }
 
-void add_symbol(const char *name, uintptr_t address) {
+static void add_symbol(const char *name, uintptr_t address) {
     ASSERT(symbol_count < MAX_SYMBOLS);
     ASSERT(name);
     symbols[symbol_count].name = strdup(name);
