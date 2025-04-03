@@ -69,12 +69,12 @@ static uint32_t g_apic_lvtt_copy = 0x0, g_apic_tdcr_copy = 0x0;
  * NOTE: Linux's default `write_cr0/4` do not allow to change protected bits,
  * so we include our own here (must be called with interrupts off).
  */
-inline void do_write_cr0(unsigned long val)
+static inline void do_write_cr0(unsigned long val)
 {
     asm volatile("mov %0, %%cr0" : : "r"(val));
 }
 
-inline void do_write_cr4(unsigned long val)
+static inline void do_write_cr4(unsigned long val)
 {
     asm volatile("mov %0, %%cr4" : : "r"(val));
 }
@@ -84,7 +84,7 @@ inline void do_write_cr4(unsigned long val)
  *
  * NOTE: CR0.WP must be set before software can set CR4.CET
  */
-void enable_write_protection(void)
+static void enable_write_protection(void)
 {
     unsigned long cr0, cr4;
 
@@ -102,7 +102,7 @@ void enable_write_protection(void)
  *
  * NOTE: CR0.WP cannot be cleared as long as CR4.CET = 1
  */
-void disable_write_protection(void)
+static void disable_write_protection(void)
 {
     unsigned long cr0, cr4;
 
@@ -125,7 +125,7 @@ void disable_write_protection(void)
  * Copy original interrupt descriptor table (IDT) -- may be modified by
  * libsgxstep; will be auto restored when closing /dev/sgx-step.
  */
-int save_idt(void)
+static int save_idt(void)
 {
     asm volatile ("sidt %0\n\t"
                   :"=m"(g_idtr) :: );
@@ -143,7 +143,7 @@ int save_idt(void)
  * Save APIC timer configuration registers that may be modified by libsgxstep;
  * will be auto restored when closing /dev/sgx-step.
  */
-int save_apic(void)
+static int save_apic(void)
 {
     g_apic_lvtt_copy = apic->read(APIC_LVTT);
     g_apic_tdcr_copy = apic->read(APIC_TDCR);
@@ -152,7 +152,7 @@ int save_apic(void)
     return 0;
 }
 
-int step_open(struct inode *inode, struct file *file)
+static int step_open(struct inode *inode, struct file *file)
 {
     if (g_in_use)
     {
@@ -176,7 +176,7 @@ int step_open(struct inode *inode, struct file *file)
  * NOTE: the IDT virtual memory page is mapped write-protected by Linux, so we
  * have to disable CR0.WP temporarily here.
  */
-void restore_idt(void)
+static void restore_idt(void)
 {
     unsigned long flags;
 
@@ -202,7 +202,7 @@ void restore_idt(void)
     }
 }
 
-void restore_apic(void)
+static void restore_apic(void)
 {
     int delta = 100;
 
@@ -232,7 +232,7 @@ void restore_apic(void)
  * modifications made by user-space libsgxstep here to their original values,
  * such that everything runs again normally and Linux does not panic.
  */
-int step_release(struct inode *inode, struct file *file)
+static int step_release(struct inode *inode, struct file *file)
 {
     restore_idt();
     restore_apic();
@@ -245,7 +245,7 @@ int step_release(struct inode *inode, struct file *file)
 
 /* Convenience function when editing PTEs from user space (but normally not
  * needed, since SGX already flushes the TLB on enclave entry/exit) */
-long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
+static long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     uint64_t addr = ((invpg_t *) arg)->adrs;
 
@@ -254,7 +254,7 @@ long sgx_step_ioctl_invpg(struct file *filep, unsigned int cmd, unsigned long ar
     return 0;
 }
 
-long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long arg)
+static long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     address_mapping_t *map = (address_mapping_t*) arg;
 	pgd_t *pgd = NULL;
@@ -314,7 +314,7 @@ long sgx_step_get_pt_mapping(struct file *filep, unsigned int cmd, unsigned long
     return 0;
 }
 
-long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned long arg)
+static long sgx_step_ioctl_setup_isr_map(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     uint64_t nr_pinned_pages;
     setup_isr_map_t *data = (setup_isr_map_t*) arg;
@@ -354,7 +354,7 @@ out:
 
 typedef long (*ioctl_t)(struct file *filep, unsigned int cmd, unsigned long arg);
 
-long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+static long step_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
     char data[256];
     ioctl_t handler = NULL;
