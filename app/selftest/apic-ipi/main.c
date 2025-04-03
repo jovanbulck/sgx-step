@@ -7,7 +7,6 @@
 #include "libsgxstep/apic.h"
 #include "libsgxstep/idt.h"
 #include <string.h>
-#include <sgx_urts.h>
 #include <x86intrin.h>
 
 #define SAMPLES         100000

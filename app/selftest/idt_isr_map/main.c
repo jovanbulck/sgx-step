@@ -35,13 +35,14 @@
 /* ------------------------------------------------------------ */
 /* This code may execute with ring0 privileges */
 int my_cpl = -1;
-extern uint64_t nemesis_tsc_aex, nemesis_tsc_eresume;
+extern uint64_t nemesis_tsc_aex;
+uint64_t tsc_pre_irq;
 
 void pre_irq(void)
 {
     my_cpl = get_cpl();
     __ss_irq_fired = 0;
-    nemesis_tsc_eresume = rdtsc_begin();
+    tsc_pre_irq = rdtsc_begin();
 }
 
 void do_irq_sw(void)
@@ -56,7 +57,7 @@ void post_irq(void)
 {
     ASSERT(__ss_irq_fired);
     info("returned from IRQ: my_cpl=%d; irq_cpl=%d; count=%02d; flags=%p; nemesis=%d",
-            my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags(), nemesis_tsc_aex - nemesis_tsc_eresume);
+            my_cpl, __ss_irq_cpl, __ss_irq_count, read_flags(), nemesis_tsc_aex - tsc_pre_irq);
 }
 
 int main( int argc, char **argv )

@@ -19,7 +19,7 @@ To run the selftest applications:
 1. Navigate to the desired directory.
 2. Compile the application:
    ```bash
-   make
+   make clean all
    ```
 3. Run the application with:
    ```bash

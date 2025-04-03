@@ -1,16 +1,9 @@
 LIBSGXSTEP_DIR       = ../../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
+NO_SGX               = 1
+export NO_SGX
 -include $(LIBSGXSTEP)/Makefile.config
 
-URTS_LIB_PATH        = $(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
-
-ifeq ($(SGX_SDK),)
-    SGX_SDK          = /opt/intel/sgxsdk
-endif
-export SGX_SDK
-ifneq ($(SGX_SDK), /opt/intel/sgxsdk)
-    URTS_LD_LIBRARY_PATH = LD_LIBRARY_PATH=$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
-endif
 
 SUBDIRS              = $(LIBSGXSTEP)
 
@@ -20,9 +13,8 @@ LD                   = gcc
 
 CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables \
                        -fno-common -Wno-attributes -g -D_GNU_SOURCE -O0
-INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR) 
-LDFLAGS             += -lsgx-step -lsgx_urts \
-                       -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib64/
+INCLUDE              = -I$(LIBSGXSTEP_DIR) 
+LDFLAGS             += -lsgx-step -pthread $(SUBDIRS:%=-L %)
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o)
@@ -31,13 +23,15 @@ OUTPUT               = app
 BUILDDIRS            = $(SUBDIRS:%=build-%)
 CLEANDIRS            = $(SUBDIRS:%=clean-%)
 
-
 MAKEFLAGS           += --silent
 
 all: $(OUTPUT)
 	
 run: clean all
-	sudo $(URTS_LD_LIBRARY_PATH) ./app
+	#TODO disable SMEP/SMAP at runtime through /dev/sgx-step
+	!(cat /proc/cpuinfo | grep -q smep) || (echo "smep not disabled!" && false)
+	!(cat /proc/cpuinfo | grep -q smap) || (echo "smap not disabled!" && false)
+	sudo ./app
 
 $(OUTPUT): $(BUILDDIRS) $(OBJECTS)
 	echo "$(INDENT)[LD]" $(OBJECTS) $(LIBS) -o $(OUTPUT) 
