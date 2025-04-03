@@ -7,7 +7,7 @@ on:
     - cron: '00 08 * * MON'
 
 jobs:
-  build:
+  selftest:
     strategy:
       matrix:
         os:
@@ -23,11 +23,44 @@ jobs:
           git submodule init
           git submodule update
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -yqq install build-essential libelf-dev
+
       - name: Build and load /dev/sgx-step
         run: |
           cd $GITHUB_WORKSPACE/kernel/
           #./install_SGX_driver.sh
           make clean load
+
+      - name: Build SGX-Step selftest applications
+        run: |
+          for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; \
+          done
+          for d in $GITHUB_WORKSPACE/app/baresgx/ ; do \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; \
+            if [[ -f Makefile ]]; then \
+                make; ldd ./app ; \
+            fi ; \
+          done
+
+  intel-sdk:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
 
       - name: Patch and install Intel SGX SDK
         run: |
@@ -37,7 +70,7 @@ jobs:
           source /opt/intel/sgxsdk/environment
           sudo service aesmd status
 
-      - name: Run Intel SGX SDK SampleCode in simulator
+      - name: Run Intel SGX SDK sample code in simulator
         run: |
           source /opt/intel/sgxsdk/environment
           cd $GITHUB_WORKSPACE/sdk/intel-sdk/linux-sgx/SampleCode/LocalAttestation
@@ -46,23 +79,50 @@ jobs:
           ldd ./app
           ./app
 
+      - name: Build SGX-Step Intel SGX SDK applications
+        run: |
+          source /opt/intel/sgxsdk/environment
+          for d in $GITHUB_WORKSPACE/app/{aep-redirect,bench,foreshadow,lvi,memcmp}/ ; do \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; make; ldd ./app ; \
+          done
+
+  oe-sdk:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Fetch submodules
+        run: |
+          git submodule init
+          git submodule update
+
       - name: Patch and install OE SDK
         run: |
           cd $GITHUB_WORKSPACE/sdk/oe/
           bash -x ./install_oe_sdk.sh
           source /opt/openenclave/share/openenclave/openenclaverc
 
-      - name: Run OE SampleCode in simulator
+      - name: Run OE sample code in simulator
         run: |
           source /opt/openenclave/share/openenclave/openenclaverc
-          cd $GITHUB_WORKSPACE/sdk/oe/samples/helloworld
+          cd $GITHUB_WORKSPACE/sdk/oe/openenclave/samples/helloworld
           make
           ldd ./host/helloworld_host
           ./host/helloworld_host ./enclave/enclave.signed --simulate
 
-      - name: Build SGX-Step sample applications
+      - name: Build SGX-Step oe applications
         run: |
-          source /opt/intel/sgxsdk/environment
           source /opt/openenclave/share/openenclave/openenclaverc
-          for d in $GITHUB_WORKSPACE/app/selftest/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; make ; ldd ./app ; done
-          for d in $GITHUB_WORKSPACE/app/*/ ; do echo -e "\n**** $d ****\n" ; cd "$d" ; if [[ -f Makefile ]]; then make; ldd ./app ; fi ; done
+          make -C libsgxstep/
+          for d in $GITHUB_WORKSPACE/app/oe/ ; do \
+            echo -e "\n**** $d ****\n" ; cd "$d" ; make; ldd host/helloworld_host ; \
+          done

@@ -14,6 +14,8 @@ echo "OE SDK successfully patched!"
 
 # ----------------------------------------------------------------------
 echo "[ installing prerequisites ]"
+sudo apt-get -yqq install build-essential ocaml ocamlbuild automake autoconf libtool wget python2 libssl-dev git cmake perl
+sudo apt-get -yqq install libssl-dev libcurl4-openssl-dev protobuf-compiler libprotobuf-dev debhelper cmake reprepro unzip lsb-release libelf-dev
 ./install_llvm11.sh
 
 # ----------------------------------------------------------------------
