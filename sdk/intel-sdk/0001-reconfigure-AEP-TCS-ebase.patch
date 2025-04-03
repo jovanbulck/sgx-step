@@ -1,8 +1,15 @@
-commit f32cc9feb7ce7e94337a3f78b0d0085161f75c8b
-Author: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date:   Thu Feb 8 20:49:32 2024 +0000
+From 07022d778a8be3ad8916785722a1b2638fa8f1df Mon Sep 17 00:00:00 2001
+From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
+Date: Thu, 3 Apr 2025 19:15:46 +0000
+Subject: [PATCH] SGX-Step SDK patches to reconfigure AEP/TCS
 
-    SGX-Step SDK patches to reconfigure AEP/TCS
+---
+ common/inc/sgx_urts.h                |  5 +++
+ psw/urts/linux/enter_enclave.S       | 54 ++++++++++++++++++++++++----
+ psw/urts/linux/urts.cpp              | 20 +++++++++++
+ psw/urts/linux/urts.lds              |  3 ++
+ sdk/simulation/urtssim/urts_deploy.c | 17 +++++++++
+ 5 files changed, 93 insertions(+), 6 deletions(-)
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
 index 691efbc9..07240fa7 100644
@@ -21,7 +28,7 @@ index 691efbc9..07240fa7 100644
  
  /* Convenient macro to be passed to sgx_create_enclave(). */
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
-index 4f09e2da..2f6b749e 100644
+index 4f09e2da..ff9d30da 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -32,6 +32,29 @@
@@ -96,8 +103,8 @@ index 4f09e2da..2f6b749e 100644
 + 
 +DECLARE_GLOBAL_FUNC set_aep
 +    lea_pic     g_aep_pointer, %xax
-+    mov         naked_arg0, %xbx
-+    mov         %xbx, (%xax)
++    mov         naked_arg0, %xdx
++    mov         %xdx, (%xax)
      ret
  
 +DECLARE_GLOBAL_FUNC get_tcs
@@ -180,3 +187,6 @@ index ac5f6223..cdf66aca 100644
  void sgx_debug_load_state_add_element(){};
  void sgx_debug_unload_state_remove_element(){};
  void sgx_destroy_enclave(){};
+-- 
+2.43.0
+
