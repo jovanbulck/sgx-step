@@ -66,24 +66,52 @@ static uint32_t g_apic_lvtt_copy = 0x0, g_apic_tdcr_copy = 0x0;
 /* ********************** UTIL FUNCTIONS ******************************* */
 
 /*
- * NOTE: Linux's default `write_cr0` does not allow to change protected bits,
- * so we include our own here.
+ * NOTE: Linux's default `write_cr0/4` do not allow to change protected bits,
+ * so we include our own here (must be called with interrupts off).
  */
-inline void do_write_cr0(unsigned long val) {
+inline void do_write_cr0(unsigned long val)
+{
     asm volatile("mov %0, %%cr0" : : "r"(val));
 }
 
-void enable_write_protection(void)
+inline void do_write_cr4(unsigned long val)
 {
-    unsigned long cr0 = read_cr0();
-    set_bit(16, &cr0);
-    do_write_cr0(cr0);
+    asm volatile("mov %0, %%cr4" : : "r"(val));
 }
 
+/*
+ * Allow kernel to write into read-only pages on the current CPU.
+ *
+ * NOTE: CR0.WP must be set before software can set CR4.CET
+ */
+void enable_write_protection(void)
+{
+    unsigned long cr0, cr4;
+
+    cr0 = native_read_cr0();
+    set_bit(X86_CR0_WP_BIT, &cr0);
+    do_write_cr0(cr0);
+
+    cr4 = native_read_cr4();
+    set_bit(X86_CR4_CET_BIT, &cr4);
+    do_write_cr4(cr4);
+}
+
+/*
+ * Inhibit kernel to write into read-only pages on the current CPU.
+ *
+ * NOTE: CR0.WP cannot be cleared as long as CR4.CET = 1
+ */
 void disable_write_protection(void)
 {
-    unsigned long cr0 = read_cr0();
-    clear_bit(16, &cr0);
+    unsigned long cr0, cr4;
+
+    cr4 = native_read_cr4();
+    clear_bit(X86_CR4_CET_BIT, &cr4);
+    do_write_cr4(cr4);
+
+    cr0 = native_read_cr0();
+    clear_bit(X86_CR0_WP_BIT, &cr0);
     do_write_cr0(cr0);
 }
 
@@ -150,9 +178,13 @@ int step_open(struct inode *inode, struct file *file)
  */
 void restore_idt(void)
 {
+    unsigned long flags;
+
+    local_irq_save(flags);
     disable_write_protection();
     memcpy((void*)g_idtr.base, g_idt_copy, g_idtr.size+1);
     enable_write_protection();
+    local_irq_restore(flags);
     log("restored IDT: %#llx with size %u", g_idtr.base, g_idtr.size+1);
 
     kfree(g_idt_copy);
