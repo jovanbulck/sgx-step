@@ -59,6 +59,14 @@ sgx_step_aep_trampoline:
     lea sgx_step_aep_cb(%rip), %xax
     mov (%xax), %xax
     test %xax, %xax
+    je .pfcallbackcheck
+    call *%xax
+
+.pfcallbackcheck:
+    /* optional C function callback for handling #PF if custom IDT entry*/
+    mov sgx_pf_aep_cb@GOTPCREL(%rip), %xax
+    mov (%xax), %xax
+    test %xax, %xax
     je .Leresume
     call *%xax
 
