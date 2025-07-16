@@ -1,4 +1,4 @@
-irq.section isr_section,"awx",@progbits
+.section isr_section,"awx",@progbits
 .align 0x1000
 .global __pf_irq_original_handler_addr, __pf_irq_faultaddr
 __pf_irq_original_handler_addr:
@@ -53,4 +53,3 @@ __pf_irq_handler:
     pop %rax
     add $8, %rsp  # Remove error code from the stack
     iretq
-

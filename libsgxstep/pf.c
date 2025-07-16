@@ -18,10 +18,10 @@
  *  along with SGX-Step. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "libsgxstep/debug.h"
+#include "debug.h"
 #include "pf.h"
-#include "libsgxstep/pt.h"
-#include "libsgxstep/enclave.h"
+#include "pt.h"
+#include "enclave.h"
 #include <signal.h>
 #include <string.h>
 #include <sys/mman.h>
