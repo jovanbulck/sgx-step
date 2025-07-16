@@ -1,12 +1,12 @@
 /* utility headers */
 #include "libsgxstep/debug.h"
-#include "libsgxstep/pf.h"
+#include "pf.h"
 #include <sys/mman.h>
 #include "libsgxstep/pt.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/pt_abstractions.h"
 #include "libsgxstep/sched.h"
-#include "libsgxstep/pf_abstractions.h"
+// #include "libsgxstep/pf_abstractions.h"
 
 /* Example Setup */
 #include "Enclave/config_example.h"
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     info_event("Calling enclave to access target page.");
 #endif
 
-    SGX_ASSERT(ecall_access_target_page(eid);
+    SGX_ASSERT(ecall_access_target_page(eid));
 
 #if DEBUG
     info_event("destroying SGX enclave");
