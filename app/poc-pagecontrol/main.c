@@ -1,12 +1,12 @@
 /* utility headers */
 #include "libsgxstep/debug.h"
-#include "pf.h"
+#include "libsgxstep/pf.h"
 #include <sys/mman.h>
 #include "libsgxstep/pt.h"
 #include "libsgxstep/enclave.h"
 #include "libsgxstep/pt_abstractions.h"
 #include "libsgxstep/sched.h"
-// #include "libsgxstep/pf_abstractions.h"
+#include "libsgxstep/pf_abstractions.h"
 
 /* Example Setup */
 #include "Enclave/config_example.h"
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     // -----------------------------------------------------------
     sgx_enclave_id_t eid = create_enclave();
 #if DEBUG
-    info("Setup");
+    info_event("Registering fault handler");
 #endif
 #if USE_CUSTOM_IDT
     register_fault_handler_IDT(fault_handler);
