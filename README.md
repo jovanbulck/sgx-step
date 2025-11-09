@@ -369,8 +369,8 @@ succeeds in reliably interrupting the first (possibly very short!) enclave
 instruction following the notoriously complex `ERESUME` instruction is described in the
 [AEX-Notify](https://jovanbulck.github.io/files/usenix23-aexnotify.pdf) paper.
 We found that the key to SGX-Step's success lies in its use of the "accessed"
-(A) bit. Specifically, SGX-Step always clears the A-bit in the victim en
-clave's page-middle directory (PMD) before arming the APIC to fire a one-shot
+(A) bit. Specifically, SGX-Step always clears the A-bit in the victim enclave's
+page-middle directory (PMD) before arming the APIC to fire a one-shot
 interrupt. The A-bit is only ever set by the processor when at least one
 instruction is executed by the enclave and can, hence, be used to
 deterministically distinguish between zero-steps versus single-steps.
