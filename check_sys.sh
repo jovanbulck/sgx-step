@@ -79,8 +79,8 @@ do
     # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7
     if [[ $c =~ "pti" ]]; then
         assert_not_contains_from_version "6.7.0" "$sgxstep_cmdline" $c "reported unknown to kernel"
-    else
-        assert_not_contains "$sgxstep_cmdline" $c "reported unknown to kernel"
+    elif [[ ! ($c =~ "splash" || $c =~ "BOOT_IMAGE") ]]; then
+        print_err "\`$c\` reported unknown to kernel"
     fi
 done
 end_check
