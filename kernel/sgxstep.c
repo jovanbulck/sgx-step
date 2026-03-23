@@ -52,6 +52,7 @@ static void *g_isr_kernel_vbase = NULL;
     #define unpin_user_pages            put_user_pages
 #endif
 
+static int g_cr4_cet = 0;
 static int g_in_use = 0;
 
 typedef struct {
@@ -92,9 +93,13 @@ static void enable_write_protection(void)
     set_bit(X86_CR0_WP_BIT, &cr0);
     do_write_cr0(cr0);
 
-    cr4 = native_read_cr4();
-    set_bit(X86_CR4_CET_BIT, &cr4);
-    do_write_cr4(cr4);
+    if (g_cr4_cet)
+    {
+        cr4 = native_read_cr4();
+        set_bit(X86_CR4_CET_BIT, &cr4);
+        do_write_cr4(cr4);
+        g_cr4_cet = 0;
+    }
 }
 
 /*
@@ -107,7 +112,7 @@ static void disable_write_protection(void)
     unsigned long cr0, cr4;
 
     cr4 = native_read_cr4();
-    clear_bit(X86_CR4_CET_BIT, &cr4);
+    g_cr4_cet = test_and_clear_bit(X86_CR4_CET_BIT, &cr4);
     do_write_cr4(cr4);
 
     cr0 = native_read_cr0();
