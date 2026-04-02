@@ -55,6 +55,7 @@ start_check "recommended SGX-Step parameters"
 sgxstep_cmdline=`cat README.md | extract_quoted "quiet splash "`
 kernel_cmdline=`cat /proc/cmdline`
 config_x2apic=$(grep -E '#define\s+X2APIC\s+[01]' libsgxstep/config.h | awk '{print $3}')
+dmesg_x2apic_opt_out=$(dmesg 2>&1 | grep "BIOS sets x2apic opt out bit")
 
 for c in $sgxstep_cmdline
 do
@@ -62,9 +63,12 @@ do
 done
 
 if [ "$config_x2apic" -eq 0 ]; then
-    assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
+	if [[ ! "$dmesg_x2apic_opt_out" =~ "BIOS sets x2apic opt out bit" ]]; then
+		assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
+	fi
 else
     assert_not_contains "$kernel_cmdline" "nox2apic" "in /proc/cmdline, but config.h defines X2APIC=1"
+    assert_not_contains "$dmesg_x2apic_opt_out" "BIOS sets x2apic opt out bit" "x2apic is disabled, but config.h defines X2APIC=1"
 fi
 end_check
 
@@ -88,14 +92,18 @@ end_check
 ############################################################################
 start_check "CPU features"
 cpuinfo=`cat /proc/cpuinfo`
+dmesg_x2apic_opt_out=$(dmesg 2>&1 | grep "BIOS sets x2apic opt out bit")
 assert_not_contains "$cpuinfo" "smap"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "smep"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "umip"   "not disabled in /proc/cpuinfo"
 
 if [ "$config_x2apic" -eq 0 ]; then
-    assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
+	if [[ ! "$dmesg_x2apic_opt_out" =~ "BIOS sets x2apic opt out bit" ]]; then
+    		assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
+	fi
 else
-    assert_contains "$cpuinfo" "x2apic" "not enabled in /proc/cpuinfo, but config.h defines X2APIC=1"
+    	assert_contains "$cpuinfo" "x2apic" "not enabled in /proc/cpuinfo, but config.h defines X2APIC=1"
+    	assert_not_contains "$dmesg_x2apic_opt_out" "BIOS sets x2apic opt out bit" "x2apic is disabled, but config.h defines X2APIC=1"
 fi
 end_check
 
