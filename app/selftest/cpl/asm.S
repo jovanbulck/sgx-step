@@ -1,3 +1,4 @@
+#include "../../../libsgxstep/config.h"
 #define IA32_TIME_STAMP_COUNTER 0x10
 #define IA32_APIC_ID            0x802
 
@@ -9,7 +10,11 @@ do_rdmsr:
     mov %rax, gate_cpl(%rip)
 
     # store privileged RDMSR result
+#if X2APIC
     mov $IA32_APIC_ID, %ecx
+#else 
+    mov $IA32_TIME_STAMP_COUNTER, %ecx
+#endif
     rdmsr
     shl $32, %rdx
     or  %rdx, %rax

@@ -30,6 +30,9 @@
 int g_apic_setup = 0;
 uint64_t g_apic_deadline_tsc_begin = -1;
 
+/* See irq_entry.S to see how these are used. */
+void __wrmsr_gate(void);
+void __rdmsr_gate(void);
 #if !X2APIC
     extern void *apic_base;
     
@@ -58,12 +61,11 @@ uint64_t g_apic_deadline_tsc_begin = -1;
     
         apic_base = remap(apic_base_addr);
         libsgxstep_info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
+
+        install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
+        install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
     }
 #else /* X2APIC */
-    /* See irq_entry.S to see how these are used. */
-    void __wrmsr_gate(void);
-    void __rdmsr_gate(void);
-
     /*
      * Install custom ring-0 IRQ gates to read/write privileged X2APIC MSR registers.
      */
