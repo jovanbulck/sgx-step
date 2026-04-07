@@ -33,6 +33,13 @@ uint64_t g_apic_deadline_tsc_begin = -1;
 /* See irq_entry.S to see how these are used. */
 void __wrmsr_gate(void);
 void __rdmsr_gate(void);
+
+static void __install_msr_gates()
+{
+	install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
+	install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
+}
+
 #if !X2APIC
     extern void *apic_base;
     
@@ -62,8 +69,7 @@ void __rdmsr_gate(void);
         apic_base = remap(apic_base_addr);
         libsgxstep_info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
 
-        install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
-        install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
+	__install_msr_gates();
     }
 #else /* X2APIC */
     /*
@@ -71,8 +77,7 @@ void __rdmsr_gate(void);
      */
     static void do_apic_init(void)
     {
-        install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
-        install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
+	__install_msr_gates();
     }
 #endif /* X2APIC */
 
