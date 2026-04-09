@@ -56,7 +56,8 @@ sgxstep_cmdline=`cat README.md | extract_quoted "quiet splash "`
 kernel_cmdline=`cat /proc/cmdline`
 config_x2apic=$(grep -E '#define\s+X2APIC\s+[01]' libsgxstep/config.h | awk '{print $3}')
 dmesg_output=$(dmesg 2>&1)
-dmesg_x2apic_opt_out=$(dmesg 2>&1 | grep "BIOS sets x2apic opt out bit")
+
+assert_not_contains "$dmesg_output" "Operation not permitted" ": run this script as root"
 
 for c in $sgxstep_cmdline
 do
@@ -64,11 +65,11 @@ do
 done
 
 if [ "$config_x2apic" -eq 0 ]; then
-	assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
+    assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
 else
-    	assert_not_contains "$kernel_cmdline" "nox2apic" "in /proc/cmdline, but config.h defines X2APIC=1"
-    	assert_not_contains "$dmesg_output" "BIOS sets x2apic opt out bit" \
-		"even if X2APIC=1 in config.h and nox2apic absent from /proc/cmdline, BIOS is opting out; try intremap=no_x2apic_opt_out in kernel params or disable x2apic"
+    assert_not_contains "$kernel_cmdline" "nox2apic" "in /proc/cmdline, but config.h defines X2APIC=1"
+    assert_not_contains "$dmesg_output" "BIOS sets x2apic opt out bit" \
+	    "even if X2APIC=1 in config.h and nox2apic absent from /proc/cmdline, BIOS is opting out; try intremap=no_x2apic_opt_out in kernel params or disable x2apic"
 fi
 end_check
 
@@ -76,7 +77,6 @@ end_check
 start_check "unknown kernel parameters"
 unknown_cmdline=`echo "$dmesg_output" | extract_quoted 'Unknown kernel command line parameters "'`
 
-assert_not_contains "$dmesg_output" "Operation not permitted" ": run this script as root"
 for c in $unknown_cmdline
 do
     # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7
@@ -96,11 +96,9 @@ assert_not_contains "$cpuinfo" "smep"   "not disabled in /proc/cpuinfo"
 assert_not_contains "$cpuinfo" "umip"   "not disabled in /proc/cpuinfo"
 
 if [ "$config_x2apic" -eq 0 ]; then
-    	assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
+    assert_not_contains "$cpuinfo" "x2apic" "not disabled in /proc/cpuinfo, but config.h defines X2APIC=0"
 else
-    	assert_contains "$cpuinfo" "x2apic" "not enabled in /proc/cpuinfo, but config.h defines X2APIC=1"
-    	assert_not_contains "$dmesg_output" "BIOS sets x2apic opt out bit" \
-		"even if X2APIC=1 in config.h and x2apic enabled in /proc/cpuinfo, BIOS is opting out; try intremap=no_x2apic_opt_out in kernel params or disable x2apic"
+    assert_contains "$cpuinfo" "x2apic" "not enabled in /proc/cpuinfo, but config.h defines X2APIC=1"
 fi
 end_check
 
