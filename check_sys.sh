@@ -55,6 +55,9 @@ start_check "recommended SGX-Step parameters"
 sgxstep_cmdline=`cat README.md | extract_quoted "quiet splash "`
 kernel_cmdline=`cat /proc/cmdline`
 config_x2apic=$(grep -E '#define\s+X2APIC\s+[01]' libsgxstep/config.h | awk '{print $3}')
+dmesg_output=$(dmesg 2>&1)
+
+assert_not_contains "$dmesg_output" "Operation not permitted" ": run this script as root"
 
 for c in $sgxstep_cmdline
 do
@@ -65,15 +68,15 @@ if [ "$config_x2apic" -eq 0 ]; then
     assert_contains "$kernel_cmdline" "nox2apic" "not in /proc/cmdline, but config.h defines X2APIC=0"
 else
     assert_not_contains "$kernel_cmdline" "nox2apic" "in /proc/cmdline, but config.h defines X2APIC=1"
+    assert_not_contains "$dmesg_output" "BIOS sets x2apic opt out bit" \
+	    "even if X2APIC=1 in config.h and nox2apic absent from /proc/cmdline, BIOS is opting out; try intremap=no_x2apic_opt_out in kernel params or disable x2apic"
 fi
 end_check
 
 ############################################################################
 start_check "unknown kernel parameters"
-dmesg_output=$(dmesg 2>&1)
 unknown_cmdline=`echo "$dmesg_output" | extract_quoted 'Unknown kernel command line parameters "'`
 
-assert_not_contains "$dmesg_output" "Operation not permitted" ": run this script as root"
 for c in $unknown_cmdline
 do
     # NOTE: pti=off wrongly reported as unknown by Linux kernel < 6.7

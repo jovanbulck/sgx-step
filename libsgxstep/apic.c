@@ -30,6 +30,22 @@
 int g_apic_setup = 0;
 uint64_t g_apic_deadline_tsc_begin = -1;
 
+/* See irq_entry.S to see how these are used. */
+void __wrmsr_gate(void);
+void __rdmsr_gate(void);
+
+/*
+ * Install custom ring-0 IRQ gates to read/write privileged X2APIC MSR registers.
+ * These call gates are needed even if X2APIC=0 since apic_timer_deadline_irq
+ * assumes they are installed. IA32_TSC_DEADLINE MSR is available in both X2APIC 
+ * and XAPIC modes.
+ */
+static void __install_msr_gates()
+{
+    install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
+    install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
+}
+
 #if !X2APIC
     extern void *apic_base;
     
@@ -58,19 +74,13 @@ uint64_t g_apic_deadline_tsc_begin = -1;
     
         apic_base = remap(apic_base_addr);
         libsgxstep_info("established local memory mapping for APIC_BASE=%p at %p", (void*) apic_base_addr, apic_base);
+
+        __install_msr_gates();
     }
 #else /* X2APIC */
-    /* See irq_entry.S to see how these are used. */
-    void __wrmsr_gate(void);
-    void __rdmsr_gate(void);
-
-    /*
-     * Install custom ring-0 IRQ gates to read/write privileged X2APIC MSR registers.
-     */
     static void do_apic_init(void)
     {
-        install_priv_gate(__wrmsr_gate, WRMSR_GATE_VECTOR);
-        install_priv_gate(__rdmsr_gate, RDMSR_GATE_VECTOR);
+        __install_msr_gates();
     }
 #endif /* X2APIC */
 

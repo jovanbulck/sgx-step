@@ -9,7 +9,7 @@ do_rdmsr:
     mov %rax, gate_cpl(%rip)
 
     # store privileged RDMSR result
-    mov $IA32_APIC_ID, %ecx
+    mov $IA32_TIME_STAMP_COUNTER, %ecx
     rdmsr
     shl $32, %rdx
     or  %rdx, %rax
