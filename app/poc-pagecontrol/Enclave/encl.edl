@@ -1,0 +1,10 @@
+enclave {
+	trusted {
+        public void ecall_access_target_page();
+		public void *ecall_leak_internal_buffer_adrs(void);
+
+    };
+	
+	untrusted {
+	};
+};

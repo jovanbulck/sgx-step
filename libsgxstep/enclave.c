@@ -36,7 +36,8 @@ void* sgx_get_tcs(void);
 
 /* See aep_trampoline.S to see how these are used. */
 extern void sgx_step_aep_trampoline(void);
-aep_cb_t sgx_step_aep_cb = NULL;
+volatile aep_cb_t sgx_step_aep_cb = NULL;
+volatile aep_cb_t sgx_pf_aep_cb = NULL; // Callback for handling pagefaults after custom IDT entry.
 uint64_t nemesis_tsc_eresume = 0x0;
 int sgx_step_eresume_cnt = 0;
 int sgx_step_do_trap = 0;
@@ -49,6 +50,12 @@ void register_aep_cb(aep_cb_t cb)
 {
     sgx_set_aep(sgx_step_aep_trampoline);
     sgx_step_aep_cb = cb;
+}
+
+void register_aep_pf_cb(aep_cb_t cb)
+{
+    sgx_set_aep(sgx_step_aep_trampoline);
+    sgx_pf_aep_cb = cb;
 }
 
 void register_enclave_info(void)
