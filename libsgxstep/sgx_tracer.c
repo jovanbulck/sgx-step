@@ -3,12 +3,19 @@
 /* Internal (ugly functions)*/
 static void generate_ids(char (*ids)[4], size_t count);
 
+/* ============ Include create functions of modules here ================== */
+trace_module_t* trace_irq_create(void);
+trace_module_t* trace_gprs_create(void);
+trace_module_t* trace_pages_create(void);
+
 /* When creating a new module assign */
+typedef trace_module_t* (*create_module_fn)(void);
 static const create_module_fn module_factory[] = {
-        [PAGES] = trace_pages_create,
-        [GPRS]  = trace_gprs_create,
-        [IRQ]   = trace_irq_create,
+        trace_pages_create, // bit 0
+        trace_gprs_create,  // bit 1
+        trace_irq_create,   // bit 2
     };
+/* ========================================================================= */
 
 /* 
     NOTE: Always call sgx_tracer_init even when all module items 
@@ -22,15 +29,20 @@ void sgx_tracer_init(sgx_tracer_t *t)
     t->num_modules = 0;
 }
 
-void sgx_tracer_trace_all(sgx_tracer_t *t, const track_type_t *options, size_t opt_cnt)
+void sgx_tracer_add_module(sgx_tracer_t *t, const track_type_t modules)
 {
 
-    ASSERT(t->num_modules + opt_cnt < MAX_MODULES);
+    ASSERT(t->num_modules + __builtin_popcount(modules) < MAX_MODULES);
 
-    for (size_t i = 0; i < opt_cnt; i++)
+    track_type_t temp = modules;
+    while(temp)
     {
+
+        // Num of trailing zero's (i.e. index of option)
+        size_t i = __builtin_ctz(temp);
+
         /* get init from factory */
-        create_module_fn create = module_factory[options[i]];
+        create_module_fn create = module_factory[i];
         ASSERT( create != NULL);
 
         /* create the module */
@@ -38,39 +50,27 @@ void sgx_tracer_trace_all(sgx_tracer_t *t, const track_type_t *options, size_t o
         ASSERT( m != NULL );
     
         /* init the state */
-        void *s = m->init();
-        ASSERT( s != NULL);
+        //void *s = m->init();
+        m->init(m);
 
-        t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
+        //t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
+        t->modules[t->num_modules++] = m;
+
+        // rmv the bit we just tracked
+        temp &= ~(1u << i);
     }
 }
 
-void sgx_tracer_enable(sgx_tracer_t *t, track_type_t opt)
-{
-    ASSERT(t->num_modules < MAX_MODULES);
-
-    /* get init from factory */
-    create_module_fn create = module_factory[opt];
-    ASSERT( create != NULL);
-
-    /* create the module */
-    trace_module_t *m = create();
-    ASSERT( m != NULL );
-    
-    /* init the state */
-    void *s = m->init();
-    ASSERT( s != NULL);
-
-    t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
-}
-
 /* Manually add module to specify which items to track */
-void sgx_tracer_man_add(sgx_tracer_t *t, track_type_t opt, void *items, size_t num_of_items)
+void sgx_tracer_mod_add(sgx_tracer_t *t, track_type_t opt, void *items, size_t num_of_items)
 {
     ASSERT(t->num_modules < MAX_MODULES);
 
+    // Num of trailing zero's 
+    size_t i = __builtin_ctz(opt);
+
     /* get init from factory */
-    create_module_fn create = module_factory[opt];
+    create_module_fn create = module_factory[i];
     ASSERT( create != NULL);
 
     /* create the module */
@@ -78,22 +78,23 @@ void sgx_tracer_man_add(sgx_tracer_t *t, track_type_t opt, void *items, size_t n
     ASSERT( m != NULL );
 
     /* Init state but specific items */
-    void *s = m->man_init(items, num_of_items);
+    void *s = m->opt_add(m, items, num_of_items);
     ASSERT( s != NULL);
 
-    t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
+    //t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
+    t->modules[t->num_modules++] = m;
 }
 
-void sgx_tracer_update(sgx_tracer_t *t)
+void sgx_tracer_step(sgx_tracer_t *t)
 {
-    if (t->step_count > MAX_STEPS)
+    if (t->step_count >= MAX_STEPS)
         return;
 
     for (size_t i = 0; i < t->num_modules; i++) 
     {
         // call the update function of each module.
         // Give argument the module (self)
-        t->modules[i].module->update(t->modules[i].state);
+        t->modules[i]->step(t->modules[i]);
     }
     t->step_count++;
 }
@@ -103,8 +104,8 @@ void sgx_tracer_destroy(sgx_tracer_t *t)
     for (size_t i = 0; i < t->num_modules; i++) 
     {
         /* Free module state & module object*/
-        t->modules[i].module->destroy(t->modules[i].state);
-        free(t->modules[i].module);
+        t->modules[i]->destroy(t->modules[i]);
+        free(t->modules[i]);
         t->num_modules = 0;
     }
 }
@@ -135,7 +136,7 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
     /* find the items to create id array */
     for (size_t i = 0; i < t->num_modules; i++)
     {
-        total_items += t->modules[i].module->count(t->modules[i].state);
+        total_items += t->modules[i]->count(t->modules[i]);
     }
     char (*ids)[4] = malloc(total_items * sizeof(*ids));
     ASSERT(ids != NULL);
@@ -144,12 +145,11 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
     size_t id_index = 0;
     for (size_t i = 0; i < t->num_modules; i++)
     {
-        tracer_entry_t t_entry = t->modules[i];
-        trace_module_t *mod = t_entry.module;
-        void *s = t_entry.state;
+        trace_module_t *mod = t->modules[i];
+        void *s = mod->state;
         trace_signal_t sig;
 
-        fprintf(f, "$scope module %s $end\n", t->modules[i].module->module_name);
+        fprintf(f, "$scope module %s $end\n", mod->module_name);
         ASSERT( mod->get(s, 0, &sig) == 0 );
 
         //size_t items = mod->count(s); 
@@ -177,9 +177,8 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
     id_index = 0;
     for (size_t m_i = 0; m_i < t->num_modules; m_i++)
     {
-        tracer_entry_t t_entry = t->modules[m_i];
-        trace_module_t *mod = t_entry.module;
-        void *s = t_entry.state;
+        trace_module_t *mod = t->modules[m_i];
+        void *s = mod->state;
         //size_t items = mod->count(s);
 
         trace_signal_t sig;
@@ -203,9 +202,8 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
     uint8_t **prev_values = malloc(t->num_modules * sizeof(uint8_t *));
     for (size_t m = 0; m < t->num_modules; m++)
     {
-        tracer_entry_t entry = t->modules[m];
-        trace_module_t *mod = entry.module;
-        void *s = entry.state;
+        trace_module_t *mod = t->modules[m];
+        void *s = mod->state;
 
         trace_signal_t sig;
         ASSERT(mod->get(s, 0, &sig) == 0);
@@ -221,9 +219,8 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
         fprintf(f, "#%zu\n", step);
         for (size_t m = 0; m < t->num_modules; m++)
         {
-            tracer_entry_t entry = t->modules[m];
-            trace_module_t *mod = entry.module;
-            void *s = entry.state;
+            trace_module_t *mod = t->modules[m];
+            void *s = mod->state;
 
             trace_signal_t sig;
             ASSERT(mod->get(s, step, &sig) == 0);

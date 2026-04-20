@@ -1,4 +1,18 @@
-#include "trace_irq_latency.h"
+#include "trace_module.h"
+
+#include "debug.h"
+#include "pt.h"
+#include "cache.h"
+#include "enclave.h"
+#include <string.h>
+#include <sys/mman.h>
+
+typedef struct{
+
+    uint32_t *step_latencies;
+    size_t current_step;                
+
+} irq_module_state_t;
 
 /* 
     NOTE: See irq_entry.S to see aex rtsc read there and
@@ -17,8 +31,8 @@ trace_module_t* trace_irq_create(void)
 
     m->module_name  = "irq_latency_trace";
     m->init         = init;
-    m->man_init     = man_init;
-    m->update       = update;
+    m->opt_add      = opt_add;
+    m->step         = step;
     m->count        = count;
     m->get          = get;
     m->describe     = describe;
@@ -27,59 +41,61 @@ trace_module_t* trace_irq_create(void)
     return m;
 }
 
-static void* init(void)
+/* Version with internal state */
+static void init(trace_module_t *m)
 {
     irq_module_state_t *state = malloc(sizeof(irq_module_state_t));
     ASSERT( state != NULL );
 
-    state->bitmap_events = calloc(MAX_STEPS_PER_MODULE, sizeof(uint32_t));
-    state->time_step = 0;
-    ASSERT( state->bitmap_events != NULL );
-    return state;
+    state->step_latencies = calloc(MAX_STEPS_PER_MODULE, sizeof(uint32_t));
+    state->current_step = 0;
+    ASSERT( state->step_latencies != NULL );
+
+    m->state = state;
 }
 
-static void* man_init(void *items, size_t num_of_items)
+static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
 {
-    return init();
+    init(m);
 }
 
-static void update(void *state)
+static void step(trace_module_t *m)
 {
-    irq_module_state_t *s = (irq_module_state_t *) state;
+    irq_module_state_t *s = (irq_module_state_t *) m->state;
 
-    uint32_t *bitmap_ev = s->bitmap_events;
+    uint32_t *bitmap_ev = s->step_latencies;
 
-    (s->time_step)++;
-    bitmap_ev[(s->time_step - 1)] = (uint32_t)(nemesis_tsc_aex - nemesis_tsc_eresume);
+    (s->current_step)++;
+    bitmap_ev[(s->current_step - 1)] = (uint32_t)(nemesis_tsc_aex - nemesis_tsc_eresume);
 }
 
-static void destroy(void *state)
+static void destroy(trace_module_t *m)
 {
-    irq_module_state_t *s = (irq_module_state_t *) state;
-    free(s->bitmap_events);
+    irq_module_state_t *s = (irq_module_state_t *) m->state;
+    free(s->step_latencies);
     free(s);
 }
 
-static size_t count(void *state)
+static size_t count(trace_module_t *m)
 {
     return 1; /* only one irq number :) */
 }
 
-static int get(void *state, size_t step, trace_signal_t *sig)
+static int get(trace_module_t *m, size_t step, trace_signal_t *sig)
 {
-    irq_module_state_t *s = (irq_module_state_t *) state;
-    ASSERT( step < s->time_step );
+    irq_module_state_t *s = (irq_module_state_t *) m->state;
+    ASSERT( step < s->current_step );
 
     sig->items = 1;
     sig->bits_per_item = 32;
 
     /* payload at specifc step */
-    sig->payload = &s->bitmap_events[step];
+    sig->payload = &s->step_latencies[step];
 
     return 0;
 }
 
-static int describe(void *state, size_t index, char *name)
+static int describe(trace_module_t *m, size_t index, char *name)
 {
     strcpy(name, "IRQ_LATENCY");
     return 0;

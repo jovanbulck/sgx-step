@@ -1,4 +1,31 @@
-#include "trace_pages.h"
+#include "trace_module.h"
+#include "debug.h"
+#include "pt.h"
+#include "cache.h"
+#include "enclave.h"
+#include <sys/mman.h>
+
+
+/* Entry in ds-bookeeper */
+typedef struct{
+    uint64_t *pte;
+    void *page_base;
+} page_entry_t;
+
+/* State of page tracker */
+typedef struct{
+
+    page_entry_t *tracked_pages;      // Trakced pages (ds A)
+    size_t num_tracked_pages;        
+
+    uint64_t *bitmap_events;
+    size_t time_step;                
+
+} page_module_state_t;
+
+#define BITS 64
+
+#define WORDS(X) ((X + (BITS - 1)) / BITS);
 
 /* ================== Internal ======================= */
 static void mark_not_accessed(page_entry_t *tracked_pages, size_t num_tracked_pages);
@@ -13,8 +40,8 @@ trace_module_t* trace_pages_create(void)
 
     m->module_name = "page_trace";
     m->init     = init;
-    m->man_init = man_init;
-    m->update   = update;
+    m->opt_add  = opt_add;
+    m->step     = step;
     m->count    = count;
     m->get      = get;
     m->describe = describe;
@@ -23,7 +50,7 @@ trace_module_t* trace_pages_create(void)
     return m;
 }
 
-static void* man_init(void *items, size_t num_of_items)
+static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
 {
     void *base = get_enclave_base();
     void *limit = get_enclave_limit();
@@ -32,85 +59,66 @@ static void* man_init(void *items, size_t num_of_items)
     page_module_state_t *state = malloc(sizeof(page_module_state_t));
     ASSERT( state != NULL );
 
-    state->num_tracked_pages = num_of_items;
+    state->num_tracked_pages = opt_len;
 
-    void **pages = (void **)items; // convert to an array of pointers/addresses
+    void **pages = (void **)opt; // convert to an array of pointers/addresses
 
     /* Allocate pages to track */
-    state->tracked_pages = malloc(sizeof(page_entry_t) * num_of_items);
+    state->tracked_pages = malloc(sizeof(page_entry_t) * opt_len);
     ASSERT( state->tracked_pages != NULL );
 
-    for (size_t i = 0; i < num_of_items; i++) 
+    for (size_t i = 0; i < opt_len; i++) 
     {
         ASSERT( base <= pages[i] && limit > pages[i] );
         uint64_t *pte = remap_page_table_level(pages[i], PTE);
         ASSERT( pte );
+        ASSERT( PRESENT(*pte) );
+        ASSERT( !mlock(pages[i], PAGE_SIZE_4KiB) );
         state->tracked_pages[i] = (page_entry_t) { .page_base = pages[i], .pte = pte };
     }
 
     /* Bitmap meathod */
-    size_t words =   (state->num_tracked_pages + 63) / 64; /* How many cells a single bit map is*/
+    size_t words = WORDS(state-> num_tracked_pages);
     state->bitmap_events = calloc(words * MAX_STEPS_PER_MODULE, sizeof(uint64_t) );
     state->time_step = 0;
     ASSERT( state->bitmap_events != NULL );
 
-    return state;
-
+    m->state = state;
 }
 
-static void* init(void)
+static void init(trace_module_t *m)
 {
-    /* Allocate state */
-    page_module_state_t *state = malloc(sizeof(page_module_state_t));
-    ASSERT( state != NULL );
 
-    /* Find how many pages to track */
     void *base = get_enclave_base();
     void *limit = get_enclave_limit();
-    state->num_tracked_pages = 0;
 
-    for (void *p = base; p < limit; p += PAGE_SIZE_4KiB)
-    {
+    /* find number of pages */
+    size_t encl_len = (get_enclave_size() + (PAGE_SIZE_4KiB - 1)) / PAGE_SIZE_4KiB;
 
-        //uint64_t *pte = remap_page_table_level(p, PTE);
-        //if (!pte || !PERSENT( *pte ) )
-        //    continue;
+    void **opt = malloc(sizeof(void*) * encl_len);
+    ASSERT( opt != NULL );
 
-        (state->num_tracked_pages)++;
-    }
-
-    /* Allocate pages to track */
-    state->tracked_pages = malloc(sizeof(page_entry_t) * state->num_tracked_pages);
-    ASSERT( state->tracked_pages != NULL );
-    
-    
-    /* Get pages for the table */
     size_t i = 0;
-    for (void *p = base; p < limit; p += PAGE_SIZE_4KiB)
-    {
+    size_t opt_len = 0;
+    for (void *p = base; p < limit; p += PAGE_SIZE_4KiB, i++){
         uint64_t *pte = remap_page_table_level(p, PTE);
-        ASSERT( pte );
-        state->tracked_pages[i] = (page_entry_t) { .page_base = p, .pte = pte };
-        i++;
+        if (pte && PRESENT(*pte))
+            opt_len++;
+        opt[i] = p;
     }
 
-    info("All tracked pages: %zu", state->num_tracked_pages);
+    /* pass _all_ pages to opt_add */
+    opt_add(m, opt, opt_len);
 
-    /* Bitmap meathod */
-    size_t words =   (state->num_tracked_pages + 63) / 64; /* How many cells a single bit map is*/
-    state->bitmap_events = calloc(words * MAX_STEPS_PER_MODULE, sizeof(uint64_t) );
-    state->time_step = 0;
-    ASSERT( state->bitmap_events != NULL );
-
-    return state;
+    free(opt);
 }
 
-static void update(void *state)
+static void step(trace_module_t *m)
 {
-    page_module_state_t *s = (page_module_state_t *) state;
+    page_module_state_t *s = (page_module_state_t *) m->state;
     page_entry_t *pages = s->tracked_pages;
     uint64_t *bitmap_ev = s->bitmap_events;
-    size_t words = (s->num_tracked_pages + 63) / 64; /* How many cells a single bit map is*/
+    size_t words = WORDS(s->num_tracked_pages); /* How many cells a single bit map is*/
 
     (s->time_step)++;
     /* Check accessed bit of tracked pages*/
@@ -126,29 +134,29 @@ static void update(void *state)
     mark_not_accessed(s->tracked_pages, s->num_tracked_pages);
 }
 
-static void destroy(void *state)
+static void destroy(trace_module_t *m)
 {
     //page_dbg_log(state);
-    page_module_state_t *s = (page_module_state_t *) state;
+    page_module_state_t *s = (page_module_state_t *) m->state;
 
+    munlockall();
     free(s->tracked_pages);
-    //free(s->events);
     free(s->bitmap_events);
     free(s);
 }
 
-static size_t count(void *state)
+static size_t count(trace_module_t *m)
 {
-    page_module_state_t *s = (page_module_state_t *) state;
+    page_module_state_t *s = (page_module_state_t *) m->state;
     return s->num_tracked_pages;
 }
 
-static int get(void *state, size_t step, trace_signal_t *sig)
+static int get(trace_module_t *m , size_t step, trace_signal_t *sig)
 {
-    page_module_state_t *s = (page_module_state_t *) state;
+    page_module_state_t *s = (page_module_state_t *) m->state;
     ASSERT( step < s->time_step );
 
-    size_t words = (s->num_tracked_pages + 63) / 64;
+    size_t words = WORDS(s->num_tracked_pages);
 
     sig->items = s->num_tracked_pages;
     sig->bits_per_item = 1;
@@ -159,11 +167,11 @@ static int get(void *state, size_t step, trace_signal_t *sig)
     return 0;
 }
 
-static int describe(void *state, size_t index, char *name)
+static int describe(trace_module_t *m, size_t index, char *name)
 {
     void *base = get_enclave_base();
 
-    page_module_state_t *s = (page_module_state_t *) state;
+    page_module_state_t *s = (page_module_state_t *) m->state;
 
     ASSERT(index < s->num_tracked_pages);
 
@@ -198,7 +206,7 @@ void page_dbg_log(void *state)
         return;
     }
 
-    uint64_t words = (s->num_tracked_pages + 63) / 64;
+    uint64_t words = WORDS(s->num_tracked_pages);
     fprintf(f2, "# step,page\n");
     for (size_t step = 0; step < s->time_step; step++)
     {
