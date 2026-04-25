@@ -50,6 +50,7 @@ void *get_enclave_limit(void);
 char *get_enclave_drv(void);
 int get_enclave_size(void);
 int get_enclave_exec_range(uint64_t *start, uint64_t *end);
+int get_enclave_readable_pages(int count, void **pages);
 int edbgrdwr(void *adrs, void* res, int len, int write);
 #define edbgrd(adrs, res, len)  edbgrdwr(adrs, res, len, 0)
 #define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)
@@ -98,6 +99,49 @@ struct gprsgx_region {
     uint32_t reserved;
     uint64_t fsbase;
     uint64_t gsbase;
+};
+
+#define ALL_GPRS 24
+#define GPRSGX_FIELDS(X)        \
+    X(RAX,      rax,      0)    \
+    X(RCX,      rcx,      8)    \
+    X(RDX,      rdx,      16)   \
+    X(RBX,      rbx,      24)   \
+    X(RSP,      rsp,      32)   \
+    X(RBP,      rbp,      40)   \
+    X(RSI,      rsi,      48)   \
+    X(RDI,      rdi,      56)   \
+    X(R8,       r8,       64)   \
+    X(R9,       r9,       72)   \
+    X(R10,      r10,      80)   \
+    X(R11,      r11,      88)   \
+    X(R12,      r12,      96)   \
+    X(R13,      r13,      104)  \
+    X(R14,      r14,      112)  \
+    X(R15,      r15,      120)  \
+    X(RFLAGS,   rflags,   128)  \
+    X(RIP,      rip,      136)  \
+    X(URSP,     ursp,     144)  \
+    X(URBP,     urbp,     152)  \
+    X(EXITINFO, exitinfo, 160)  \
+    X(RESERVED, reserved, 164)  \
+    X(FSBASE,   fsbase,   168)  \
+    X(GSBASE,   gsbase,   176)
+
+#define MAKE_ENUM(name, field, offset) name = offset,
+enum gprsgx_offset 
+{
+    GPRSGX_FIELDS( MAKE_ENUM )
+};
+
+#define MAKE_ALL_GPR(name, field, offset) name,
+static enum gprsgx_offset gpr_all[] = {
+    GPRSGX_FIELDS( MAKE_ALL_GPR )
+};
+
+#define MAKE_STR(name, filed, offset) [name] = #name,
+static char *gpr_names[] = {
+    GPRSGX_FIELDS( MAKE_STR )
 };
 
 typedef union {

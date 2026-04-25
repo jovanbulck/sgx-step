@@ -1,0 +1,9 @@
+enclave {
+	
+	trusted {
+        public int memcmp_pwd([in,string] char *pwd);
+	};
+	
+	untrusted {
+	};
+};
