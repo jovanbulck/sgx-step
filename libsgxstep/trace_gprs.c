@@ -33,23 +33,6 @@ static inline uint64_t gprsgx_get(const gprsgx_region_t *gprsgx_region, enum gpr
     return 0; 
 }
 
-/* Constructor for this module - registered in sgx_tracer.c factory */
-trace_module_t* trace_gprs_create(void)
-{
-    trace_module_t *m = malloc(sizeof(*m));
-    ASSERT( m != NULL );
-
-    m->module_name = "gprs_trace";
-    m->init     = init;
-    m->opt_add  = opt_add;
-    m->step     = step;
-    m->count    = count;
-    m->get      = get;
-    m->describe = describe;
-    m->destroy  = destroy;
-
-    return m;
-}
 
 static void init(trace_module_t *m)
 {
@@ -159,4 +142,22 @@ static int describe(trace_module_t *m, size_t index, char *name)
     strcpy(name, gpr_names[reg]);
 
     return 0;
+}
+
+/* Constructor for this module - registered in sgx_tracer.c factory */
+trace_module_t* trace_gprs_create(void)
+{
+    trace_module_t *m = malloc(sizeof(*m));
+    ASSERT( m != NULL );
+
+    m->module_name = "gprs_trace";
+    m->init     = init;
+    m->opt_add  = opt_add;
+    m->step     = step;
+    m->count    = count;
+    m->get      = get;
+    m->describe = describe;
+    m->destroy  = destroy;
+
+    return m;
 }

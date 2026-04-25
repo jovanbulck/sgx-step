@@ -23,23 +23,6 @@ typedef struct{
 */
 extern uint64_t nemesis_tsc_eresume, nemesis_tsc_aex;
 
-/* Constructor for this module - registered in sgx_tracer.c factory */
-trace_module_t* trace_irq_create(void)
-{
-    trace_module_t *m = malloc(sizeof(*m));
-    ASSERT( m != NULL );
-
-    m->module_name  = "irq_latency_trace";
-    m->init         = init;
-    m->opt_add      = opt_add;
-    m->step         = step;
-    m->count        = count;
-    m->get          = get;
-    m->describe     = describe;
-    m->destroy      = destroy;
-
-    return m;
-}
 
 /* Version with internal state */
 static void init(trace_module_t *m)
@@ -99,4 +82,21 @@ static int describe(trace_module_t *m, size_t index, char *name)
 {
     strcpy(name, "IRQ_LATENCY");
     return 0;
+}
+
+trace_module_t* trace_irq_create(void)
+{
+    trace_module_t *m = malloc(sizeof(*m));
+    ASSERT( m != NULL );
+
+    m->module_name  = "irq_latency_trace";
+    m->init         = init;
+    m->opt_add      = opt_add;
+    m->step         = step;
+    m->count        = count;
+    m->get          = get;
+    m->describe     = describe;
+    m->destroy      = destroy;
+
+    return m;
 }

@@ -23,7 +23,7 @@ struct trace_module {
     void (*init)(trace_module_t *m);
 
     //void* (*mod_init)(void *items, size_t num_of_items);
-    void* (*opt_add)(trace_module_t *m, void *opt, size_t opt_len);
+    void (*opt_add)(trace_module_t *m, void *opt, size_t opt_len);
 
     //void (*step)(void *state);
     void (*step)(trace_module_t *m);

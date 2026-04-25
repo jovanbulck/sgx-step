@@ -127,6 +127,33 @@ void register_enclave_info(void)
     ioctl_init = 1;
 }
 
+int get_enclave_readable_pages(int count, void **pages)
+{
+    if (!ioctl_init) register_enclave_info();
+
+    FILE *fd_self_maps;
+    uint64_t start, end = 0;
+    char read;
+    int i = 0;
+    
+    ASSERT((fd_self_maps = fopen("/proc/self/maps", "r")) >= 0);
+    while (fscanf(fd_self_maps, "%lx-%lx %c%*c%*c%*c %*x %*x:%*x %*[0-9 ]%*m[^\n]",
+                  &start, &end, &read) > 0)
+    {
+        if (victim.base <= start && victim.limit >= end && read == 'r')
+        {
+            ASSERT( i + (end - start) / PAGE_SIZE_4KiB < count );	    
+	    for (void *p = (void *)start; p < (void *)end; p += PAGE_SIZE_4KiB)
+	    {
+                pages[i++] = p;
+	    }
+	}
+    }
+
+    return i;
+}
+
+
 void *get_enclave_base(void)
 {
     if (!ioctl_init) register_enclave_info();

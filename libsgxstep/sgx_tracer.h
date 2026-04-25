@@ -7,11 +7,9 @@
 #include <stdio.h>
 
 #include "trace_module.h"
-#include "trace_pages.h"
-#include "trace_gprs.h"
-#include "trace_irq_latency.h"
 
 #include "debug.h"
+
 #include <string.h>
 #include <time.h> // time in vcd
 

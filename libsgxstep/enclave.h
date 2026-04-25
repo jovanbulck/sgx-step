@@ -50,6 +50,7 @@ void *get_enclave_limit(void);
 char *get_enclave_drv(void);
 int get_enclave_size(void);
 int get_enclave_exec_range(uint64_t *start, uint64_t *end);
+int get_enclave_readable_pages(int count, void **pages);
 int edbgrdwr(void *adrs, void* res, int len, int write);
 #define edbgrd(adrs, res, len)  edbgrdwr(adrs, res, len, 0)
 #define edbgwr(adrs, res, len)  edbgrdwr(adrs, res, len, 1)

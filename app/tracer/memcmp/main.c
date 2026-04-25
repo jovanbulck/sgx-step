@@ -43,10 +43,6 @@ uint64_t *pte_encl = NULL, *pte_trigger = NULL, *pmd_encl = NULL;
 void *code_adrs, *trigger_adrs;
 
 sgx_tracer_t tracer;
-track_type_t tracer_options[] = {
-    PAGES,
-    GPRS
-};
 
 /* ================== ATTACKER IRQ/FAULT HANDLERS ================= */
 
@@ -93,12 +89,14 @@ void aep_cb_func(void)
      */
     if (do_irq && ACCESSED(*pte_encl)) 
     {
-        sgx_tracer_update(&tracer);
+        sgx_tracer_step(&tracer);
         step_cnt++;
     }
-    *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
-    *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
-    flush(pte_encl);
+
+    /* Now handled by tracer */
+    //*pte_encl = MARK_NOT_ACCESSED( *pte_encl );
+    //*pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
+    //flush(pte_encl);
 
     /*
      * Configure APIC timer interval for next interrupt.
@@ -216,7 +214,6 @@ void attacker_config_page_table(void)
     ASSERT( pte_trigger = remap_page_table_level( trigger_adrs, PTE) );
     ASSERT( PRESENT(*pte_trigger) );
     *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
-    ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
     info("enclave trigger at %p with PTE", trigger_adrs);
     print_pte_adrs( trigger_adrs );
 
@@ -238,7 +235,6 @@ int main( int argc, char **argv )
     info_event("Creating enclave...");
     SGX_ASSERT( sgx_create_enclave( "./Enclave/encl.so", /*debug=*/DBG_ENCL,
                                     &token, &updated, &eid, NULL ) );
-
     /* 0. dry run */
     SGX_ASSERT( memcmp_pwd(eid, &pwd_success, pwd) );
 
@@ -247,6 +243,7 @@ int main( int argc, char **argv )
     attacker_config_runtime();
     attacker_config_page_table();
     register_aep_cb(aep_cb_func);
+
     
     /* ===================== Tracer usage example ======================== */
 
@@ -256,16 +253,24 @@ int main( int argc, char **argv )
     /* Use this line to trace all enclave and gprgs */
     // sgx_tracer_trace_all(&tracer, tracer_options, /*num_of_modules=*/2);
     
-    void *pages[] = {code_adrs, trigger_adrs};
-    sgx_tracer_man_add(&tracer, /*option=*/PAGES, pages, /*num_of_pages=*/2);
-    
+    //void *pages[] = {code_adrs, trigger_adrs};
+    //void *pages[] = {trigger_adrs};
+    //sgx_tracer_init_mod(&tracer, /*option=*/TRACK_PAGES, pages, /*num_of_pages=*/1);
+
+    /* Tested: add_module and init for IRQ and GPRS */ 
     /* NOTE: ONLY TRACE GPRS IN DEBUG ENCLAVES, PRODUCTION ENCLAVES DO *NOT* ALLOW THIS*/
-    enum gprsgx_offset regs[] = {RIP};
-    sgx_tracer_man_add(&tracer, /*option=*/GPRS, regs, /*num_of_regs=*/1);
+    //enum gprsgx_offset regs[] = {RIP};
+    //sgx_tracer_init_mod(&tracer, /*option=*/TRACK_GPRS, regs, /*num_of_regs=*/1);
+   
+    //sgx_tracer_init_mod(&tracer, /*option=*/TRACK_IRQ, NULL, /*number_doesn't_matter=*/0);
     
-    sgx_tracer_man_add(&tracer, /*option=*/IRQ, NULL, /*number_doesn't_matter=*/0);
+
+    /* Add module to add entire module */
+    sgx_tracer_add_module(&tracer, /*option=*/ TRACK_PAGES);
 
     /* ================================================================= */
+
+    ASSERT(!mprotect(trigger_adrs, 4096, PROT_NONE ));
 
 #if DO_TIMER_STEP
     info_event("Establishing user-space APIC/IDT mappings");

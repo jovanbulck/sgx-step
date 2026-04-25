@@ -32,24 +32,6 @@ static void mark_not_accessed(page_entry_t *tracked_pages, size_t num_tracked_pa
 void page_dbg_log(void *state);
 /* ==================================================== */
 
-/* Constructor for this module - registered in sgx_tracer.c factory */
-trace_module_t* trace_pages_create(void)
-{
-    trace_module_t *m = malloc(sizeof(*m));
-    ASSERT( m != NULL );
-
-    m->module_name = "page_trace";
-    m->init     = init;
-    m->opt_add  = opt_add;
-    m->step     = step;
-    m->count    = count;
-    m->get      = get;
-    m->describe = describe;
-    m->destroy  = destroy;
-
-    return m;
-}
-
 static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
 {
     void *base = get_enclave_base();
@@ -70,10 +52,12 @@ static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
     for (size_t i = 0; i < opt_len; i++) 
     {
         ASSERT( base <= pages[i] && limit > pages[i] );
+	
+	/* Fault-in the page*/
+        uint8_t v = *(uint8_t *)pages[i];
         uint64_t *pte = remap_page_table_level(pages[i], PTE);
         ASSERT( pte );
         ASSERT( PRESENT(*pte) );
-        ASSERT( !mlock(pages[i], PAGE_SIZE_4KiB) );
         state->tracked_pages[i] = (page_entry_t) { .page_base = pages[i], .pte = pte };
     }
 
@@ -88,28 +72,23 @@ static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
 
 static void init(trace_module_t *m)
 {
+    size_t opt_pages = 0;
 
     void *base = get_enclave_base();
     void *limit = get_enclave_limit();
 
     /* find number of pages */
-    size_t encl_len = (get_enclave_size() + (PAGE_SIZE_4KiB - 1)) / PAGE_SIZE_4KiB;
+    int encl_pages = (get_enclave_size() + (PAGE_SIZE_4KiB - 1)) / PAGE_SIZE_4KiB;
 
-    void **opt = malloc(sizeof(void*) * encl_len);
+    void **opt = malloc(sizeof(void*) * encl_pages);
     ASSERT( opt != NULL );
-
-    size_t i = 0;
-    size_t opt_len = 0;
-    for (void *p = base; p < limit; p += PAGE_SIZE_4KiB, i++){
-        uint64_t *pte = remap_page_table_level(p, PTE);
-        if (pte && PRESENT(*pte))
-            opt_len++;
-        opt[i] = p;
-    }
+    
+    ASSERT( (opt_pages = get_enclave_readable_pages(encl_pages, opt)) >  0 );
 
     /* pass _all_ pages to opt_add */
-    opt_add(m, opt, opt_len);
-
+    opt_add(m, opt, opt_pages);
+    
+    info("Tracking %lu", opt_pages);
     free(opt);
 }
 
@@ -139,7 +118,6 @@ static void destroy(trace_module_t *m)
     //page_dbg_log(state);
     page_module_state_t *s = (page_module_state_t *) m->state;
 
-    munlockall();
     free(s->tracked_pages);
     free(s->bitmap_events);
     free(s);
@@ -187,6 +165,7 @@ static void mark_not_accessed(page_entry_t *tracked_pages, size_t num_tracked_pa
     for (size_t i = 0; i < num_tracked_pages; i ++)
     {
         uint64_t *pte = tracked_pages[i].pte;
+        /* Swapped pages should be ignored*/
         if (!pte || !PRESENT(*pte))
             continue;
 
@@ -221,4 +200,22 @@ void page_dbg_log(void *state)
     }
 
     fclose(f2);
+}
+
+
+trace_module_t* trace_pages_create(void)
+{
+    trace_module_t *m = malloc(sizeof(*m));
+    ASSERT( m != NULL );
+
+    m->module_name = "page_trace";
+    m->init     = init;
+    m->opt_add  = opt_add;
+    m->step     = step;
+    m->count    = count;
+    m->get      = get;
+    m->describe = describe;
+    m->destroy  = destroy;
+
+    return m;
 }

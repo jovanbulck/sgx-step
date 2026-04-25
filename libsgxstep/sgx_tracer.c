@@ -32,8 +32,8 @@ void sgx_tracer_init(sgx_tracer_t *t)
 void sgx_tracer_add_module(sgx_tracer_t *t, const track_type_t modules)
 {
 
-    ASSERT(t->num_modules + __builtin_popcount(modules) < MAX_MODULES);
-
+    ASSERT(t->num_modules + __builtin_popcount(modules) <= MAX_MODULES);
+    
     track_type_t temp = modules;
     while(temp)
     {
@@ -62,9 +62,9 @@ void sgx_tracer_add_module(sgx_tracer_t *t, const track_type_t modules)
 }
 
 /* Manually add module to specify which items to track */
-void sgx_tracer_mod_add(sgx_tracer_t *t, track_type_t opt, void *items, size_t num_of_items)
+void sgx_tracer_init_mod(sgx_tracer_t *t, track_type_t opt, void *items, size_t num_of_items)
 {
-    ASSERT(t->num_modules < MAX_MODULES);
+    ASSERT(t->num_modules + 1 <= MAX_MODULES);
 
     // Num of trailing zero's 
     size_t i = __builtin_ctz(opt);
@@ -78,8 +78,7 @@ void sgx_tracer_mod_add(sgx_tracer_t *t, track_type_t opt, void *items, size_t n
     ASSERT( m != NULL );
 
     /* Init state but specific items */
-    void *s = m->opt_add(m, items, num_of_items);
-    ASSERT( s != NULL);
+    m->opt_add(m, items, num_of_items);
 
     //t->modules[t->num_modules++] = (tracer_entry_t) { .module = m, .state = s};
     t->modules[t->num_modules++] = m;
@@ -132,7 +131,6 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
     fprintf(f, "$scope module top $end\n");
 
     size_t total_items = 0;
-
     /* find the items to create id array */
     for (size_t i = 0; i < t->num_modules; i++)
     {
@@ -150,14 +148,14 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
         trace_signal_t sig;
 
         fprintf(f, "$scope module %s $end\n", mod->module_name);
-        ASSERT( mod->get(s, 0, &sig) == 0 );
+        ASSERT( mod->get(mod, 0, &sig) == 0 );
 
         //size_t items = mod->count(s); 
 
         for (size_t j = 0; j < sig.items; j++)
         {
             char name[32];
-            mod->describe(s, j, name);
+            mod->describe(mod, j, name);
             fprintf(f, "$var wire %zu %s %s $end\n",
                 sig.bits_per_item,  
                 ids[id_index],            
@@ -182,7 +180,7 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
         //size_t items = mod->count(s);
 
         trace_signal_t sig;
-        ASSERT(mod->get(s, 0, &sig) == 0);
+        ASSERT(mod->get(mod, 0, &sig) == 0);
         size_t bits_per_item = sig.bits_per_item;
 
         for (size_t i = 0; i < sig.items; i++)
@@ -206,7 +204,7 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
         void *s = mod->state;
 
         trace_signal_t sig;
-        ASSERT(mod->get(s, 0, &sig) == 0);
+        ASSERT(mod->get(mod, 0, &sig) == 0);
 
         /* Array of arrays */
         prev_values[m] = calloc((sig.items * sig.bits_per_item + 7) / 8, 1); 
@@ -223,7 +221,7 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
             void *s = mod->state;
 
             trace_signal_t sig;
-            ASSERT(mod->get(s, step, &sig) == 0);
+            ASSERT(mod->get(mod, step, &sig) == 0);
 
             uint8_t *curr = (uint8_t *)sig.payload;
             //uint64_t *check = (uint64_t *)sig.payload;
@@ -235,7 +233,7 @@ void sgx_tracer_vcd(sgx_tracer_t *t)
             //if (memcmp(curr, prev, width_bytes) != 0)
             //{
             size_t bits_per_item = sig.bits_per_item;
-
+	    
             for (size_t i = 0; i < sig.items; i++)
             {
                 uint64_t curr_val = 0;
