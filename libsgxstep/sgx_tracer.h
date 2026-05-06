@@ -36,6 +36,6 @@ void sgx_tracer_init_mod(sgx_tracer_t *t, track_type_t opt, void *items, size_t 
 void sgx_tracer_add_module(sgx_tracer_t *t, const track_type_t modules);
 void sgx_tracer_step(sgx_tracer_t *t);
 void sgx_tracer_destroy(sgx_tracer_t *t);
-void sgx_tracer_vcd(sgx_tracer_t *t);
+void sgx_tracer_vcd(sgx_tracer_t *t, const char *filename);
 
 #endif

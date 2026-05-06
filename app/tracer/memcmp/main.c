@@ -94,9 +94,9 @@ void aep_cb_func(void)
     }
 
     /* Now handled by tracer */
-    //*pte_encl = MARK_NOT_ACCESSED( *pte_encl );
-    //*pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
-    //flush(pte_encl);
+    *pte_encl = MARK_NOT_ACCESSED( *pte_encl );
+    *pte_trigger = MARK_NOT_ACCESSED(*pte_trigger);
+    flush(pte_encl);
 
     /*
      * Configure APIC timer interval for next interrupt.

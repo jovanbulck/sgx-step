@@ -109,9 +109,9 @@ void sgx_tracer_destroy(sgx_tracer_t *t)
     }
 }
 
-void sgx_tracer_vcd(sgx_tracer_t *t)
+void sgx_tracer_vcd(sgx_tracer_t *t, const char *filename)
 {
-    FILE *f = fopen("sgx_tracer_log.vcd", "w");
+    FILE *f = fopen(filename, "w");
     if (!f) 
     {
         perror("(write_vcd) fopen error");
