@@ -1,0 +1,67 @@
+
+--------------------------------------------------------------------------------
+[main.c] Creating enclave...
+--------------------------------------------------------------------------------
+
+[sched.c] continuing on CPU 1
+[enclave.c] tcs at 7eceb7389000; aep at 7eceb7d853ac
+==== Victim Enclave ====
+    Driver: /dev/sgx_enclave
+    Base:   0x7eceb7200000
+    Limit:  0x7eceb739d000
+    Size:   1691648
+    Exec:   15 pages
+    TCS:    0x7eceb7389000
+    SSA:    0x7eceb7389f48
+    AEP:    0x7eceb7d853ac
+    EDBGRD: debug
+[pt.c] /dev/sgx-step opened!
+[pt.c] /dev/mem opened!
+[main.c] enclave code at 0x7eceb7201083 with PTE
++-------------------------------------------------------------------------------------------+
+| XD | PK | IGN | RSVD | PHYS ADRS      | IGN | G | PAT | D | A | PCD | PWT | U/S | R/W | P | 
+| 0  | x  | x   | 0    | 0x000071681000 | x   | x | x   | 0 | 0 | x   | x   | 1   | 0   | 1 | 
++-------------------------------------------------------------------------------------------+
+[sgx_tracer.c] current i: 1
+[sgx_tracer.c] current i: 2
+
+--------------------------------------------------------------------------------
+[main.c] Establishing user-space APIC/IDT mappings
+--------------------------------------------------------------------------------
+
+[idt.c] DTR.base=0xfffffe0000000000/size=4095 (256 entries)
+[idt.c] established user space IDT mapping at 0x7eceb7dbf000
+[idt.c] setting up ISR kernel mapping: 0x5f06d5ee1000-0x5f06d5ee207a
+[idt.c] received kernel base address 0xffffd357817ce000 with offset 0xffff7450ab8ed000
+[idt.c] using kernel-mapped ISR handler: 0x5f06d5ee2000 -> 0xffffd357817cf000
+[idt.c] installed asm IRQ handler at 10:0xffffd357817cf000
+[idt.c] IDT[ 45] @0x7eceb7dbf2d0 = 0xffffd357817cf000 (seg sel 0x10); p=1; dpl=3; type=14; ist=0
+[file.c] reading buffer from '/dev/cpu/1/msr' (size=8)
+[apic.c] established local memory mapping for APIC_BASE=0xfee00000 at 0x7eceb7dbc000
+[idt.c] locking user-space IRQ gate handler page at 0x5f06d5ed7000
+[idt.c] installing ring-0 IRQ gate
+[sched.c] continuing on CPU 1
+[idt.c] DTR.base=0xfffffe0000000000/size=4095 (256 entries)
+[idt.c] established user space IDT mapping at 0x7eceb7dbb000
+[idt.c] installed asm IRQ handler at 10:0x5f06d5ed700e
+[idt.c] IDT[ 51] @0x7eceb7dbb330 = 0x5f06d5ed700e (seg sel 0x10); p=1; dpl=3; type=14; ist=0
+[idt.c] locking user-space IRQ gate handler page at 0x5f06d5ed7000
+[idt.c] installing ring-0 IRQ gate
+[sched.c] continuing on CPU 1
+[idt.c] DTR.base=0xfffffe0000000000/size=4095 (256 entries)
+[idt.c] established user space IDT mapping at 0x7eceb7dbb000
+[idt.c] installed asm IRQ handler at 10:0x5f06d5ed701f
+[idt.c] IDT[ 50] @0x7eceb7dbb320 = 0x5f06d5ed701f (seg sel 0x10); p=1; dpl=3; type=14; ist=0
+[apic.c] APIC_ID=0x2; LVTT=0x400ec; TDCR=0
+[apic.c] APIC timer one-shot mode with division 2 (lvtt=2d/tdcr=0)
+[main.c] APIC timer IRQ handler seems to be working
+
+--------------------------------------------------------------------------------
+[main.c] Printing vcd...
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+[main.c] Destroying tracer...
+--------------------------------------------------------------------------------
+
