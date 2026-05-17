@@ -64,7 +64,6 @@ void dump_enclave_exec_pages(void);
 #define SGX_TCS_OSSA_OFFSET         16
 #define SGX_TCS_CSSA_OFFSET         24
 #define SGX_GPRSGX_SIZE             184
-#define SGX_GPRSGX_RIP_OFFSET       136
 #define SGX_FLAGS_DBGOPTIN          0x1
 
 /* HACK: to avoid having to retrieve the SSA framesize from the untrusted
@@ -74,72 +73,56 @@ void dump_enclave_exec_pages(void);
     #define SGX_SSAFRAMESIZE            4096
 #endif
 
-struct gprsgx_region {
-    uint64_t rax;
-    uint64_t rcx;
-    uint64_t rdx;
-    uint64_t rbx;
-    uint64_t rsp;
-    uint64_t rbp;
-    uint64_t rsi;
-    uint64_t rdi;
-    uint64_t r8;
-    uint64_t r9;
-    uint64_t r10;
-    uint64_t r11;
-    uint64_t r12;
-    uint64_t r13;
-    uint64_t r14;
-    uint64_t r15;
-    uint64_t rflags;
-    uint64_t rip;
-    uint64_t ursp;
-    uint64_t urbp;
-    uint32_t exitinfo;
-    uint32_t reserved;
-    uint64_t fsbase;
-    uint64_t gsbase;
-};
-
 #define ALL_GPRS 24
-#define GPRSGX_FIELDS(X)        \
-    X(RAX,      rax,      0)    \
-    X(RCX,      rcx,      8)    \
-    X(RDX,      rdx,      16)   \
-    X(RBX,      rbx,      24)   \
-    X(RSP,      rsp,      32)   \
-    X(RBP,      rbp,      40)   \
-    X(RSI,      rsi,      48)   \
-    X(RDI,      rdi,      56)   \
-    X(R8,       r8,       64)   \
-    X(R9,       r9,       72)   \
-    X(R10,      r10,      80)   \
-    X(R11,      r11,      88)   \
-    X(R12,      r12,      96)   \
-    X(R13,      r13,      104)  \
-    X(R14,      r14,      112)  \
-    X(R15,      r15,      120)  \
-    X(RFLAGS,   rflags,   128)  \
-    X(RIP,      rip,      136)  \
-    X(URSP,     ursp,     144)  \
-    X(URBP,     urbp,     152)  \
-    X(EXITINFO, exitinfo, 160)  \
-    X(RESERVED, reserved, 164)  \
-    X(FSBASE,   fsbase,   168)  \
-    X(GSBASE,   gsbase,   176)
 
-#define MAKE_ENUM(name, field, offset) name = offset,
+// (ENUM name, struct name, offset, bits)
+#define GPRSGX_FIELDS(X)        \
+    X(RAX,      rax,      0,    64)  \
+    X(RCX,      rcx,      8,    64)  \
+    X(RDX,      rdx,      16,   64)  \
+    X(RBX,      rbx,      24,   64)  \
+    X(RSP,      rsp,      32,   64)  \
+    X(RBP,      rbp,      40,   64)  \
+    X(RSI,      rsi,      48,   64)  \
+    X(RDI,      rdi,      56,   64)  \
+    X(R8,       r8,       64,   64)  \
+    X(R9,       r9,       72,   64)  \
+    X(R10,      r10,      80,   64)  \
+    X(R11,      r11,      88,   64)  \
+    X(R12,      r12,      96,   64)  \
+    X(R13,      r13,      104,  64)  \
+    X(R14,      r14,      112,  64)  \
+    X(R15,      r15,      120,  64)  \
+    X(RFLAGS,   rflags,   128,  64)  \
+    X(RIP,      rip,      136,  64)  \
+    X(URSP,     ursp,     144,  64)  \
+    X(URBP,     urbp,     152,  64)  \
+    X(EXITINFO, exitinfo, 160,  32)  \
+    X(RESERVED, reserved, 164,  32)  \
+    X(FSBASE,   fsbase,   168,  64)  \
+    X(GSBASE,   gsbase,   176,  64)
+
+#define MAKE_ENUM(name, field, offset, size) name = offset,
 enum gprsgx_offset 
 {
     GPRSGX_FIELDS( MAKE_ENUM )
 };
 
-#define MAKE_ALL_GPR(name, field, offset) name,
+#define PRINT_GPR(name, field, offset, size) \
+	printf("    %-10s    0x%" PRIx##size "\n", #name, gprsgx_region->fields.field);
+
+#define _expand_type(x) uint##x##_t
+#define MAKE_GPRSGX_REGION(name, field, offset, size) _expand_type(size) field;
+struct gprsgx_region{
+    GPRSGX_FIELDS( MAKE_GPRSGX_REGION )
+};
+
+#define MAKE_ALL_GPR(name, field, offset, size) name,
 static enum gprsgx_offset gpr_all[] = {
     GPRSGX_FIELDS( MAKE_ALL_GPR )
 };
 
-#define MAKE_STR(name, filed, offset) [name] = #name,
+#define MAKE_STR(name, field, offset, size) [name] = #name,
 static char *gpr_names[] = {
     GPRSGX_FIELDS( MAKE_STR )
 };
@@ -158,7 +141,7 @@ void* get_enclave_ssa_gprsgx_adrs(void);
 void dump_gprsgx_region(gprsgx_region_t *gprsgx_region);
 
 uint64_t edbgrd_ssa_gprsgx(int gprsgx_field_offset);
-#define edbgrd_erip() edbgrd_ssa_gprsgx(SGX_GPRSGX_RIP_OFFSET)
+#define edbgrd_erip() edbgrd_ssa_gprsgx(RIP)
 
 void set_debug_optin(void);
 

@@ -15,7 +15,7 @@ typedef struct{
 /* State of page tracker */
 typedef struct{
 
-    page_entry_t *tracked_pages;      // Trakced pages (ds A)
+    page_entry_t *tracked_pages;    
     size_t num_tracked_pages;        
 
     uint64_t *bitmap_events;
@@ -43,7 +43,7 @@ static void opt_add(trace_module_t *m, void *opt, size_t opt_len)
 
     state->num_tracked_pages = opt_len;
 
-    void **pages = (void **)opt; // convert to an array of pointers/addresses
+    void **pages = (void **)opt;
 
     /* Allocate pages to track */
     state->tracked_pages = malloc(sizeof(page_entry_t) * opt_len);
@@ -115,7 +115,6 @@ static void step(trace_module_t *m)
 
 static void destroy(trace_module_t *m)
 {
-    //page_dbg_log(state);
     page_module_state_t *s = (page_module_state_t *) m->state;
 
     free(s->tracked_pages);

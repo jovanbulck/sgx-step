@@ -61,7 +61,7 @@ static void destroy(trace_module_t *m)
 
 static size_t count(trace_module_t *m)
 {
-    return 1; /* only one irq number :) */
+    return 1; /* only one irq */
 }
 
 static int get(trace_module_t *m, size_t step, trace_signal_t *sig)

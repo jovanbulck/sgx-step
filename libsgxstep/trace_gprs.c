@@ -12,7 +12,6 @@ typedef struct {
 
 typedef struct {
 
-    //gpr_entry_t *tracked_gprs;
     enum gprsgx_offset *tracked_gprs;
     size_t num_tracked_gprs;
     size_t *bitmap_events;
@@ -25,7 +24,7 @@ static inline uint64_t gprsgx_get(const gprsgx_region_t *gprsgx_region, enum gpr
 { 
     switch (reg) 
     { 
-#define X(name, field, offset) case name: return gprsgx_region->fields.field; 
+#define X(name, field, offset, size) case name: return gprsgx_region->fields.field; 
     GPRSGX_FIELDS(X) 
 #undef X 
     } 
@@ -40,7 +39,6 @@ static void init(trace_module_t *m)
     ASSERT( state != NULL );
 
     state->num_tracked_gprs = ALL_GPRS;
-    //state->tracked_gprs = gpr_all;      // no malloc in .rodata
 					
     state->tracked_gprs = malloc(sizeof(gpr_all));
     ASSERT( state->tracked_gprs != NULL );
@@ -90,7 +88,6 @@ static void step(trace_module_t *m)
     /* Read entire gprsgx region */
     gprsgx_region_t gprsgx = {0};
     edbgrd(get_enclave_ssa_gprsgx_adrs(), &gprsgx, sizeof(gprsgx_region_t));
-    //dump_gprsgx_region(&gprsgx);
 
     gprs_module_state_t *s = (gprs_module_state_t *) m->state;
     size_t *bitmap_ev = s->bitmap_events;

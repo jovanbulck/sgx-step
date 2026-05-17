@@ -110,4 +110,4 @@ Signals are grouped by module. Each time step corresponds to one SGX-Step interr
 
 ## GTKWave Visualization
 
-![GTKWave Screenshot](gtkwave_example.png)
+![GTKWave Screenshot](page_access_pattern.png)
