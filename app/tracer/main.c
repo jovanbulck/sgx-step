@@ -22,8 +22,10 @@
 #define DEBUG              0
 #define DBG_ENCL           1
 
-#define TRACE_PAGE
-#define TRACE_RIP
+#define TRACE_ALL          1
+#define TRACE_PAGE         0
+#define TRACE_RIP          0
+#define TRACE_IRQ          0
 
 /*
  * NOTE: set DO_TIMER_STEP=0 to _simulate_ a single-stepping attack through the
@@ -212,21 +214,15 @@ int main( int argc, char **argv )
 
     sgx_tracer_init(&tracer);
 
-    #ifdef TRACE_PAGE
+    #if TRACE_PAGE
         void *pages[] = {code_adrs, page_a, page_b};
         sgx_tracer_init_mod(&tracer, /*option=*/TRACK_PAGES, pages, /*num_of_pages=*/3);
-    #endif
-
-    #ifdef TRACE_IRQ
+    #elif TRACE_IRQ
         sgx_tracer_init_mod(&tracer, /*option=*/TRACK_IRQ, NULL, /*number_doesn't_matter=*/0);
-    #endif
-
-    #ifdef TRACE_RIP
+    #elif TRACE_RIP
         enum gprsgx_offset regs[] = {RIP};
         sgx_tracer_init_mod(&tracer, /*option=*/TRACK_GPRS, regs, /*num_of_regs=*/1);
-    #endif
-    
-    #ifdef TRACE_ALL	
+    #elif TRACE_ALL	
         sgx_tracer_add_module(&tracer, /*option=*/TRACK_GPRS | TRACK_IRQ | TRACK_PAGES);
     #endif
 

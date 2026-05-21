@@ -96,7 +96,8 @@ static void step(trace_module_t *m)
     (s->internal_step)++;
     for (size_t i = 0; i < s->num_tracked_gprs; i++)
     {
-        bitmap_ev[i + (s->internal_step - 1) * s->num_tracked_gprs] = gprsgx_get(&gprsgx, regs_off[i]);
+        uint64_t reg =  gprsgx_get(&gprsgx, regs_off[i]);
+        bitmap_ev[i + (s->internal_step - 1) * s->num_tracked_gprs] = (regs_off[i] == RIP) ? reg - (uint64_t) get_enclave_base() : reg; 
     }
 }
 

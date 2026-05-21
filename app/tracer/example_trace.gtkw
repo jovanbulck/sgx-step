@@ -1,0 +1,25 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Thu May 21 18:19:44 2026
+[*]
+[dumpfile] "/home/panayiotis/Desktop/prs/sgx-step-tracer/app/tracer/trace.vcd"
+[dumpfile_mtime] "Thu May 21 18:17:03 2026"
+[dumpfile_size] 27928
+[savefile] "/home/panayiotis/Desktop/prs/sgx-step-tracer/app/tracer/example_trace.gtkw"
+[timestart] 24
+[size] 1850 1016
+[pos] -51 -51
+*-1.308253 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] top.
+[sst_width] 233
+[signals_width] 102
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@4023
+^>1 /home/panayiotis/Desktop/prs/sgx-step-tracer/tools/disasm/disasm
+top.gprs_trace.RIP[63:0]
+@28
+top.page_trace.0x18000
+top.page_trace.0x19000
+[pattern_trace] 1
+[pattern_trace] 0
