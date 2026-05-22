@@ -9,8 +9,9 @@
 #include "libsgxstep/cache.h"
 #include "libsgxstep/elf_parser.h"
 
-#define ENCLAVE_PATH            "enclave/encl.elf"
-#define ENCLAVE_DBG             1
+#define ENCLAVE_SGXS      "enclave/encl.sgxs"
+#define ENCLAVE_SIG       "enclave/encl.sig"
+#define ENCLAVE_DEBUG     1
 #define SINGLE_STEP_ENABLE      1
 
 void *encl_page = NULL;
@@ -60,9 +61,8 @@ int main(void)
 
     /************************************************************************/
     info_event("loading baresgx enclave");
-    tcs = baresgx_load_elf_enclave(ENCLAVE_PATH, ENCLAVE_DBG);
+    tcs = baresgx_load_sgxs_enclave(ENCLAVE_SGXS, ENCLAVE_SIG, ENCLAVE_DEBUG);
     print_enclave_info();
-    register_symbols(ENCLAVE_PATH);
 
     info("dry run");
     rv = baresgx_enter_enclave(tcs, /*arg=*/0);
@@ -73,7 +73,7 @@ int main(void)
     register_aep_cb(aep_cb_func);
     ASSERT( signal(SIGSEGV, handle_fault) != SIG_ERR);
 
-    encl_page = get_symbol_offset("encl_entry") + get_enclave_base();
+    encl_page = get_enclave_base();
     info("entry page at %p", encl_page);
     ASSERT(pte_encl = remap_page_table_level(encl_page, PTE));
     ASSERT(PRESENT(*pte_encl));

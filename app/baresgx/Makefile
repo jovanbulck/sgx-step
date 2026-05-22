@@ -3,17 +3,17 @@ LIBSGXSTEP              = $(LIBSGXSTEP_DIR)/libsgxstep
 -include $(LIBSGXSTEP)/Makefile.config
 LIBSGXSTEP_SILENT       = 1
 
-BARESGX                 = ../../sdk/bare-sgx/urts
+BARESGX                 = ../../sdk/bare-sgx
 ENCLAVE                 = enclave
 
 
-SUBDIRS                 = $(ENCLAVE) $(BARESGX) $(LIBSGXSTEP)
+SUBDIRS                 = $(BARESGX)/urts $(BARESGX)/sdk/tools $(ENCLAVE) $(LIBSGXSTEP)
 
 CC                      := gcc
 LD                      := gcc
 INCLUDE                 := -I$(BARESGX)/include/ -I$(LIBSGXSTEP_DIR) 
 CFLAGS                  := -Wall -g -fPIC 
-LDFLAGS                 := -z noexecstack -pthread -lbaresgx-urts -lsgx-step -L$(BARESGX) -L$(LIBSGXSTEP) -lcrypto -lelf
+LDFLAGS                 := -z noexecstack -pthread -lbare-urts -lsgx-step -L$(BARESGX)/urts -L$(LIBSGXSTEP) -lcrypto -lelf
 
 SOURCES                 = $(shell ls *.c)
 OBJECTS                 = $(SOURCES:.c=.o)
