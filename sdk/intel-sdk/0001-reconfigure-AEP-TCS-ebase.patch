@@ -1,21 +1,22 @@
-From 07022d778a8be3ad8916785722a1b2638fa8f1df Mon Sep 17 00:00:00 2001
-From: Jo Van Bulck <jo.vanbulck@cs.kuleuven.be>
-Date: Thu, 3 Apr 2025 19:15:46 +0000
-Subject: [PATCH] SGX-Step SDK patches to reconfigure AEP/TCS
+From 017a3611d99aa7d913cef150941bf66bc8db9cb7 Mon Sep 17 00:00:00 2001
+From: Hayao Otsuka <shun819.mail@gmail.com>
+Date: Thu, 28 May 2026 15:31:27 +0900
+Subject: [PATCH] SGX-Step SDK patches to reconfigure AEP/TCS (rebased on
+ sgx_2.29)
 
 ---
- common/inc/sgx_urts.h                |  5 +++
- psw/urts/linux/enter_enclave.S       | 54 ++++++++++++++++++++++++----
- psw/urts/linux/urts.cpp              | 20 +++++++++++
+ common/inc/sgx_urts.h                |  6 ++-
+ psw/urts/linux/enter_enclave.S       | 56 +++++++++++++++++++++++++---
+ psw/urts/linux/urts.cpp              | 20 ++++++++++
  psw/urts/linux/urts.lds              |  3 ++
  sdk/simulation/urtssim/urts_deploy.c | 17 +++++++++
- 5 files changed, 93 insertions(+), 6 deletions(-)
+ 5 files changed, 95 insertions(+), 7 deletions(-)
 
 diff --git a/common/inc/sgx_urts.h b/common/inc/sgx_urts.h
-index 691efbc9..07240fa7 100644
+index 8cad503c..bc54c5c3 100644
 --- a/common/inc/sgx_urts.h
 +++ b/common/inc/sgx_urts.h
-@@ -76,6 +76,11 @@ typedef struct _sgx_kss_config_t
+@@ -76,11 +76,15 @@ typedef struct _sgx_kss_config_t
  extern "C" {
  #endif
  
@@ -23,12 +24,17 @@ index 691efbc9..07240fa7 100644
 +void* SGXAPI sgx_get_aep(void);
 +void  SGXAPI sgx_set_aep(void *aep);
 +void* SGXAPI sgx_get_tcs(void);
-+
- typedef uint8_t sgx_launch_token_t[1024];
  
- /* Convenient macro to be passed to sgx_create_enclave(). */
+ typedef uint8_t sgx_reserved_field_1024t[1024];
+ 
+ /**
+- * @deprecated Support for launch tokens was removed in v2.28 (in favor of Flexible Launch Control). 
++ * @deprecated Support for launch tokens was removed in v2.28 (in favor of Flexible Launch Control).
+  * This field is now reserved. Please update your API to use @c sgx_reserved_field_1024t type
+  */
+ typedef sgx_reserved_field_1024t sgx_launch_token_t;
 diff --git a/psw/urts/linux/enter_enclave.S b/psw/urts/linux/enter_enclave.S
-index 4f09e2da..ff9d30da 100644
+index 69c7c67a..c7322591 100644
 --- a/psw/urts/linux/enter_enclave.S
 +++ b/psw/urts/linux/enter_enclave.S
 @@ -32,6 +32,29 @@
@@ -61,7 +67,7 @@ index 4f09e2da..ff9d30da 100644
  
  /* int __morestack(const tcs_t *tcs, const int fn, const void *ocall_table, const void *ms, CTrustThread *trust_thread); */
  .file "enter_enclave.S"
-@@ -98,9 +121,17 @@ EENTER_PROLOG
+@@ -100,9 +123,17 @@ EENTER_PROLOG
      je   1f
      vzeroupper
  1:
@@ -82,9 +88,9 @@ index 4f09e2da..ff9d30da 100644
  
  .Leenter_inst:
      ENCLU
-@@ -158,18 +189,29 @@ EENTER_PROLOG
- .Loret:
+@@ -161,16 +192,29 @@ EENTER_PROLOG
      EENTER_EPILOG
+ END_FUNC
  
 -.Lasync_exit_pointer:
 +__default_async_exit_pointer:
@@ -100,23 +106,23 @@ index 4f09e2da..ff9d30da 100644
 +    lea_pic     g_aep_pointer, %xax
 +    mov         (%xax), %xax
 +    ret
-+ 
++END_FUNC
++
 +DECLARE_GLOBAL_FUNC set_aep
 +    lea_pic     g_aep_pointer, %xax
 +    mov         naked_arg0, %xdx
 +    mov         %xdx, (%xax)
-     ret
- 
++    ret
++END_FUNC
++
 +DECLARE_GLOBAL_FUNC get_tcs
 +    lea_pic     g_tcs, %xax
 +    mov         (%xax), %xax
-+    ret
-+ 
- DECLARE_GLOBAL_FUNC get_eenterp
-     lea_pic .Leenter_inst, %xax
      ret
+ END_FUNC
+ 
 diff --git a/psw/urts/linux/urts.cpp b/psw/urts/linux/urts.cpp
-index 22b37bf0..c9ac872e 100644
+index 73f1c77f..3bd98bc9 100644
 --- a/psw/urts/linux/urts.cpp
 +++ b/psw/urts/linux/urts.cpp
 @@ -40,6 +40,26 @@
@@ -147,7 +153,7 @@ index 22b37bf0..c9ac872e 100644
  {
      //update last feature index if it fails here
 diff --git a/psw/urts/linux/urts.lds b/psw/urts/linux/urts.lds
-index 02b98ed6..a70d55ee 100644
+index 6cfd06d4..4cdfcfc3 100644
 --- a/psw/urts/linux/urts.lds
 +++ b/psw/urts/linux/urts.lds
 @@ -1,5 +1,8 @@
@@ -160,7 +166,7 @@ index 02b98ed6..a70d55ee 100644
          sgx_create_enclave_ex;
          sgx_destroy_enclave;
 diff --git a/sdk/simulation/urtssim/urts_deploy.c b/sdk/simulation/urtssim/urts_deploy.c
-index ac5f6223..cdf66aca 100644
+index 52c2b853..dd932326 100644
 --- a/sdk/simulation/urtssim/urts_deploy.c
 +++ b/sdk/simulation/urtssim/urts_deploy.c
 @@ -57,6 +57,23 @@ sgx_status_t sgx_create_encrypted_enclave()
@@ -188,5 +194,5 @@ index ac5f6223..cdf66aca 100644
  void sgx_debug_unload_state_remove_element(){};
  void sgx_destroy_enclave(){};
 -- 
-2.43.0
+2.51.2
 
