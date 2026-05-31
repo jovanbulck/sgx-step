@@ -1,3 +1,5 @@
+#if !NO_SGX
+
 #include "trace_module.h"
 
 #include "debug.h"
@@ -100,3 +102,5 @@ trace_module_t* trace_irq_create(void)
 
     return m;
 }
+
+#endif /* !NO_SGX */

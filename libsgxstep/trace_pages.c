@@ -1,3 +1,5 @@
+#if !NO_SGX
+
 #include "trace_module.h"
 #include "debug.h"
 #include "pt.h"
@@ -218,3 +220,5 @@ trace_module_t* trace_pages_create(void)
 
     return m;
 }
+
+#endif /* !NO_SGX */

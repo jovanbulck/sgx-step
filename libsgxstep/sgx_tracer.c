@@ -1,3 +1,5 @@
+#if !NO_SGX
+
 #include "sgx_tracer.h"
 
 static void generate_ids(char (*ids)[4], size_t count);
@@ -284,3 +286,5 @@ static void generate_ids(char (*ids)[4], size_t count)
     }
 }
 /* ============================================================= */
+
+#endif /* !NO_SGX */
