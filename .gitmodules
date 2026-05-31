@@ -1,9 +1,9 @@
 [submodule "kernel/linux-sgx-driver"]
 	path = kernel/linux-sgx-driver
-	url = https://github.com/01org/linux-sgx-driver.git
+	url = https://github.com/intel/linux-sgx-driver.git
 [submodule "sdk/intel-sdk/linux-sgx"]
 	path = sdk/intel-sdk/linux-sgx
-	url = https://github.com/01org/linux-sgx.git
+	url = https://github.com/intel/confidential-computing.sgx.git
 [submodule "sdk/gramine"]
 	path = sdk/gramine/gramine
 	url = https://github.com/gramineproject/gramine.git
