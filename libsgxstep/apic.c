@@ -136,3 +136,9 @@ void apic_timer_deadline_irq(int tsc_offset)
     /* NOTE: don't use apic_write here as this is a 64-bit MSR */
     wrmsr(IA32_TSC_DEADLINE_MSR, g_apic_deadline_tsc_begin + tsc_offset);
 }
+
+void apic_timer_irq_asm_wrapper(uint32_t interval)
+{
+    libsgxstep_info("APIC TIMER SETUP %d", interval);
+    apic_write(APIC_TMICT, interval);
+}

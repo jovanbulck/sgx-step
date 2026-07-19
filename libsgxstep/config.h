@@ -39,7 +39,7 @@
  * RD/WRMSR instructions, which is also the only access mode supported for
  * IA32_TSC_DEADLINE.
  */
-#define X2APIC                      1
+#define X2APIC                      0
 #if (!X2APIC && !M32)
     #define APIC_CONFIG_MSR         1
 #else
@@ -58,6 +58,6 @@
  *       suitable timer intervals on our evaluation platforms by
  *       tweaking and observing the NOP microbenchmark erip results.
  */
-#define SGX_STEP_TIMER_INTERVAL 32
+#define SGX_STEP_TIMER_INTERVAL     255
 
 #endif

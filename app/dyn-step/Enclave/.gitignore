@@ -1,0 +1,20 @@
+	enclave/Enclave/asm.s
+	enclave/Enclave/build_asm.py
+	enclave/Enclave/encl.so
+	enclave/Enclave/encl.unsigned.so
+	enclave/Enclave/encl_t.c
+	enclave/Enclave/encl_t.h
+	enclave/Enclave/encl_u.c
+	enclave/Enclave/encl_u.h
+	enclave/Enclave/libencl_proxy.a
+	enclave/Enclave/private_key.pem
+	enclave/Enclave/public_key.pem
+
+
+encl
+*.pem
+*.a
+*.s
+*.so
+*_u.*
+*_t.*

@@ -122,5 +122,5 @@ uint8_t apic_id(void);
 int apic_timer_oneshot(uint8_t vector);
 int apic_timer_deadline(uint8_t vector);
 void apic_timer_deadline_irq(int tsc_offset);
-
+void apic_timer_irq_asm_wrapper(uint32_t interval);
 #endif
