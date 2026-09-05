@@ -48,10 +48,23 @@ void step_open( void )
     }
 }
 
-void __attribute__((destructor)) tear_down_sgx_step( void )
+/*
+ * Close /dev/sgx-step (restores the victim core's APIC tick) before
+ * sgx_destroy_enclave; else sgx_release()->synchronize_srcu() hangs in D state.
+ * https://github.com/jovanbulck/sgx-step/issues/90
+ */
+void step_close( void )
 {
     if (fd_step >= 0)
+    {
         close(fd_step);
+        fd_step = -1;
+    }
+}
+
+void __attribute__((destructor)) tear_down_sgx_step( void )
+{
+    step_close();
     if (fd_mem >= 0)
         close(fd_mem);
     if (fd_self_mem >= 0)
