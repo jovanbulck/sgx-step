@@ -61,13 +61,11 @@ jobs:
           cd $GITHUB_WORKSPACE/sdk/intel-sdk/
           sudo apt-get update
           bash -x ./install_SGX_SDK.sh
-          source /opt/intel/sgxsdk/environment
-          sudo service aesmd status
 
       - name: Run Intel SGX SDK sample code in simulator
         run: |
           source /opt/intel/sgxsdk/environment
-          cd $GITHUB_WORKSPACE/sdk/intel-sdk/linux-sgx/SampleCode/LocalAttestation
+          cd $GITHUB_WORKSPACE/sdk/intel-sdk/linux-sgx/sdk/SampleCode/LocalAttestation
           make SGX_MODE=SIM
           cd bin
           ldd ./app

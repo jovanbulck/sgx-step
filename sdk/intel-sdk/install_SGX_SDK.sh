@@ -15,8 +15,7 @@ function ci_silent() {
     fi
 }
 
-git submodule init
-git submodule update
+git submodule update --init --recursive
 
 # ----------------------------------------------------------------------
 echo "[ patching SDK ]"
@@ -55,16 +54,7 @@ EOF
 cd ../../../
 
 # ----------------------------------------------------------------------
-echo "[ building PSW ]"
-ci_silent make psw_install_pkg
-
-echo "[ installing PSW/SDK system-wide ]"
-cd linux/installer/bin/
-
-if [ -e /opt/intel/sgxpsw/uninstall.sh ]
-then
-    sudo /opt/intel/sgxpsw/uninstall.sh
-fi
-sudo ./sgx_linux_x64_psw_*.bin
+echo "[ building patched uRTS ]"
+ci_silent make psw
 
 echo "SGX SDK succesfully installed!"
