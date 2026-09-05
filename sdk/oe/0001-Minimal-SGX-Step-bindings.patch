@@ -24,7 +24,7 @@ index 4b78e1989..9332f9c2b 100644
  
  #if !defined(__ASSEMBLER__) && (_WIN32)
 diff --git a/host/sgx/calls.c b/host/sgx/calls.c
-index eed0c4dcf..66bfb3cc5 100644
+index 4b1b9805d..eec69a20f 100644
 --- a/host/sgx/calls.c
 +++ b/host/sgx/calls.c
 @@ -578,6 +578,25 @@ static void _release_tcs(oe_enclave_t* enclave, void* tcs)
@@ -53,9 +53,9 @@ index eed0c4dcf..66bfb3cc5 100644
  /*
  **==============================================================================
  **
-@@ -608,6 +627,7 @@ oe_result_t oe_ecall(
-     /* Assign a oe_sgx_td_t for this operation */
-     if (!(tcs = _assign_tcs(enclave)))
+@@ -609,6 +628,7 @@ oe_result_t oe_ecall(
+     tcs = _assign_tcs(enclave);
+     if (!tcs)
          OE_RAISE(OE_OUT_OF_THREADS);
 +    __oe_last_tcs = tcs;
  
