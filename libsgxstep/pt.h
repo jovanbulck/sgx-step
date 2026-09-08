@@ -156,6 +156,7 @@
 
 void mem_open( void );
 void step_open( void );
+void step_close( void );
 void __attribute__((destructor))  tear_down_sgx_step( void );
 
 typedef enum {PGD, PUD, PMD, PTE, PAGE} pt_level_t;

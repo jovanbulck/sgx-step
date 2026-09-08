@@ -214,6 +214,7 @@ int main(int argc, char **argv) {
 #endif
 
     /* 3. Restore normal execution environment. */
+    step_close();
     SGX_ASSERT(sgx_destroy_enclave(eid));
 
     info_event("all done; counted %d/%d IRQs (AEP/IDT)", irq_cnt,
