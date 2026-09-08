@@ -1,6 +1,6 @@
 LIBSGXSTEP_DIR       = ../..
 LIBSGXSTEP           = $(LIBSGXSTEP_DIR)/libsgxstep
-URTS_LIB_PATH        = $(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+URTS_LIB_PATH        = $(LIBSGXSTEP_DIR)/linux-sgx/sdk/build/linuxLOAD
 -include $(LIBSGXSTEP)/Makefile.config
 
 ifeq ($(SGX_SDK),)
@@ -8,7 +8,7 @@ ifeq ($(SGX_SDK),)
 endif
 export SGX_SDK
 ifneq ($(SGX_SDK), /opt/intel/sgxsdk)
-    URTS_LD_LIBRARY_PATH = LD_LIBRARY_PATH=$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux
+    URTS_LD_LIBRARY_PATH = LD_LIBRARY_PATH=$(LIBSGXSTEP_DIR)/linux-sgx/sdk/build/linuxLOAD
 endif
 
 ENCLAVE              = Enclave
@@ -30,7 +30,7 @@ CFLAGS              += -fpic -fno-stack-protector -fno-builtin -fno-jump-tables 
 INCLUDE              = -I$(SGX_SDK)/include/ -I$(LIBSGXSTEP_DIR) 
 LDFLAGS             += -lsgx-step -lencl_proxy -lsgx_urts \
                        -lsgx_uae_service -pthread $(SUBDIRS:%=-L %) -L$(SGX_SDK)/lib$(LIB_SUFX)/ \
-                       -L$(LIBSGXSTEP_DIR)/linux-sgx/psw/urts/linux -lelf 
+                       -L$(LIBSGXSTEP_DIR)/linux-sgx/sdk/build/linuxLOAD -lelf 
 
 SOURCES              = $(shell ls *.c) $(ENCLAVE)/encl_u.c
 OBJECTS              = $(SOURCES:.c=.o) 
