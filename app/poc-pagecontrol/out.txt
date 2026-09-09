@@ -1,0 +1,37 @@
+
+--------------------------------------------------------------------------------
+[main.c] Creating enclave...
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+[main.c] Registering fault handler
+--------------------------------------------------------------------------------
+
+[idt.c] DTR.base=0xfffffe0000000000/size=4095 (256 entries)
+[pt.c] /dev/sgx-step opened!
+[pt.c] /dev/mem opened!
+[idt.c] established user space IDT mapping at 0x7fa10b777000
+[idt.c] setting up ISR kernel mapping: 0x561b1ae70000-0x561b1ae7306a
+[idt.c] received kernel base address 0xff3b33b9e3ad8000 with offset 0xff3add9ec8c68000
+[idt.c] using kernel-mapped ISR handler: 0x561b1ae71000 -> 0xff3b33b9e3ad9000
+[idt.c] installed asm IRQ handler at 10:0xff3b33b9e3ad9000
+[idt.c] IDT[ 14] @0x7fa10b7770e0 = 0xff3b33b9e3ad9000 (seg sel 0x10); p=1; dpl=3; type=14; ist=0
+[main.c] Buffer addrs: 0x7fa109018000
+
+--------------------------------------------------------------------------------
+[main.c] Revoking access to target page.
+--------------------------------------------------------------------------------
+
+[enclave.c] tcs at 7fa109989000; aep at 561b1ae67fc2
+
+--------------------------------------------------------------------------------
+[main.c] Calling enclave to access target page.
+--------------------------------------------------------------------------------
+
+[main.c] Page fault on page 24:
+
+--------------------------------------------------------------------------------
+[main.c] destroying SGX enclave
+--------------------------------------------------------------------------------
+

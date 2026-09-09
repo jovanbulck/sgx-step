@@ -42,6 +42,7 @@ extern int sgx_step_do_trap;
 
 typedef void (*aep_cb_t)(void);
 void register_aep_cb(aep_cb_t cb);
+void register_aep_pf_cb(aep_cb_t cb);
 
 void register_enclave_info(void);
 void print_enclave_info(void);
