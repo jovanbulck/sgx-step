@@ -1,0 +1,12 @@
+[package]
+name = "sgx-step"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["sgx"]
+sgx = ["sgx-urts-sys"]
+
+[dependencies]
+sgx-step-sys = { path = "../sgx-step-sys" }
+sgx-urts-sys = { path = "../sgx-urts-sys", optional = true }
