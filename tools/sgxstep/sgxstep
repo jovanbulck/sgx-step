@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import sys
+import os
+import subprocess
+
+# path to libsgx-step.so relative to this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+lib_path = os.path.join(script_dir, '../libsgxstep/libsgx-step.so')
+
+args = sys.argv[1:]
+env = os.environ.copy()
+env['LD_PRELOAD'] = lib_path
+
+i = 0
+filtered_args = []
+while i < len(args):
+    if args[i] == '--skip' and i + 1 < len(args):
+        env['SGXSTEP_SKIP_ECALL'] = args[i+1]
+        i += 2
+    elif args[i] == '--target' and i + 1 < len(args):
+        env['SGXSTEP_TARGET_ECALL'] = args[i+1]
+        i += 2
+    elif args[i] == '--tf':
+        env['SGXSTEP_TF'] = '1'
+        i += 1
+    elif args[i] == '--trace':
+        env['SGXSTEP_TRACER'] = '1'
+        i += 1
+    else:
+        filtered_args.append(args[i])
+        i += 1
+
+if not filtered_args:
+    print("Usage: sgxstep [--skip N] [--target N] [--tf] [--trace] ./app [args]")
+    sys.exit(1)
+
+result = subprocess.run(
+    ['sudo', 'env', f'LD_PRELOAD={lib_path}'] + 
+    [f'{k}={v}' for k, v in env.items() if k.startswith('SGXSTEP_')] + 
+    filtered_args
+)
+sys.exit(result.returncode)

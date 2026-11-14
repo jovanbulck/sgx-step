@@ -18,7 +18,7 @@
 
 #include "libsgxstep/sgx_tracer.h" // <-------- Include the tracer
 
-#define DO_TIMER_STEP      0
+#define DO_TIMER_STEP      1
 #define DEBUG              0
 #define DBG_ENCL           1
 

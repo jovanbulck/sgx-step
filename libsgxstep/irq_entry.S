@@ -97,7 +97,12 @@ __ss_irq_gate_cb:
     .align 0x1000
     .global __ss_irq_gate
 __ss_irq_gate:
+#ifdef BUILD_SHARED
+    mov __ss_irq_gate_cb@GOTPCREL(%rip), %r11
+    call *(%r11)
+#else
     call *__ss_irq_gate_cb(%rip)
+#endif
     iretq
 
     /*

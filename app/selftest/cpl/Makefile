@@ -14,7 +14,7 @@ LD                   = gcc
 CFLAGS              += -fPIC -fno-stack-protector -fno-builtin -fno-jump-tables \
                        -fno-common -Wno-attributes -g -D_GNU_SOURCE -O0
 INCLUDE              = -I$(LIBSGXSTEP_DIR) 
-LDFLAGS             += -lsgx-step -pthread $(SUBDIRS:%=-L %)
+LDFLAGS             += -L$(LIBSGXSTEP_DIR) -l:libsgx-step.a -pthread $(SUBDIRS:%=-L %)
 
 SOURCES              = $(shell ls *.c)
 OBJECTS              = $(SOURCES:.c=.o) asm.o

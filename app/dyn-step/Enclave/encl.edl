@@ -1,0 +1,10 @@
+enclave {
+	
+	trusted {
+        public int enclave_dummy_call(void);
+        public void page_aligned_func(void);
+    };
+	
+	untrusted {
+	};
+};

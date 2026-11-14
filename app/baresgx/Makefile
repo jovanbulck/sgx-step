@@ -13,7 +13,7 @@ CC                      := gcc
 LD                      := gcc
 INCLUDE                 := -I$(BARESGX)/include/ -I$(LIBSGXSTEP_DIR) 
 CFLAGS                  := -Wall -g -fPIC 
-LDFLAGS                 := -z noexecstack -pthread -lbare-urts -lsgx-step -L$(BARESGX)/urts -L$(LIBSGXSTEP) -lcrypto -lelf
+LDFLAGS                 := -z noexecstack -pthread -lbare-urts -L$(LIBSGXSTEP_DIR) -l:libsgx-step.a -L$(BARESGX)/urts -L$(LIBSGXSTEP) -lcrypto -lelf
 
 SOURCES                 = $(shell ls *.c)
 OBJECTS                 = $(SOURCES:.c=.o)
