@@ -30,9 +30,13 @@ transient_access:
 
     #prefetcht0 (%rsi)
 
+    mov $64, %r8                  # bound the retry loop for 0x00 values
 retry:
     movb (%rsi), %al
     shl %cl, %rax
-    jz retry
+    jnz done
+    dec %r8
+    jnz retry
+done:
     movq (%rdi, %rax), %rdi
     retq

@@ -109,7 +109,7 @@ int foreshadow(void *adrs)
         foreshadow_init();
 
     /* Be sceptic about 0x00 bytes to compensate for the bias */
-    for(j=0; (rv==0x00 || rv==0xff) && j < FORESHADOW_ZERO_RETRIES; j++, fs_zero_retries++);
+    for(j=0; (rv==0x00 || rv==0xff) && j < FORESHADOW_ZERO_RETRIES; j++, fs_zero_retries++)
         rv = foreshadow_round(adrs);
 
     return rv;
